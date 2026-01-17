@@ -78,3 +78,10 @@ jobs:
           labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Make packages public
+        run: |
+          echo "Packages pushed successfully. To make them public, visit:"
+          echo "https://github.com/users/${{ github.repository_owner }}/packages/container/vocab-app-web/settings"
+          echo "https://github.com/users/${{ github.repository_owner }}/packages/container/vocab-app-api/settings"
+          echo "and change visibility to Public under 'Change visibility'"
