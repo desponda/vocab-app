@@ -77,3 +77,10 @@ ingress:
   host: vocab-staging.dresponda.com
   annotations:
     cert-manager.io/cluster-issuer: "cloudflare"
+
+secrets:
+  # Generate these with: openssl rand -base64 32
+  postgresPassword: "CHANGE_ME_postgres_password"
+  jwtAccessSecret: "CHANGE_ME_jwt_access_secret"
+  jwtRefreshSecret: "CHANGE_ME_jwt_refresh_secret"
+  anthropicApiKey: ""  # Optional: Add Claude API key for AI features
