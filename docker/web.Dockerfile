@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Build arguments for Next.js public env vars
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api
+
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@8.15.1 --activate
 
@@ -17,6 +20,9 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY apps/web ./apps/web
+
+# Set environment variable for Next.js build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build Next.js application
 RUN pnpm --filter=@vocab-app/web build

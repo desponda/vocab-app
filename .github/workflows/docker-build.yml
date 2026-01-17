@@ -67,6 +67,8 @@ jobs:
           labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://vocab-staging.dresponda.com/api
 
       - name: Build and push api image
         uses: docker/build-push-action@v6
