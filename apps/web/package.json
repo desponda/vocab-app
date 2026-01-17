@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "echo 'No tests yet for web app'",
     "lint": "eslint",
     "clean": "rm -rf .next"
   },
