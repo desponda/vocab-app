@@ -40,9 +40,12 @@ COPY turbo.json ./
 # Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
 
-# Copy Prisma schema and generate client
+# Copy Prisma schema
 COPY apps/api/prisma ./apps/api/prisma
-RUN cd apps/api && pnpm prisma generate
+
+# Copy generated Prisma client from builder
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy built application
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
