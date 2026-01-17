@@ -41,8 +41,7 @@ pnpm-debug.log*
 .turbo
 
 # Prisma
-apps/api/prisma/migrations/
-!apps/api/prisma/migrations/.gitkeep
+# Keep migrations in version control for deployment
 
 # IDE
 .vscode/*
