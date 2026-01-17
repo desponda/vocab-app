@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { config } from '../lib/config';
 import { requireAuth } from '../middleware/auth';
@@ -36,11 +36,9 @@ const generateTokens = async (
 ): Promise<{ accessToken: string; refreshToken: string }> => {
   const accessToken = app.jwt.sign({ userId });
 
-  const refreshToken = jwt.sign(
-    { userId },
-    config.jwt.refreshSecret,
-    { expiresIn: config.jwt.refreshExpiresIn }
-  );
+  const refreshToken = jwt.sign({ userId }, config.jwt.refreshSecret, {
+    expiresIn: config.jwt.refreshExpiresIn,
+  } as SignOptions);
 
   // Store refresh token in database
   const expiresAt = new Date();
