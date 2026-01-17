@@ -9,11 +9,14 @@ metadata:
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation
 spec:
+  backoffLimit: 3
   template:
     metadata:
       labels:
         app: migrations
     spec:
+      imagePullSecrets:
+      - name: ghcr-credentials
       restartPolicy: Never
       containers:
       - name: migrations
@@ -30,4 +33,3 @@ spec:
             secretKeyRef:
               name: {{ include "vocab-app.fullname" . }}-secrets
               key: database-url
-      backoffLimit: 3
