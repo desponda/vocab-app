@@ -68,6 +68,8 @@ secrets/
 # Kubernetes
 k8s/secrets/
 *.secret.yaml
+values-staging.yaml
+values-production.yaml
 
 # Uploads
 uploads/
