@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { config } from '../lib/config';
 import { requireAuth } from '../middleware/auth';
@@ -35,12 +36,10 @@ const generateTokens = async (
 ): Promise<{ accessToken: string; refreshToken: string }> => {
   const accessToken = app.jwt.sign({ userId });
 
-  const refreshToken = app.jwt.sign(
+  const refreshToken = jwt.sign(
     { userId },
-    {
-      secret: config.jwt.refreshSecret,
-      expiresIn: config.jwt.refreshExpiresIn,
-    }
+    config.jwt.refreshSecret,
+    { expiresIn: config.jwt.refreshExpiresIn }
   );
 
   // Store refresh token in database
@@ -178,9 +177,9 @@ export const authRoutes = async (app: FastifyInstance) => {
 
     try {
       // Verify refresh token
-      const decoded = app.jwt.verify<{ userId: string }>(refreshToken, {
-        secret: config.jwt.refreshSecret,
-      });
+      const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as {
+        userId: string;
+      };
 
       // Check if token exists in database
       const storedToken = await prisma.refreshToken.findUnique({
