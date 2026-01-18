@@ -33,6 +33,13 @@ export const studentRoutes = async (app: FastifyInstance) => {
         gradeLevel: true,
         createdAt: true,
         updatedAt: true,
+        enrollments: {
+          select: {
+            id: true,
+            classroomId: true,
+            createdAt: true,
+          },
+        },
       },
     });
 

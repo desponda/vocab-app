@@ -477,6 +477,11 @@ export const StudentSchema = z.object({
   gradeLevel: z.number().int().min(1).max(12),
   createdAt: z.string(),
   updatedAt: z.string(),
+  enrollments: z.array(z.object({
+    id: z.string(),
+    classroomId: z.string(),
+    createdAt: z.string(),
+  })).optional(),
 });
 
 export const DocumentStatusSchema = z.enum([
