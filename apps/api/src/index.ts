@@ -73,14 +73,7 @@ app.setErrorHandler(errorHandler);
 
 // Initialize MinIO bucket and start background workers on startup
 app.addHook('onReady', async () => {
-  try {
-    await initializeBucket();
-  } catch (error) {
-    // Log warning but don't crash - MinIO might not be available yet
-    app.log.warn(
-      `Failed to initialize MinIO bucket. File upload features may not be available. Error: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
+  await initializeBucket();
   createVocabularyWorker();
 });
 

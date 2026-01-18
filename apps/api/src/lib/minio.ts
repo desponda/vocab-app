@@ -33,8 +33,8 @@ export async function initializeBucket(): Promise<void> {
       console.log(`MinIO bucket '${BUCKET_NAME}' already exists`);
     }
   } catch (error) {
-    console.error('Failed to initialize MinIO bucket:', error);
-    throw error;
+    // Log error but don't throw - MinIO might not be available
+    console.warn('Failed to initialize MinIO bucket. File upload features will be unavailable:', error instanceof Error ? error.message : String(error));
   }
 }
 
