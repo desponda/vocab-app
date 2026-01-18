@@ -93,19 +93,45 @@ ingress:
 
 # Secrets Management:
 # IMPORTANT: Secrets are NOT stored in this file (which is checked into git)
-# Instead, create them manually using: k8s/scripts/create-secrets.sh
-# Or override with: helm install --set-file secrets.jwtAccessSecret=./jwt-secret.txt
+# Instead, create them manually or use automated secret generators
+# Or override with: helm install --set-file secrets.database.postgresPassword=./postgres-password.txt
+
 secrets:
-  # External secret name (created outside of Helm)
+  # Migration support: Set to true to use legacy monolithic secret
+  # Default: false (uses split secrets: database, jwt, anthropic)
+  useLegacySecret: false
+
+  # Legacy monolithic secret support (deprecated, for rollback only)
+  # Keep for backward compatibility during migration period
   externalSecretName: "vocab-app-secrets"
-
-  # Set to true only for local development (creates secret from values below)
-  # NEVER use in production - use external secret management instead
   createFromHelm: false
-
-  # Only used if createFromHelm=true (local dev only)
-  # Must meet validation: JWT secrets >= 32 chars
   postgresPassword: ""
   jwtAccessSecret: ""
   jwtRefreshSecret: ""
   anthropicApiKey: ""
+
+  # New separated secrets configuration
+  # Each secret is created automatically by its generator job (idempotent)
+
+  database:
+    # Secret containing postgres-password and database-url
+    secretName: "vocab-app-database-secret"
+    createFromHelm: false
+    # Only used if createFromHelm=true (local dev only)
+    postgresPassword: ""
+
+  jwt:
+    # Secret containing jwt-access-secret and jwt-refresh-secret
+    secretName: "vocab-app-jwt-secret"
+    createFromHelm: false
+    # Only used if createFromHelm=true (local dev only)
+    # Must meet validation: JWT secrets >= 32 chars
+    accessSecret: ""
+    refreshSecret: ""
+
+  anthropic:
+    # Secret containing anthropic-api-key (optional)
+    secretName: "vocab-app-anthropic-secret"
+    createFromHelm: false
+    # Only used if createFromHelm=true (local dev only)
+    apiKey: ""
