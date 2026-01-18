@@ -176,7 +176,7 @@ export default function ClassroomDetailPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">{classroom.name}</h2>
           <p className="text-muted-foreground">
-            Grade Level {classroom.gradeLevel}
+            Classroom Code: {classroom.code}
           </p>
         </div>
         <div className="flex items-center gap-2">
