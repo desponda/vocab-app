@@ -163,20 +163,22 @@ Return ONLY valid JSON (no markdown code blocks, no explanation):
 
 interface TestQuestion {
   questionText: string;
-  questionType: 'SPELLING' | 'DEFINITION' | 'FILL_BLANK' | 'MULTIPLE_CHOICE';
+  questionType: 'MULTIPLE_CHOICE';
   correctAnswer: string;
-  options?: string[]; // For multiple choice
+  options: string[]; // Always 4 options for multiple choice
   orderIndex: number;
 }
 
 /**
  * Generate test questions from vocabulary words
- * Creates varied question types for engaging tests
+ * Creates exactly 2 multiple choice questions per word:
+ * 1. Sentence completion: "Which word best fits in this sentence: ___?"
+ * 2. Definition matching: "Which definition best matches the word ___?"
+ * Questions are randomized in order.
  */
 export async function generateTestQuestions(
   words: Array<{ word: string; definition?: string; context?: string }>,
-  testVariant: string,
-  questionCount: number = 10
+  testVariant: string
 ): Promise<TestQuestion[]> {
   if (!config.anthropicApiKey) {
     throw new Error('ANTHROPIC_API_KEY not configured');
@@ -193,48 +195,53 @@ export async function generateTestQuestions(
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [
       {
         role: 'user',
-        content: `Generate ${questionCount} test questions from these vocabulary words for Test Variant ${testVariant}.
+        content: `Generate test questions from these vocabulary words for Test Variant ${testVariant}.
 
 VOCABULARY WORDS:
 ${wordsText}
 
-INSTRUCTIONS:
-1. Create a mix of question types:
-   - SPELLING: "Spell the word that means: [definition]"
-   - DEFINITION: "What does [word] mean?"
-   - FILL_BLANK: "Complete the sentence: The [blank] was magnificent."
-   - MULTIPLE_CHOICE: "Which word means [definition]?" with 4 options
+CRITICAL REQUIREMENTS:
+1. Create EXACTLY 2 multiple choice questions per vocabulary word
+2. Question Type 1: SENTENCE COMPLETION
+   - Format: "Which word best fits in this sentence: [sentence with blank]?"
+   - Create a natural sentence using the word's definition/context
+   - The sentence should make the correct answer clear to students who know the word
+   - Example: "Which word best fits in this sentence: The scientist had to _____ her theory with evidence?"
 
-2. Ensure questions are age-appropriate and clear
-3. For MULTIPLE_CHOICE, include 3 plausible distractors
-4. Vary the question types for engagement
-5. Each variant should have different questions
+3. Question Type 2: DEFINITION MATCHING
+   - Format: "Which definition best matches the word '[word]'?"
+   - Provide 4 definitions, one correct and 3 plausible but incorrect
+   - Make distractors believable but clearly wrong for students who studied
+   - Example: "Which definition best matches the word 'demonstrate'?"
+
+4. For ALL questions:
+   - Include exactly 4 options (1 correct + 3 distractors)
+   - Make distractors plausible (use other words from the list when possible)
+   - Ensure questions are age-appropriate and clear
+   - Use varied sentence structures across questions
+   - Correct answer must always be included in options array
+
+5. Each test variant should have different sentences/distractors
+6. DO NOT include orderIndex - we'll randomize after generation
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
   "questions": [
     {
-      "questionText": "Spell the word that means: very impressive",
-      "questionType": "SPELLING",
-      "correctAnswer": "magnificent",
-      "orderIndex": 0
-    },
-    {
-      "questionText": "What does 'demonstrate' mean?",
-      "questionType": "DEFINITION",
-      "correctAnswer": "to show clearly",
-      "orderIndex": 1
-    },
-    {
-      "questionText": "Which word means 'to convince someone'?",
+      "questionText": "Which word best fits in this sentence: The teacher asked students to _____ their understanding by explaining the concept?",
       "questionType": "MULTIPLE_CHOICE",
-      "correctAnswer": "persuade",
-      "options": ["persuade", "analyze", "explore", "demonstrate"],
-      "orderIndex": 2
+      "correctAnswer": "demonstrate",
+      "options": ["demonstrate", "persuade", "analyze", "contemplate"]
+    },
+    {
+      "questionText": "Which definition best matches the word 'demonstrate'?",
+      "questionType": "MULTIPLE_CHOICE",
+      "correctAnswer": "to show clearly or prove",
+      "options": ["to show clearly or prove", "to convince someone of something", "to examine in detail", "to think deeply about"]
     }
   ]
 }`,
@@ -262,7 +269,24 @@ Return ONLY valid JSON (no markdown, no explanation):
       throw new Error('Invalid response format: missing questions array');
     }
 
-    return result.questions;
+    // Validate we have exactly 2 questions per word
+    const expectedQuestionCount = words.length * 2;
+    if (result.questions.length !== expectedQuestionCount) {
+      console.warn(
+        `Expected ${expectedQuestionCount} questions (2 per word), got ${result.questions.length}. Proceeding anyway.`
+      );
+    }
+
+    // Randomize question order
+    const shuffledQuestions = result.questions
+      .map((q: any) => ({ ...q, sort: Math.random() }))
+      .sort((a: any, b: any) => a.sort - b.sort)
+      .map((q: any, index: number) => {
+        const { sort, ...question } = q;
+        return { ...question, orderIndex: index };
+      });
+
+    return shuffledQuestions;
   } catch (parseError) {
     console.error('Failed to parse Claude test generation response:', jsonText);
     throw new Error(`Failed to parse test generation result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);

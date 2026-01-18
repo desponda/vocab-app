@@ -19,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 
@@ -208,6 +207,11 @@ export default function TakeTestPage() {
   const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
+  // Parse options for multiple choice questions
+  const questionOptions = currentQuestion.options
+    ? JSON.parse(currentQuestion.options) as string[]
+    : [];
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       {/* Header */}
@@ -215,7 +219,7 @@ export default function TakeTestPage() {
         <div>
           <h2 className="text-2xl font-bold">{attempt.test.name}</h2>
           <p className="text-sm text-muted-foreground">
-            {attempt.test.variant}
+            Variant {attempt.test.variant}
           </p>
         </div>
         <div className="text-right">
@@ -241,17 +245,27 @@ export default function TakeTestPage() {
             <p className="text-lg font-medium mb-4">{currentQuestion.questionText}</p>
           </div>
 
-          {/* Answer Input */}
-          <div className="space-y-2">
-            <Label htmlFor="answer">Your Answer</Label>
-            <Input
-              id="answer"
-              value={answers[currentQuestion.id] || ''}
-              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-              placeholder="Type your answer here..."
-              autoFocus
-              className="text-lg"
-            />
+          {/* Multiple Choice Options */}
+          <div className="space-y-3">
+            <Label>Select your answer:</Label>
+            <div className="grid gap-3">
+              {questionOptions.map((option, index) => {
+                const isSelected = answers[currentQuestion.id] === option;
+                return (
+                  <Button
+                    key={index}
+                    variant={isSelected ? "default" : "outline"}
+                    className="w-full justify-start text-left h-auto min-h-[3rem] px-4 py-3"
+                    onClick={() => handleAnswerChange(currentQuestion.id, option)}
+                  >
+                    <span className="font-semibold mr-3">
+                      {String.fromCharCode(65 + index)}.
+                    </span>
+                    <span className="flex-1">{option}</span>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>

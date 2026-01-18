@@ -57,9 +57,10 @@ describe('Anthropic API Integration', () => {
 
   it('should format message request correctly for test question generation', () => {
     // This test verifies the structure of API calls for test generation
+    // Updated to reflect 2 questions per word format (requires more tokens)
     const messageStructure = {
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [
         {
           role: 'user' as const,
@@ -70,7 +71,7 @@ describe('Anthropic API Integration', () => {
 
     // Verify structure
     expect(messageStructure.model).toBe('claude-sonnet-4-5-20250929');
-    expect(messageStructure.max_tokens).toBe(4096);
+    expect(messageStructure.max_tokens).toBe(8192);
     expect(messageStructure.messages).toHaveLength(1);
     expect(messageStructure.messages[0].role).toBe('user');
     expect(typeof messageStructure.messages[0].content).toBe('string');

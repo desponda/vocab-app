@@ -108,8 +108,8 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
 
       console.log(`[Job ${job.id}] Generating test variant ${variant}`);
 
-      // Generate questions using Claude
-      const questions = await generateTestQuestions(allWords, variant, Math.min(allWords.length, 15));
+      // Generate questions using Claude (2 questions per word)
+      const questions = await generateTestQuestions(allWords, variant);
 
       if (questions.length === 0) {
         console.warn(`[Job ${job.id}] No questions generated for variant ${variant}, skipping`);
@@ -135,17 +135,32 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
 
       // Save questions to database
       const questionsData = questions.map((q, index) => {
-        // Find word ID by matching correct answer or question text
-        const wordId = wordMap.get(q.correctAnswer.toLowerCase()) || vocabularyWords[index % vocabularyWords.length]?.id;
+        // Find word ID by matching:
+        // 1. For sentence completion: correctAnswer is the word
+        // 2. For definition matching: extract word from question text
+        let wordId = wordMap.get(q.correctAnswer.toLowerCase());
+
+        if (!wordId) {
+          // Try to extract word from question text for definition matching questions
+          const match = q.questionText.match(/word ['"](.+?)['"]/i);
+          if (match && match[1]) {
+            wordId = wordMap.get(match[1].toLowerCase());
+          }
+        }
+
+        // Fallback: use round-robin assignment
+        if (!wordId) {
+          wordId = vocabularyWords[Math.floor(index / 2) % vocabularyWords.length]?.id;
+        }
 
         return {
           questionText: q.questionText,
           questionType: q.questionType,
           correctAnswer: q.correctAnswer,
-          options: q.options ? JSON.stringify(q.options) : null,
+          options: JSON.stringify(q.options), // Always has options now
           orderIndex: q.orderIndex || index,
           testId: test.id,
-          wordId: wordId || vocabularyWords[0]!.id, // Fallback to first word
+          wordId: wordId || vocabularyWords[0]!.id, // Final fallback to first word
         };
       });
 
