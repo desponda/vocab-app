@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet, type TestAssignment } from '@/lib/api';
@@ -53,14 +53,12 @@ export default function ClassroomDetailPage() {
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
-  const [tests, setTests] = useState<Test[]>([]);
   const [vocabularySheets, setVocabularySheets] = useState<VocabularySheet[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedTestId, setSelectedTestId] = useState<string>('');
   const [selectedSheetId, setSelectedSheetId] = useState<string>('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
@@ -98,22 +96,6 @@ export default function ClassroomDetailPage() {
     loadClassroom();
   }, [classroomId, accessToken]);
 
-  // Load available tests for assignment
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const loadTests = async () => {
-      try {
-        const { tests: teacherTests } = await testsApi.list(accessToken);
-        setTests(teacherTests);
-      } catch (err) {
-        console.error('Error loading tests:', err);
-      }
-    };
-
-    loadTests();
-  }, [accessToken]);
-
   // Load vocabulary sheets for bulk assignment
   useEffect(() => {
     if (!accessToken) return;
@@ -121,11 +103,20 @@ export default function ClassroomDetailPage() {
     const loadVocabularySheets = async () => {
       try {
         const { sheets } = await vocabularySheetsApi.list(accessToken);
-        // Filter to only completed sheets with tests
-        const completedSheets = sheets.filter(
-          (sheet) => sheet.status === 'COMPLETED' && sheet._count && sheet._count.tests > 0
-        );
-        setVocabularySheets(completedSheets);
+
+        // Filter to only completed sheets with tests in new format
+        // Note: Tests processed after 2026-01-18 will have multiple choice format
+        const newFormatCutoff = new Date('2026-01-18T00:00:00Z');
+
+        const validSheets = sheets.filter((sheet) => {
+          const isCompleted = sheet.status === 'COMPLETED';
+          const hasTests = sheet._count && sheet._count.tests > 0;
+          const isNewFormat = sheet.processedAt && new Date(sheet.processedAt) >= newFormatCutoff;
+
+          return isCompleted && hasTests && isNewFormat;
+        });
+
+        setVocabularySheets(validSheets);
       } catch (err) {
         console.error('Error loading vocabulary sheets:', err);
       }
@@ -135,7 +126,7 @@ export default function ClassroomDetailPage() {
   }, [accessToken]);
 
   // Load assigned tests for this classroom
-  const loadAssignedTests = async () => {
+  const loadAssignedTests = useCallback(async () => {
     if (!accessToken) return;
 
     try {
@@ -144,11 +135,11 @@ export default function ClassroomDetailPage() {
     } catch (err) {
       console.error('Error loading assigned tests:', err);
     }
-  };
+  }, [classroomId, accessToken]);
 
   useEffect(() => {
     loadAssignedTests();
-  }, [classroomId, accessToken]);
+  }, [loadAssignedTests]);
 
   const handleCopyCode = () => {
     if (classroom?.code) {
@@ -158,32 +149,12 @@ export default function ClassroomDetailPage() {
     }
   };
 
-  const handleAssignTest = async () => {
-    if (!selectedTestId || !accessToken) return;
-
-    setIsAssigning(true);
-    try {
-      await testsApi.assign(selectedTestId, classroomId, accessToken);
-      setAssignSuccess(true);
-      setIsAssignDialogOpen(false);
-      setSelectedTestId('');
-
-      // Show success message briefly
-      setTimeout(() => setAssignSuccess(false), 3000);
-    } catch (err) {
-      console.error('Error assigning test:', err);
-      setError('Failed to assign test. Please try again.');
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
   const handleBulkAssignVocabSheet = async () => {
     if (!selectedSheetId || !accessToken) return;
 
     setIsAssigning(true);
     try {
-      const result = await vocabularySheetsApi.assignToClassroom(
+      await vocabularySheetsApi.assignToClassroom(
         selectedSheetId,
         classroomId,
         undefined, // no due date for now
@@ -302,22 +273,17 @@ export default function ClassroomDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => {
-                      const enrollment = student.enrollments?.find(
-                        (e) => e.classroomId === classroomId
-                      );
-                      return (
-                        <TableRow key={student.id}>
-                          <TableCell className="font-medium">{student.name}</TableCell>
-                          <TableCell>{student.gradeLevel}</TableCell>
-                          <TableCell>
-                            {student.createdAt
-                              ? new Date(student.createdAt).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {students.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">{student.name}</TableCell>
+                        <TableCell>{student.gradeLevel}</TableCell>
+                        <TableCell>
+                          {student.createdAt
+                            ? new Date(student.createdAt).toLocaleDateString()
+                            : 'N/A'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               )}
@@ -408,7 +374,7 @@ export default function ClassroomDetailPage() {
               {assignedTests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No tests assigned yet</p>
-                  <p className="text-sm mt-2">Click "Assign Test" to assign vocabulary tests to this classroom</p>
+                  <p className="text-sm mt-2">Click &quot;Assign Test&quot; to assign vocabulary tests to this classroom</p>
                 </div>
               ) : (
                 <Table>
