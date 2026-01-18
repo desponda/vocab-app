@@ -78,8 +78,9 @@ minio:
   secretName: "vocab-app-minio-secret"
 
   # MinIO endpoint configuration
-  # For external MinIO Tenant: use the tenant service endpoint
-  endpoint: "vocab-app-storage-hl.default.svc.cluster.local"
+  # For local MinIO Tenant: will be deployed in same namespace
+  # Note: MinIO initialization will warn if service is not available
+  endpoint: "vocab-app-storage-hl.vocab-app-staging.svc.cluster.local"
   port: 9000
   useSSL: false
   bucket: "vocab-documents"

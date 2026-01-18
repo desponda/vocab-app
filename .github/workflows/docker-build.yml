@@ -164,11 +164,30 @@ jobs:
           # Extract short SHA for image tag
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
 
-          # Update values.yaml with new image tags
-          sed -i "s|tag: .*|tag: sha-${SHORT_SHA}|g" k8s/helm/vocab-app/values.yaml
+          # Track which images were actually built (not just skipped)
+          BUILD_WEB="${{ needs.build-web.result }}"
+          BUILD_API="${{ needs.build-api.result }}"
+
+          echo "Build results: WEB=$BUILD_WEB, API=$BUILD_API"
+
+          # Create a temporary file
+          TEMP_FILE=$(mktemp)
+
+          # Update only for images that were actually built
+          if [[ "$BUILD_WEB" == "success" ]]; then
+            echo "Updating web image tag to sha-${SHORT_SHA}..."
+            awk '/^web:/{found=1} found && /^\s+tag:/{sub(/tag: .*/, "tag: sha-'$SHORT_SHA'"); found=0} 1' k8s/helm/vocab-app/values.yaml > "$TEMP_FILE"
+            mv "$TEMP_FILE" k8s/helm/vocab-app/values.yaml
+          fi
+
+          if [[ "$BUILD_API" == "success" ]]; then
+            echo "Updating API image tag to sha-${SHORT_SHA}..."
+            awk '/^api:/{found=1} found && /^\s+tag:/{sub(/tag: .*/, "tag: sha-'$SHORT_SHA'"); found=0} 1' k8s/helm/vocab-app/values.yaml > "$TEMP_FILE"
+            mv "$TEMP_FILE" k8s/helm/vocab-app/values.yaml
+          fi
 
           # Show the changes
-          git diff k8s/helm/vocab-app/values.yaml
+          git diff k8s/helm/vocab-app/values.yaml || echo "No changes"
 
       - name: Commit and push updated Helm values
         run: |
