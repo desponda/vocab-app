@@ -3,21 +3,33 @@ import { config } from './config';
 
 // MinIO is optional - create client only if credentials are configured
 export const minioClient: Client | null = config.minio?.accessKey && config.minio?.secretKey
-  ? createMinIOClient(config.minio!)
+  ? createMinIOClient(
+      config.minio.endpoint,
+      config.minio.port,
+      config.minio.useSSL,
+      config.minio.accessKey as string,
+      config.minio.secretKey as string
+    )
   : null;
 
-function createMinIOClient(minioConfig: typeof config.minio & object): Client {
+function createMinIOClient(
+  endpoint: string,
+  port: number,
+  useSSL: boolean,
+  accessKey: string,
+  secretKey: string
+): Client {
   const client = new Client({
-    endPoint: minioConfig.endpoint,
-    port: minioConfig.port,
-    useSSL: minioConfig.useSSL,
-    accessKey: minioConfig.accessKey,
-    secretKey: minioConfig.secretKey,
+    endPoint: endpoint,
+    port,
+    useSSL,
+    accessKey,
+    secretKey,
   });
 
   // Accept self-signed certificates for MinIO Operator-managed tenants
   // This is safe for internal Kubernetes cluster communication
-  if (minioConfig.useSSL) {
+  if (useSSL) {
     client.setRequestOptions({
       rejectUnauthorized: false,
     });
