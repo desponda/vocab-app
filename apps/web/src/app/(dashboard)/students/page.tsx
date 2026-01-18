@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
+import { CreateStudentDialog } from '@/components/students/create-student-dialog';
 
 export default function StudentsPage() {
   const { accessToken } = useAuth();
@@ -41,6 +42,10 @@ export default function StudentsPage() {
     fetchStudents();
   }, [accessToken]);
 
+  const handleStudentCreated = (student: Student) => {
+    setStudents((prev) => [...prev, student]);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -66,10 +71,15 @@ export default function StudentsPage() {
             Manage your students and their learning progress
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Student
-        </Button>
+        <CreateStudentDialog
+          onStudentCreated={handleStudentCreated}
+          trigger={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Student
+            </Button>
+          }
+        />
       </div>
 
       {students.length === 0 ? (
@@ -81,10 +91,15 @@ export default function StudentsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Student
-            </Button>
+            <CreateStudentDialog
+              onStudentCreated={handleStudentCreated}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Student
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (

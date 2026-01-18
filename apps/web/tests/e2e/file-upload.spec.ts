@@ -48,14 +48,24 @@ test.describe.serial('File Upload Flow', () => {
     await page.goto(`${BASE_URL}/students`);
     await expect(page.locator('h2')).toContainText('Students');
 
-    // TODO: This test will need to be updated when student creation UI is implemented
-    // For now, we'll skip this test if there are no students
-    const hasStudents = await page.locator('text=/Grade/').count();
-    if (hasStudents === 0) {
-      console.log('Student creation UI not yet implemented, skipping test');
-      test.skip();
-      return;
-    }
+    // Click "Add Student" button
+    await page.click('text=Add Student');
+
+    // Wait for dialog to open
+    await expect(page.locator('text=Create a new student profile')).toBeVisible();
+
+    // Fill in student details
+    await page.fill('input#name', studentName);
+    await page.fill('input#gradeLevel', '6');
+
+    // Submit form
+    await page.click('button[type="submit"]:has-text("Create Student")');
+
+    // Wait for dialog to close and student to appear
+    await expect(page.locator(`text=${studentName}`)).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.locator('text=Grade 6')).toBeVisible();
   });
 
   test('should navigate to student detail page', async ({ page }) => {
