@@ -1,19 +1,21 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '../lib/prisma';
 
-describe('Tests Routes', () => {
+// Database tests require DATABASE_URL with valid connection
+// Skip if not in a CI environment with a proper database setup
+const shouldSkipDatabaseTests = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes('***');
+
+describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
   let teacherId: string;
   let studentId: string;
   let classroomId: string;
   let testId: string;
   let questionId: string;
   let attemptId: string;
-  let testSetupFailed = false;
 
   beforeAll(async () => {
-    try {
-      // Create test teacher user
-      const user = await prisma.user.create({
+    // Create test teacher user
+    const user = await prisma.user.create({
       data: {
         email: `teacher-${Date.now()}@test.com`,
         name: 'Test Teacher',
@@ -107,10 +109,6 @@ describe('Tests Routes', () => {
       },
     });
     questionId = question.id;
-    } catch (error) {
-      console.error('Failed to set up test data:', error);
-      testSetupFailed = true;
-    }
   });
 
   afterAll(async () => {
@@ -119,7 +117,7 @@ describe('Tests Routes', () => {
     await prisma.$disconnect();
   });
 
-  describe.skipIf(testSetupFailed)('Test Assignment', () => {
+  describe('Test Assignment', () => {
     it('should assign a test to a classroom', async () => {
       const assignment = await prisma.testAssignment.create({
         data: {
@@ -155,7 +153,7 @@ describe('Tests Routes', () => {
     });
   });
 
-  describe.skipIf(testSetupFailed)('Test Attempts', () => {
+  describe('Test Attempts', () => {
     it('should start a test attempt', async () => {
       const test = await prisma.test.findUnique({
         where: { id: testId },
@@ -218,7 +216,7 @@ describe('Tests Routes', () => {
     });
   });
 
-  describe.skipIf(testSetupFailed)('Test Retrieval', () => {
+  describe('Test Retrieval', () => {
     it('should get a test with all questions', async () => {
       const test = await prisma.test.findUnique({
         where: { id: testId },
@@ -247,7 +245,7 @@ describe('Tests Routes', () => {
     });
   });
 
-  describe.skipIf(testSetupFailed)('Auto-grading', () => {
+  describe('Auto-grading', () => {
     it('should correctly grade spelling answers (case-insensitive)', () => {
       const correctAnswer = 'hello';
       const userAnswer1 = 'hello';
