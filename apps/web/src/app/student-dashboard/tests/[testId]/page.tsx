@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { testsApi, studentsApi, type TestAttempt, type Student } from '@/lib/api';
+import {
+  testsApi,
+  studentsApi,
+  type TestAttempt,
+  type Student,
+  type TestQuestion,
+  type TestDetail
+} from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,22 +23,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 
-interface TestQuestion {
-  id: string;
-  question: string;
-  correctAnswer: string;
-}
-
 interface TestAttemptWithQuestions extends TestAttempt {
-  test: {
-    id: string;
-    name: string;
-    variant: string;
-    _count: {
-      questions: number;
-    };
-    questions: TestQuestion[];
-  };
+  test: TestDetail;
 }
 
 export default function TakeTestPage() {
@@ -245,7 +238,7 @@ export default function TakeTestPage() {
         <CardContent className="space-y-6">
           {/* Question Text */}
           <div>
-            <p className="text-lg font-medium mb-4">{currentQuestion.question}</p>
+            <p className="text-lg font-medium mb-4">{currentQuestion.questionText}</p>
           </div>
 
           {/* Answer Input */}
