@@ -204,7 +204,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
         include: { answers: true },
       });
 
-      const correctAnswers = attempt!.answers.filter((a) => a.isCorrect).length;
+      const correctAnswers = attempt!.answers.filter((a: any) => a.isCorrect).length;
       const score = Math.round((correctAnswers / attempt!.totalQuestions) * 100);
 
       // Update attempt with score
