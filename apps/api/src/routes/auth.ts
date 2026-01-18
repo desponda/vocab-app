@@ -14,6 +14,8 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(100),
   name: z.string().min(1).max(100),
+  role: z.enum(['TEACHER', 'PARENT']).default('PARENT'),
+  classroomCode: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -72,15 +74,45 @@ export const authRoutes = async (app: FastifyInstance) => {
       });
     }
 
+    // If registering as PARENT (student), validate classroom code
+    if (body.role === 'PARENT' && !body.classroomCode) {
+      return reply.code(400).send({
+        error: 'Bad Request',
+        message: 'Classroom code is required for students',
+      });
+    }
+
+    if (body.role === 'PARENT' && body.classroomCode) {
+      // Verify classroom code exists
+      const classroom = await prisma.classroom.findUnique({
+        where: { code: body.classroomCode },
+      });
+
+      if (!classroom) {
+        return reply.code(404).send({
+          error: 'Not Found',
+          message: 'Classroom code not found',
+        });
+      }
+
+      if (!classroom.isActive) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'This classroom is not active',
+        });
+      }
+    }
+
     // Hash password
     const passwordHash = await hashPassword(body.password);
 
-    // Create user
+    // Create user with transaction for consistency
     const user = await prisma.user.create({
       data: {
         email: body.email,
         passwordHash,
         name: body.name,
+        role: body.role as any,
       },
       select: {
         id: true,
@@ -90,6 +122,30 @@ export const authRoutes = async (app: FastifyInstance) => {
         createdAt: true,
       },
     });
+
+    // If registering as PARENT (student), create student record and enroll in classroom
+    if (body.role === 'PARENT' && body.classroomCode) {
+      const classroom = await prisma.classroom.findUnique({
+        where: { code: body.classroomCode },
+      });
+
+      // Create student record
+      const student = await prisma.student.create({
+        data: {
+          name: body.name,
+          gradeLevel: 1, // Default grade level, can be updated later
+          userId: user.id,
+        },
+      });
+
+      // Enroll student in classroom
+      await prisma.studentEnrollment.create({
+        data: {
+          studentId: student.id,
+          classroomId: classroom!.id,
+        },
+      });
+    }
 
     // Generate tokens
     const { accessToken, refreshToken } = await generateTokens(app, user.id);

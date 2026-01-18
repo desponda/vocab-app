@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
@@ -18,6 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const registerSchema = z
   .object({
@@ -28,10 +35,24 @@ const registerSchema = z
       .min(8, 'Password must be at least 8 characters')
       .max(100, 'Password is too long'),
     confirmPassword: z.string(),
+    role: z.enum(['TEACHER', 'PARENT'], {
+      errorMap: () => ({ message: 'Please select a role' }),
+    }),
+    classroomCode: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
+  })
+  .refine((data) => {
+    // Students (PARENT role) must provide a classroom code
+    if (data.role === 'PARENT' && !data.classroomCode) {
+      return false;
+    }
+    return true;
+  }, {
+    message: 'Classroom code is required to join as a student',
+    path: ['classroomCode'],
   });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -40,21 +61,28 @@ export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'TEACHER' | 'PARENT' | ''>('');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      role: undefined,
+    },
   });
+
+  const role = watch('role');
 
   const onSubmit = async (data: RegisterFormData) => {
     setError('');
     setIsLoading(true);
 
     try {
-      await registerUser(data.email, data.password, data.name);
+      await registerUser(data.email, data.password, data.name, data.role, data.classroomCode);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -80,6 +108,45 @@ export default function RegisterPage() {
             {error && (
               <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
                 {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="role">I am a...</Label>
+              <Select
+                value={role || ''}
+                onValueChange={(value) => {
+                  // This will be handled by the form's onChange
+                }}
+              >
+                <SelectTrigger disabled={isLoading}>
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TEACHER">Teacher</SelectItem>
+                  <SelectItem value="PARENT">Student</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Hidden input to register the role field */}
+              <input type="hidden" {...register('role')} />
+              {errors.role && (
+                <p className="text-sm text-destructive">{errors.role.message}</p>
+              )}
+            </div>
+
+            {role === 'PARENT' && (
+              <div className="space-y-2">
+                <Label htmlFor="classroomCode">Classroom Code</Label>
+                <Input
+                  id="classroomCode"
+                  type="text"
+                  placeholder="Enter your classroom code"
+                  disabled={isLoading}
+                  {...register('classroomCode')}
+                />
+                {errors.classroomCode && (
+                  <p className="text-sm text-destructive">{errors.classroomCode.message}</p>
+                )}
               </div>
             )}
 

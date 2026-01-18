@@ -65,6 +65,8 @@ export const authApi = {
     email: string;
     password: string;
     name: string;
+    role: 'TEACHER' | 'PARENT';
+    classroomCode?: string;
   }): Promise<{ user: User; accessToken: string }> =>
     request('/api/auth/register', {
       method: 'POST',

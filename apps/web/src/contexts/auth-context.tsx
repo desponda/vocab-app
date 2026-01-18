@@ -9,7 +9,13 @@ interface AuthContextType {
   accessToken: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    role: 'TEACHER' | 'PARENT',
+    classroomCode?: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
 }
@@ -92,12 +98,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/dashboard');
   };
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    role: 'TEACHER' | 'PARENT',
+    classroomCode?: string
+  ) => {
     const { user: registeredUser, accessToken: token } = await authApi.register(
       {
         email,
         password,
         name,
+        role,
+        classroomCode,
       }
     );
 
@@ -106,7 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('accessToken', token);
     localStorage.setItem('user', JSON.stringify(registeredUser));
 
-    router.push('/dashboard');
+    // Route based on role
+    const redirectPath = role === 'TEACHER' ? '/dashboard' : '/student-dashboard';
+    router.push(redirectPath);
   };
 
   const logout = async () => {
