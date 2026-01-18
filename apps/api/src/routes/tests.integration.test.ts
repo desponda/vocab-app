@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '../lib/prisma';
 
-// Database tests require DATABASE_URL with valid connection
-// Skip if not in a CI environment with a proper database setup
-const shouldSkipDatabaseTests = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes('***');
-
-describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
+/**
+ * Integration tests for test routes
+ *
+ * These tests require a running PostgreSQL database and are excluded from CI.
+ * To run locally:
+ *   1. Start Docker: docker-compose up -d postgres
+ *   2. Run migrations: cd apps/api && pnpm prisma migrate dev
+ *   3. Run tests: pnpm test -- --include='**/*.integration.test.ts'
+ */
+describe('Tests Routes', () => {
   let teacherId: string;
   let studentId: string;
   let classroomId: string;
