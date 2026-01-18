@@ -49,7 +49,7 @@ export function FileUpload({ onUpload, disabled = false }: FileUploadProps) {
         handleUpload(acceptedFiles[0]);
       }
     },
-    [disabled, onUpload]
+    [disabled, handleUpload]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

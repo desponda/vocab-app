@@ -1,10 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import path from 'path';
+import fs from 'fs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 // Helper function to ensure user is logged in
-async function ensureUserLoggedIn(page: any, email: string, password: string) {
+async function ensureUserLoggedIn(page: Page, email: string, password: string) {
   try {
     await page.goto(`${BASE_URL}/login`);
     await page.fill('input#email', email);
@@ -13,7 +14,7 @@ async function ensureUserLoggedIn(page: any, email: string, password: string) {
     await expect(page.locator('h2')).toContainText('Dashboard', {
       timeout: 10000,
     });
-  } catch (error) {
+  } catch {
     console.log('User may already be registered, attempting to login failed');
   }
 }
@@ -23,8 +24,6 @@ test.describe.serial('File Upload Flow', () => {
   const testPassword = 'Test1234!';
   const testName = 'Upload Test Teacher';
   const studentName = 'Test Student';
-
-  let studentId: string;
 
   test('should register a new teacher account', async ({ page }) => {
     await page.goto(`${BASE_URL}/register`);
@@ -270,7 +269,6 @@ test.describe.serial('File Upload Flow', () => {
     const fileInput = page.locator('input[type="file"]');
 
     // Create a temporary text file
-    const fs = require('fs');
     const tmpFile = path.join(__dirname, '../fixtures/test-invalid.txt');
     fs.writeFileSync(tmpFile, 'This is not a valid file type');
 

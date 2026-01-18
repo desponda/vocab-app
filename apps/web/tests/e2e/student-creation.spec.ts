@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 // Helper function to ensure user is logged in
-async function ensureUserLoggedIn(page: any, email: string, password: string) {
+async function ensureUserLoggedIn(page: Page, email: string, password: string) {
   try {
     await page.goto(`${BASE_URL}/login`);
     await page.fill('input#email', email);
@@ -12,7 +12,7 @@ async function ensureUserLoggedIn(page: any, email: string, password: string) {
     await expect(page.locator('h2')).toContainText('Dashboard', {
       timeout: 10000,
     });
-  } catch (error) {
+  } catch {
     console.log('User may already be registered, attempting to login failed');
   }
 }

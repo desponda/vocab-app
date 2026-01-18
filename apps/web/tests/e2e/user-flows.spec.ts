@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'https://vocab-staging.dresponda.com';
 
@@ -9,7 +9,7 @@ const testPassword = 'Test1234!';
 const testName = 'E2E Test User';
 
 // Helper function to ensure user is registered and logged in
-async function ensureUserLoggedIn(page: any) {
+async function ensureUserLoggedIn(page: Page) {
   await page.goto(`${BASE_URL}/login`);
   await page.fill('input#email', testEmail);
   await page.fill('input#password', testPassword);
@@ -18,7 +18,7 @@ async function ensureUserLoggedIn(page: any) {
   // Check if login succeeded or if we need to register
   try {
     await expect(page.locator('h2')).toContainText('Dashboard', { timeout: 5000 });
-  } catch (e) {
+  } catch {
     // Login failed, try to register
     await page.goto(`${BASE_URL}/register`);
     await page.fill('input#name', testName);
