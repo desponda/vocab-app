@@ -10,6 +10,7 @@ import { classroomRoutes } from './routes/classrooms';
 import { vocabularySheetRoutes } from './routes/vocabulary-sheets';
 import { errorHandler } from './middleware/error-handler';
 import { initializeBucket } from './lib/minio';
+import { createVocabularyWorker } from './jobs/process-vocabulary-sheet';
 
 const app = Fastify({
   logger: {
@@ -70,9 +71,10 @@ app.get('/api/health', async () => {
 // Error handler
 app.setErrorHandler(errorHandler);
 
-// Initialize MinIO bucket on startup
+// Initialize MinIO bucket and start background workers on startup
 app.addHook('onReady', async () => {
   await initializeBucket();
+  createVocabularyWorker();
 });
 
 // Start server

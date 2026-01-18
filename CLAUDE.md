@@ -50,7 +50,7 @@ vocab-app/
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 Week 2 - MinIO Setup & Vocabulary Upload (In Progress)
+**Current Phase:** Phase 2 Week 3 - Claude Vision API Integration (✅ COMPLETE)
 
 **Phase 1 - Foundation & Authentication (✅ COMPLETE):**
 - ✅ Project structure and monorepo setup
@@ -73,20 +73,30 @@ vocab-app/
 - ✅ Unit tests for classroom code generation (5 tests passing)
 - ✅ Integration testing with curl (all endpoints working)
 
-**Phase 2 Week 2 - MinIO Setup (✅ PARTIALLY COMPLETE):**
+**Phase 2 Week 2 - Vocabulary Upload (✅ COMPLETE):**
 - ✅ MinIO security: Remove hardcoded credentials, implement secret generator
-- ✅ Dependencies installed: @anthropic-ai/sdk, bullmq, minio, file-type, sharp
+- ✅ Dependencies installed: @anthropic-ai/sdk, bullmq, minio, sharp
 - ✅ MinIO client library created (upload/download/delete)
 - ✅ Kubernetes secret generator job for MinIO credentials
 - ✅ Docker Compose configured with env vars
-- 🔄 Vocabulary upload routes (pending)
-- 🔄 Upload frontend UI with drag-drop (pending)
-- 🔄 File validation and processing (pending)
+- ✅ Vocabulary upload routes with magic byte validation
+- ✅ Upload frontend UI with drag-drop (react-dropzone)
+- ✅ File upload tested locally (upload, list, download, delete)
+- ✅ Badge and Progress components for UI
+
+**Phase 2 Week 3 - Claude Vision Integration (✅ COMPLETE):**
+- ✅ Claude API client library (extractVocabulary, generateTestQuestions)
+- ✅ Claude Vision API integration for vocabulary extraction from images
+- ✅ BullMQ job queue for background processing
+- ✅ Background worker with rate limiting (2 concurrent, 10/min)
+- ✅ Test generation (3-10 variants per sheet with varied question types)
+- ✅ PDF to image conversion support (using sharp)
+- ✅ Job triggering on vocabulary upload
+- ✅ Error handling and status updates (PENDING → PROCESSING → COMPLETED/FAILED)
 
 **Phase 2 - Next Steps:**
-- **Week 2 (remaining):** Vocabulary upload backend/frontend
-- **Week 3:** Claude Vision API integration (image → vocabulary extraction → test generation)
-- **Week 4:** E2E tests, deployment to staging
+- **Week 4:** E2E tests for vocabulary upload and processing flow
+- **Phase 3:** Test assignment UI, student test-taking interface, grading, analytics
 
 See `/home/node/.claude/plans/flickering-wobbling-candy.md` for detailed Phase 2 plan.
 
@@ -499,7 +509,7 @@ If you're switching environments or onboarding a new developer:
 ---
 
 **Last Updated:** 2026-01-18
-**Current Phase:** Phase 2 Week 2 - MinIO Setup & Vocabulary Upload (In Progress)
+**Current Phase:** Phase 2 Week 3 - Claude Vision Integration (✅ COMPLETE)
 **CI Status:** ✅ Passing
 **Staging:** ✅ Deployed (auto-deploys on `main` push)
-**Next:** Vocabulary upload routes, upload UI with drag-drop
+**Next:** E2E tests, Phase 3 test assignment and student test-taking

@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';
 import { uploadFile, downloadFile, deleteFile } from '../lib/minio';
 import { config } from '../lib/config';
+import { vocabularyQueue } from '../lib/queue';
 
 const sheetIdSchema = z.object({
   id: z.string().cuid(),
@@ -145,8 +146,13 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
       },
     });
 
-    // TODO: Trigger background job to process vocabulary sheet (Phase 2 Week 3)
-    // await vocabularyQueue.add('process-sheet', { sheetId: sheet.id });
+    // Trigger background job to process vocabulary sheet
+    if (config.anthropicApiKey) {
+      await vocabularyQueue.add('process-sheet', { sheetId: sheet.id });
+      console.log(`Queued vocabulary processing job for sheet: ${sheet.id}`);
+    } else {
+      console.warn('ANTHROPIC_API_KEY not configured, skipping vocabulary processing');
+    }
 
     return reply.code(201).send({ sheet });
   });
