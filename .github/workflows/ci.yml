@@ -8,16 +8,22 @@ on:
 
 env:
   NODE_VERSION: '20'
+  PNPM_VERSION: '8.15.1'
 
 jobs:
-  lint:
-    name: Lint
+  # Single setup job that caches dependencies for all other jobs
+  setup:
+    name: Setup & Cache
     runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-pnpm.outputs.cache-hit }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,8 +31,105 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        id: cache-pnpm
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Generate Prisma Client
+        run: cd apps/api && pnpm prisma generate
+
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/node_modules/.prisma
+            apps/api/prisma/generated
+          key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
+
+  # Changed files detection for conditional job execution
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      any: ${{ steps.filter.outputs.api == 'true' || steps.filter.outputs.web == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+            web:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: [setup, changes]
+    if: needs.changes.outputs.any == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-lint-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-lint-
 
       - name: Lint
         run: pnpm lint
@@ -34,30 +137,67 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    needs: [setup, changes]
+    strategy:
+      matrix:
+        workspace:
+          - { name: 'api', condition: 'needs.changes.outputs.api == true' }
+          - { name: 'web', condition: 'needs.changes.outputs.web == true' }
+    if: needs.changes.outputs.any == 'true'
     steps:
       - uses: actions/checkout@v4
+        if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
 
       - name: Setup pnpm
+        if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
         uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
+        if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Restore node_modules cache
+        if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Generate Prisma Client
-        run: cd apps/api && pnpm prisma generate
+      - name: Restore Prisma cache
+        if: matrix.workspace.name == 'api'
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/node_modules/.prisma
+            apps/api/prisma/generated
+          key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
 
-      - name: Type check
-        run: pnpm --filter=web run build && pnpm --filter=api run build
+      - name: Restore Turbo cache
+        if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-build-${{ matrix.workspace.name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-build-${{ matrix.workspace.name }}-
+
+      - name: Type check & build
+        if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
+        run: pnpm --filter=@vocab-app/${{ matrix.workspace.name }} build
 
   test:
     name: Test
     runs-on: ubuntu-latest
+    needs: [setup, changes]
+    if: needs.changes.outputs.any == 'true'
     services:
       postgres:
         image: postgres:16-alpine
@@ -88,6 +228,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -95,11 +237,30 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Generate Prisma Client
-        run: cd apps/api && pnpm prisma generate
+      - name: Restore Prisma cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/node_modules/.prisma
+            apps/api/prisma/generated
+          key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-test-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-test-
 
       - name: Run database migrations
         run: cd apps/api && pnpm prisma migrate deploy
@@ -115,14 +276,24 @@ jobs:
           JWT_REFRESH_SECRET: test_refresh_secret
           NODE_ENV: test
 
+  # Combined build job that only runs if all checks pass
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs: [setup, changes, lint, typecheck, test]
+    if: |
+      always() &&
+      needs.changes.outputs.any == 'true' &&
+      needs.lint.result == 'success' &&
+      needs.typecheck.result == 'success' &&
+      needs.test.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -130,11 +301,33 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Generate Prisma Client
-        run: cd apps/api && pnpm prisma generate
+      - name: Restore Prisma cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/node_modules/.prisma
+            apps/api/prisma/generated
+          key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-build-all-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-build-all-
 
       - name: Build all packages
         run: pnpm build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN || '' }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM || '' }}

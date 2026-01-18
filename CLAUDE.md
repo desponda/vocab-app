@@ -38,7 +38,10 @@ vocab-app/
 │       └── vocab-app/
 ├── docs/
 │   ├── plans/            # Implementation plans and phases
-│   └── adr/              # Architecture Decision Records
+│   ├── workflows/        # Development workflow guides
+│   ├── adr/              # Architecture Decision Records
+│   ├── testing-strategy.md
+│   └── testing-guide.md
 ├── .devcontainer/        # DevContainer configuration
 ├── pnpm-workspace.yaml
 ├── turbo.json
@@ -135,6 +138,12 @@ See `docs/plans/implementation-plan.md` for detailed roadmap.
    - Review AI-generated code before committing
    - Ensure security best practices (no secrets, proper validation)
    - Check for performance issues
+
+6. **Pre-Push Workflow:**
+   - **ALWAYS** run pre-push checklist before committing (see `docs/workflows/pre-push-checklist.md`)
+   - Quick check: `pnpm lint && pnpm build`
+   - If K8s changes: `helm template` validation
+   - Catch errors locally before CI/staging failures
 
 ### Key Commands
 
