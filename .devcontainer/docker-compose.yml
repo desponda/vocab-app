@@ -3,9 +3,16 @@ version: '3.8'
 services:
   dev:
     image: mcr.microsoft.com/devcontainers/typescript-node:20
+    init: true
+    privileged: true
     volumes:
       - ..:/workspace:cached
+      - docker-data:/var/lib/docker
+    entrypoint: /usr/local/share/docker-init.sh
     command: sleep infinity
+    depends_on:
+      - db
+      - redis
     network_mode: service:db
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/vocab_app_dev
@@ -34,3 +41,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  docker-data:

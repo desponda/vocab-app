@@ -81,7 +81,6 @@
   },
 
   "postCreateCommand": "pnpm install",
-  "postStartCommand": "docker-compose up -d postgres redis",
 
   "remoteUser": "node"
 }
