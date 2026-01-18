@@ -50,7 +50,7 @@ vocab-app/
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 - Classroom Management & Vocabulary Upload (Week 1 Complete)
+**Current Phase:** Phase 2 Week 2 - MinIO Setup & Vocabulary Upload (In Progress)
 
 **Phase 1 - Foundation & Authentication (✅ COMPLETE):**
 - ✅ Project structure and monorepo setup
@@ -73,8 +73,18 @@ vocab-app/
 - ✅ Unit tests for classroom code generation (5 tests passing)
 - ✅ Integration testing with curl (all endpoints working)
 
+**Phase 2 Week 2 - MinIO Setup (✅ PARTIALLY COMPLETE):**
+- ✅ MinIO security: Remove hardcoded credentials, implement secret generator
+- ✅ Dependencies installed: @anthropic-ai/sdk, bullmq, minio, file-type, sharp
+- ✅ MinIO client library created (upload/download/delete)
+- ✅ Kubernetes secret generator job for MinIO credentials
+- ✅ Docker Compose configured with env vars
+- 🔄 Vocabulary upload routes (pending)
+- 🔄 Upload frontend UI with drag-drop (pending)
+- 🔄 File validation and processing (pending)
+
 **Phase 2 - Next Steps:**
-- **Week 2:** MinIO setup, vocabulary upload backend/frontend
+- **Week 2 (remaining):** Vocabulary upload backend/frontend
 - **Week 3:** Claude Vision API integration (image → vocabulary extraction → test generation)
 - **Week 4:** E2E tests, deployment to staging
 
@@ -489,7 +499,7 @@ If you're switching environments or onboarding a new developer:
 ---
 
 **Last Updated:** 2026-01-18
-**Current Phase:** Phase 2 Week 1 - Classroom Management (✅ Complete)
+**Current Phase:** Phase 2 Week 2 - MinIO Setup & Vocabulary Upload (In Progress)
 **CI Status:** ✅ Passing
 **Staging:** ✅ Deployed (auto-deploys on `main` push)
-**Next:** Week 2 - MinIO setup & vocabulary upload
+**Next:** Vocabulary upload routes, upload UI with drag-drop
