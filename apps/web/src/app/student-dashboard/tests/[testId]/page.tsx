@@ -246,27 +246,38 @@ export default function TakeTestPage() {
           </div>
 
           {/* Multiple Choice Options */}
-          <div className="space-y-3">
-            <Label>Select your answer:</Label>
-            <div className="grid gap-3">
-              {questionOptions.map((option, index) => {
-                const isSelected = answers[currentQuestion.id] === option;
-                return (
-                  <Button
-                    key={index}
-                    variant={isSelected ? "default" : "outline"}
-                    className="w-full justify-start text-left h-auto min-h-[3rem] px-4 py-3"
-                    onClick={() => handleAnswerChange(currentQuestion.id, option)}
-                  >
-                    <span className="font-semibold mr-3">
-                      {String.fromCharCode(65 + index)}.
-                    </span>
-                    <span className="flex-1">{option}</span>
-                  </Button>
-                );
-              })}
+          {questionOptions.length > 0 ? (
+            <div className="space-y-3">
+              <Label>Select your answer:</Label>
+              <div className="grid gap-3">
+                {questionOptions.map((option, index) => {
+                  const isSelected = answers[currentQuestion.id] === option;
+                  return (
+                    <Button
+                      key={index}
+                      variant={isSelected ? "default" : "outline"}
+                      className="w-full justify-start text-left h-auto min-h-[3rem] px-4 py-3"
+                      onClick={() => handleAnswerChange(currentQuestion.id, option)}
+                    >
+                      <span className="font-semibold mr-3">
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      <span className="flex-1">{option}</span>
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            /* No options - old test format no longer supported */
+            <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-4 text-amber-800 dark:text-amber-200">
+              <p className="font-semibold mb-2">⚠️ Incompatible Test Format</p>
+              <p className="text-sm">
+                This test was created with an older format and is no longer supported.
+                Please ask your teacher to assign a new test.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
