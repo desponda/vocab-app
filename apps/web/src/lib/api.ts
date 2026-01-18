@@ -182,6 +182,10 @@ export const classroomsApi = {
       method: 'DELETE',
       token,
     }),
+
+  // Get all students (needed for classroom detail page)
+  listStudents: (token: string): Promise<{ students: Student[] }> =>
+    request('/api/students', { token }),
 };
 
 // Vocabulary Sheets API
@@ -330,6 +334,69 @@ export const testsApi = {
     token: string
   ): Promise<{ attempts: TestAttempt[] }> =>
     request(`/api/tests/students/${studentId}/attempts`, { token }),
+
+  // Create attempt and get questions (convenience method)
+  createAttempt: async (
+    testId: string,
+    studentId: string,
+    token: string
+  ): Promise<{ attempt: any }> => {
+    // Start the attempt
+    const { attempt } = await request('/api/tests/attempts/start', {
+      method: 'POST',
+      body: JSON.stringify({ testId, studentId }),
+      token,
+    });
+
+    // Get test with questions
+    const { test } = await request<{ test: TestDetail }>(`/api/tests/${testId}`, { token });
+
+    // Return attempt with test questions
+    return {
+      attempt: {
+        ...attempt,
+        test: {
+          ...test,
+          questions: test.questions || [],
+        },
+      },
+    };
+  },
+
+  // Submit all answers and complete attempt
+  submitAttempt: async (
+    attemptId: string,
+    data: { answers: { questionId: string; answer: string }[] },
+    studentId: string,
+    token: string
+  ): Promise<{ attempt: TestAttempt }> => {
+    // Submit each answer
+    for (const answerData of data.answers) {
+      await request(`/api/tests/attempts/${attemptId}/answer`, {
+        method: 'POST',
+        body: JSON.stringify({
+          questionId: answerData.questionId,
+          answer: answerData.answer,
+        }),
+        token,
+      });
+    }
+
+    // Complete the attempt to calculate score
+    const result = await request<{ attempt: TestAttempt }>(
+      `/api/tests/attempts/${attemptId}/complete`,
+      {
+        method: 'POST',
+        token,
+      }
+    );
+
+    return result;
+  },
+
+  // List all tests (teacher view)
+  list: (token: string): Promise<{ tests: Test[] }> =>
+    request('/api/tests', { token }),
 };
 
 // Documents API (Deprecated - use vocabularySheetsApi instead)

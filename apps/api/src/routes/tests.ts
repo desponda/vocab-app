@@ -39,6 +39,39 @@ export const testRoutes = async (app: FastifyInstance) => {
   // All test routes require authentication
   app.addHook('onRequest', requireAuth);
 
+  // List all tests for authenticated teacher
+  app.get('/', async (request: FastifyRequest, reply) => {
+    const tests = await prisma.test.findMany({
+      where: {
+        sheet: {
+          teacherId: request.userId,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        variant: true,
+        createdAt: true,
+        sheet: {
+          select: {
+            id: true,
+            originalName: true,
+          },
+        },
+        _count: {
+          select: {
+            questions: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return reply.send({ tests });
+  });
+
   // Assign test to classroom (teacher only)
   app.post('/:testId/assign', async (request: FastifyRequest, reply) => {
     const params = testIdSchema.parse(request.params);

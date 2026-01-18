@@ -140,7 +140,7 @@ export default function ClassroomsPage() {
                     {classroom._count?.enrollments !== 1 ? 's' : ''}
                   </span>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/classrooms/${classroom.id}`}>Manage</Link>
+                    <Link href={`/dashboard/classrooms/${classroom.id}`}>View Details</Link>
                   </Button>
                 </div>
               </CardContent>
