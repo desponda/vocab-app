@@ -65,7 +65,7 @@ export const authApi = {
     email: string;
     password: string;
     name: string;
-    role: 'TEACHER' | 'PARENT';
+    role: 'TEACHER' | 'STUDENT';
     classroomCode?: string;
   }): Promise<{ user: User; accessToken: string }> =>
     request('/api/auth/register', {
@@ -393,7 +393,7 @@ export const documentsApi = {
 };
 
 // Types
-export const UserRoleSchema = z.enum(['PARENT', 'TEACHER', 'ADMIN']);
+export const UserRoleSchema = z.enum(['STUDENT', 'TEACHER', 'ADMIN']);
 
 export const UserSchema = z.object({
   id: z.string(),

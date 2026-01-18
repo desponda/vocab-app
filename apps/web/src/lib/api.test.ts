@@ -7,7 +7,7 @@ describe('API Types', () => {
       id: 'test-id',
       email: 'test@example.com',
       name: 'Test User',
-      role: 'PARENT' as const,
+      role: 'STUDENT' as const,
       createdAt: new Date().toISOString(),
     };
 

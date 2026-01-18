@@ -26,7 +26,7 @@ export default function StudentDashboardPage() {
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'PARENT')) {
+    if (!isLoading && (!user || user.role !== 'STUDENT')) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
@@ -40,7 +40,7 @@ export default function StudentDashboardPage() {
         setIsLoadingTests(true);
         setError('');
 
-        // First, get the student record (students are created for PARENT users on signup)
+        // First, get the student record (students are created for STUDENT users on signup)
         const { students } = await studentsApi.list(accessToken);
 
         if (students.length === 0) {
@@ -49,7 +49,7 @@ export default function StudentDashboardPage() {
           return;
         }
 
-        // PARENT users should only have one student record
+        // STUDENT users should only have one student record
         const userStudent = students[0];
 
         setStudent(userStudent);

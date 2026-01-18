@@ -34,7 +34,7 @@ model User {
   email         String    @unique
   passwordHash  String
   name          String
-  role          UserRole  @default(PARENT)
+  role          UserRole  @default(STUDENT)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -45,7 +45,7 @@ model User {
 }
 
 enum UserRole {
-  PARENT
+  STUDENT
   TEACHER
   ADMIN
 }

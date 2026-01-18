@@ -21,7 +21,7 @@ export default function StudentDashboardLayout({
 
   // Redirect to login if not a student
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'PARENT')) {
+    if (!isLoading && (!user || user.role !== 'STUDENT')) {
       router.push('/login');
     }
   }, [user, isLoading, router]);

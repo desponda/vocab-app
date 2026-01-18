@@ -14,7 +14,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(100),
   name: z.string().min(1).max(100),
-  role: z.enum(['TEACHER', 'PARENT']).default('PARENT'),
+  role: z.enum(['TEACHER', 'STUDENT']).default('STUDENT'),
   classroomCode: z.string().optional(),
 });
 
@@ -74,15 +74,15 @@ export const authRoutes = async (app: FastifyInstance) => {
       });
     }
 
-    // If registering as PARENT (student), validate classroom code
-    if (body.role === 'PARENT' && !body.classroomCode) {
+    // If registering as STUDENT (student), validate classroom code
+    if (body.role === 'STUDENT' && !body.classroomCode) {
       return reply.code(400).send({
         error: 'Bad Request',
         message: 'Classroom code is required for students',
       });
     }
 
-    if (body.role === 'PARENT' && body.classroomCode) {
+    if (body.role === 'STUDENT' && body.classroomCode) {
       // Verify classroom code exists
       const classroom = await prisma.classroom.findUnique({
         where: { code: body.classroomCode },
@@ -123,8 +123,8 @@ export const authRoutes = async (app: FastifyInstance) => {
       },
     });
 
-    // If registering as PARENT (student), create student record and enroll in classroom
-    if (body.role === 'PARENT' && body.classroomCode) {
+    // If registering as STUDENT (student), create student record and enroll in classroom
+    if (body.role === 'STUDENT' && body.classroomCode) {
       const classroom = await prisma.classroom.findUnique({
         where: { code: body.classroomCode },
       });

@@ -35,7 +35,7 @@ const registerSchema = z
       .min(8, 'Password must be at least 8 characters')
       .max(100, 'Password is too long'),
     confirmPassword: z.string(),
-    role: z.enum(['TEACHER', 'PARENT'], {
+    role: z.enum(['TEACHER', 'STUDENT'], {
       errorMap: () => ({ message: 'Please select a role' }),
     }),
     classroomCode: z.string().optional(),
@@ -45,8 +45,8 @@ const registerSchema = z
     path: ['confirmPassword'],
   })
   .refine((data) => {
-    // Students (PARENT role) must provide a classroom code
-    if (data.role === 'PARENT' && !data.classroomCode) {
+    // Students (STUDENT role) must provide a classroom code
+    if (data.role === 'STUDENT' && !data.classroomCode) {
       return false;
     }
     return true;
@@ -61,7 +61,7 @@ export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'TEACHER' | 'PARENT' | ''>('');
+  const [selectedRole, setSelectedRole] = useState<'TEACHER' | 'STUDENT' | ''>('');
 
   const {
     register,
@@ -124,7 +124,7 @@ export default function RegisterPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TEACHER">Teacher</SelectItem>
-                  <SelectItem value="PARENT">Student</SelectItem>
+                  <SelectItem value="STUDENT">Student</SelectItem>
                 </SelectContent>
               </Select>
               {/* Hidden input to register the role field */}
@@ -134,7 +134,7 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {role === 'PARENT' && (
+            {role === 'STUDENT' && (
               <div className="space-y-2">
                 <Label htmlFor="classroomCode">Classroom Code</Label>
                 <Input

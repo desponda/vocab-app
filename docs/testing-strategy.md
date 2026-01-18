@@ -425,7 +425,7 @@ export const testUsers = {
     email: 'parent@test.com',
     password: 'Test1234!',
     name: 'Test Parent',
-    role: 'PARENT',
+    role: 'STUDENT',
   },
   teacher: {
     email: 'teacher@test.com',
@@ -457,7 +457,7 @@ export const createTestUser = (overrides = {}) => ({
   email: faker.internet.email(),
   password: 'Test1234!',
   name: faker.person.fullName(),
-  role: 'PARENT',
+  role: 'STUDENT',
   ...overrides,
 });
 

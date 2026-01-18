@@ -36,7 +36,7 @@ describe('Tests Routes', () => {
         email: `student-${Date.now()}@test.com`,
         name: 'Test Student',
         passwordHash: 'hashed-password',
-        role: 'PARENT',
+        role: 'STUDENT',
       },
     });
 
