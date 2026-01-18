@@ -29,34 +29,22 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
-Get database secret name - supports migration from legacy to new structure
+Get database secret name
 */}}
 {{- define "vocab-app.databaseSecretName" -}}
-{{- if .Values.secrets.useLegacySecret }}
-{{- .Values.secrets.externalSecretName }}
-{{- else }}
 {{- .Values.secrets.database.secretName }}
 {{- end }}
-{{- end }}
 
 {{/*
-Get JWT secret name - supports migration from legacy to new structure
+Get JWT secret name
 */}}
 {{- define "vocab-app.jwtSecretName" -}}
-{{- if .Values.secrets.useLegacySecret }}
-{{- .Values.secrets.externalSecretName }}
-{{- else }}
 {{- .Values.secrets.jwt.secretName }}
-{{- end }}
 {{- end }}
 
 {{/*
-Get Anthropic secret name - supports migration from legacy to new structure
+Get Anthropic secret name
 */}}
 {{- define "vocab-app.anthropicSecretName" -}}
-{{- if .Values.secrets.useLegacySecret }}
-{{- .Values.secrets.externalSecretName }}
-{{- else }}
 {{- .Values.secrets.anthropic.secretName }}
-{{- end }}
 {{- end }}

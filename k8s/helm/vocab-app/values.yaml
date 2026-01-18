@@ -93,25 +93,13 @@ ingress:
 
 # Secrets Management:
 # IMPORTANT: Secrets are NOT stored in this file (which is checked into git)
-# Instead, create them manually or use automated secret generators
+# Instead, use automated secret generators or create secrets manually
 # Or override with: helm install --set-file secrets.database.postgresPassword=./postgres-password.txt
 
 secrets:
-  # Migration support: Set to true to use legacy monolithic secret
-  # Default: false (uses split secrets: database, jwt, anthropic)
-  useLegacySecret: false
-
-  # Legacy monolithic secret support (deprecated, for rollback only)
-  # Keep for backward compatibility during migration period
-  externalSecretName: "vocab-app-secrets"
-  createFromHelm: false
-  postgresPassword: ""
-  jwtAccessSecret: ""
-  jwtRefreshSecret: ""
-  anthropicApiKey: ""
-
-  # New separated secrets configuration
+  # Separated secrets configuration
   # Each secret is created automatically by its generator job (idempotent)
+  # Provides independent rotation schedules and principle of least privilege
 
   database:
     # Secret containing postgres-password and database-url
