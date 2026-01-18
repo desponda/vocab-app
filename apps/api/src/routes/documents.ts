@@ -96,7 +96,7 @@ export const documentRoutes = async (app: FastifyInstance) => {
 
       // Upload to MinIO
       await minioClient.putObject(
-        config.minio.bucket,
+        config.minio!.bucket,
         s3Key,
         buffer,
         buffer.length,
@@ -256,7 +256,7 @@ export const documentRoutes = async (app: FastifyInstance) => {
 
       // Get file from MinIO
       const stream = await minioClient.getObject(
-        config.minio.bucket,
+        config.minio!.bucket,
         document.s3Key
       );
 
@@ -297,7 +297,7 @@ export const documentRoutes = async (app: FastifyInstance) => {
 
       // Delete from MinIO
       try {
-        await minioClient.removeObject(config.minio.bucket, document.s3Key);
+        await minioClient.removeObject(config.minio!.bucket, document.s3Key);
         request.log.info(`Deleted file from MinIO: ${document.s3Key}`);
       } catch (error) {
         request.log.warn({ error, s3Key: document.s3Key }, 'Failed to delete from MinIO');

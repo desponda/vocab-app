@@ -30,15 +30,15 @@ const configSchema = z.object({
   // Anthropic
   anthropicApiKey: z.string().optional(),
 
-  // MinIO Object Storage
+  // MinIO Object Storage (optional, for Phase 2 file upload)
   minio: z.object({
     endpoint: z.string().default('localhost'),
     port: z.coerce.number().default(9000),
     useSSL: z.coerce.boolean().default(false),
-    accessKey: z.string().min(1),
-    secretKey: z.string().min(32),
+    accessKey: z.string().optional(),
+    secretKey: z.string().optional(),
     bucket: z.string().default('vocab-documents'),
-  }),
+  }).optional(),
 
   // File Upload
   upload: z.object({
