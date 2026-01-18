@@ -68,6 +68,7 @@ export default function RegisterPage() {
     handleSubmit,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -116,7 +117,7 @@ export default function RegisterPage() {
               <Select
                 value={role || ''}
                 onValueChange={(value) => {
-                  // This will be handled by the form's onChange
+                  setValue('role', value as 'TEACHER' | 'STUDENT', { shouldValidate: true });
                 }}
               >
                 <SelectTrigger disabled={isLoading}>
@@ -127,8 +128,6 @@ export default function RegisterPage() {
                   <SelectItem value="STUDENT">Student</SelectItem>
                 </SelectContent>
               </Select>
-              {/* Hidden input to register the role field */}
-              <input type="hidden" {...register('role')} />
               {errors.role && (
                 <p className="text-sm text-destructive">{errors.role.message}</p>
               )}
