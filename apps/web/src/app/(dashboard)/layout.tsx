@@ -5,16 +5,25 @@ import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Redirect students to student dashboard
+  useEffect(() => {
+    if (!isLoading && user && user.role !== 'TEACHER') {
+      router.push('/student-dashboard');
+    }
+  }, [user, isLoading, router]);
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },

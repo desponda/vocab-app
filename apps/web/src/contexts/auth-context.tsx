@@ -95,7 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('accessToken', token);
     localStorage.setItem('user', JSON.stringify(loggedInUser));
 
-    router.push('/dashboard');
+    // Route based on role
+    const redirectPath = loggedInUser.role === 'TEACHER' ? '/dashboard' : '/student-dashboard';
+    router.push(redirectPath);
   };
 
   const register = async (

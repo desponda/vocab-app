@@ -59,7 +59,17 @@ export default function StudentDashboardPage() {
           userStudent.id,
           accessToken
         );
-        setAssignments(response.assignments);
+
+        // Filter out old-format tests (created before 2026-01-18)
+        // Old tests don't have multiple choice options and will fail to start
+        const newFormatCutoff = new Date('2026-01-18T00:00:00Z');
+        const validAssignments = response.assignments.filter((assignment) => {
+          if (!assignment.test?.createdAt) return false;
+          const testCreatedAt = new Date(assignment.test.createdAt);
+          return testCreatedAt >= newFormatCutoff;
+        });
+
+        setAssignments(validAssignments);
       } catch (err) {
         if (err instanceof ApiError) {
           setError(err.message);
