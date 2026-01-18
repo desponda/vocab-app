@@ -163,11 +163,37 @@ See `/home/node/.claude/plans/flickering-wobbling-candy.md` for detailed Phase 2
    - Ensure security best practices (no secrets, proper validation)
    - Check for performance issues
 
-6. **Pre-Push Workflow:**
-   - **ALWAYS** run pre-push checklist before committing (see `docs/workflows/pre-push-checklist.md`)
-   - Quick check: `pnpm lint && pnpm build`
-   - If K8s changes: `helm template` validation
-   - Catch errors locally before CI/staging failures
+6. **Pre-Push Checklist (MANDATORY - NO EXCEPTIONS):**
+
+   **⚠️ CRITICAL: You MUST run these commands BEFORE every `git commit` and `git push`**
+
+   ```bash
+   # 1. If Prisma schema changed, regenerate client
+   cd apps/api && pnpm prisma generate
+
+   # 2. Lint check (catches code style issues)
+   pnpm lint
+
+   # 3. Build check (catches TypeScript errors)
+   pnpm build
+
+   # 4. Run tests (catches logic errors)
+   pnpm test
+   ```
+
+   **Why this is non-negotiable:**
+   - Prevents CI failures that waste time and block deployments
+   - Catches type errors from schema changes (e.g., Prisma client not regenerated)
+   - Validates migrations work before they reach staging
+   - Ensures tests pass before code review
+
+   **If ANY command fails:**
+   - ❌ DO NOT commit
+   - ❌ DO NOT push
+   - ✅ Fix the errors first
+   - ✅ Re-run the full checklist
+
+   **See `docs/workflows/pre-push-checklist.md` for detailed steps**
 
 ### Key Commands
 

@@ -180,6 +180,10 @@ jobs:
             apps/api/prisma/generated
           key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
 
+      - name: Generate Prisma Client (if cache miss)
+        if: matrix.workspace.name == 'api'
+        run: cd apps/api && pnpm prisma generate
+
       - name: Restore Turbo cache
         if: ${{ matrix.workspace.condition == 'true' || needs.changes.outputs.any == 'true' }}
         uses: actions/cache@v4
@@ -254,6 +258,9 @@ jobs:
             apps/api/prisma/generated
           key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
 
+      - name: Generate Prisma Client (if cache miss)
+        run: cd apps/api && pnpm prisma generate
+
       - name: Restore Turbo cache
         uses: actions/cache@v4
         with:
@@ -317,6 +324,9 @@ jobs:
             apps/api/node_modules/.prisma
             apps/api/prisma/generated
           key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
+
+      - name: Generate Prisma Client (if cache miss)
+        run: cd apps/api && pnpm prisma generate
 
       - name: Restore Turbo cache
         uses: actions/cache@v4
