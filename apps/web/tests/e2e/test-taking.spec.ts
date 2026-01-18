@@ -146,9 +146,9 @@ test.describe.serial('Test Taking Workflow', () => {
     // Navigate to classrooms
     await page.click('text=Manage Classrooms');
 
-    // Click on "Manage" button for the classroom
-    const manageButton = page.locator('button:has-text("Manage")').first();
-    await manageButton.click();
+    // Click on "View Details" button for the classroom
+    const viewDetailsButton = page.locator('button:has-text("View Details")').first();
+    await viewDetailsButton.click();
 
     // Wait for classroom detail page
     await page.waitForTimeout(500);
