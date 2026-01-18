@@ -132,6 +132,56 @@ export const studentsApi = {
     }),
 };
 
+// Classrooms API
+export const classroomsApi = {
+  create: (name: string, token: string): Promise<{ classroom: Classroom }> =>
+    request('/api/classrooms', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+      token,
+    }),
+
+  list: (token: string): Promise<{ classrooms: Classroom[] }> =>
+    request('/api/classrooms', { token }),
+
+  get: (id: string, token: string): Promise<{ classroom: ClassroomDetail }> =>
+    request(`/api/classrooms/${id}`, { token }),
+
+  update: (
+    id: string,
+    data: { name?: string; isActive?: boolean },
+    token: string
+  ): Promise<{ classroom: Classroom }> =>
+    request(`/api/classrooms/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  delete: (id: string, token: string): Promise<void> =>
+    request(`/api/classrooms/${id}`, {
+      method: 'DELETE',
+      token,
+    }),
+
+  enroll: (
+    code: string,
+    studentId: string,
+    token: string
+  ): Promise<{ enrollment: Enrollment }> =>
+    request('/api/classrooms/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ code, studentId }),
+      token,
+    }),
+
+  unenroll: (enrollmentId: string, token: string): Promise<void> =>
+    request(`/api/classrooms/enroll/${enrollmentId}`, {
+      method: 'DELETE',
+      token,
+    }),
+};
+
 // Documents API
 export const documentsApi = {
   upload: (
@@ -238,9 +288,45 @@ export const DocumentSchema = z.object({
   }),
 });
 
+// Classroom schemas
+export const ClassroomSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  code: z.string(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  _count: z.object({
+    enrollments: z.number(),
+  }).optional(),
+});
+
+export const EnrolledStudentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  gradeLevel: z.number(),
+});
+
+export const EnrollmentSchema = z.object({
+  id: z.string(),
+  enrolledAt: z.string(),
+  student: EnrolledStudentSchema.optional(),
+  classroom: z.object({
+    id: z.string(),
+    name: z.string(),
+    code: z.string(),
+  }).optional(),
+});
+
+export const ClassroomDetailSchema = ClassroomSchema.extend({
+  enrollments: z.array(EnrollmentSchema),
+});
+
 export type User = z.infer<typeof UserSchema>;
 export type Student = z.infer<typeof StudentSchema>;
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type Document = z.infer<typeof DocumentSchema>;
 export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
 export type DocumentType = z.infer<typeof DocumentTypeSchema>;
+export type Classroom = z.infer<typeof ClassroomSchema>;
+export type ClassroomDetail = z.infer<typeof ClassroomDetailSchema>;
+export type Enrollment = z.infer<typeof EnrollmentSchema>;

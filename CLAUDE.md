@@ -10,8 +10,8 @@ This is a production-ready educational application built with modern 2026 best p
 
 - **Frontend:** Next.js 16+ (App Router), TypeScript, shadcn/ui, Tailwind CSS v4
 - **Backend:** Fastify + TypeScript, PostgreSQL + Prisma ORM
-- **AI:** Claude API with streaming
-- **PDF Generation:** Puppeteer (background jobs)
+- **AI:** Claude 3.5 Sonnet with Vision API (vocabulary extraction from images)
+- **File Storage:** MinIO (S3-compatible object storage)
 - **Background Jobs:** BullMQ + Redis
 - **Testing:** Vitest (unit), Playwright (e2e)
 - **CI/CD:** GitHub Actions → Docker → ArgoCD GitOps
@@ -50,9 +50,9 @@ vocab-app/
 
 ## Implementation Status
 
-**Current Phase:** Phase 1 - Foundation & Authentication (In Progress)
+**Current Phase:** Phase 2 - Classroom Management & Vocabulary Upload (Week 1 Complete)
 
-**Completed:**
+**Phase 1 - Foundation & Authentication (✅ COMPLETE):**
 - ✅ Project structure and monorepo setup
 - ✅ Frontend scaffolding (Next.js 16, Tailwind v4)
 - ✅ Backend scaffolding (Fastify, Prisma)
@@ -64,17 +64,21 @@ vocab-app/
 - ✅ Playwright e2e test framework
 - ✅ Staging environment (vocab-staging.dresponda.com)
 
-**In Progress:**
-- 🔄 E2E test suite (7/15 tests passing, needs refinement)
-- 🔄 Auth context and protected routes
-- 🔄 Student CRUD operations
+**Phase 2 Week 1 - Classroom Management (✅ COMPLETE):**
+- ✅ Database schema with 10 new models (Classroom, VocabularySheet, Test, etc.)
+- ✅ Classroom code generation (unique 6-char codes like "ABC123")
+- ✅ Classroom backend API (CRUD + student enrollment)
+- ✅ Classroom frontend UI (create, list, display codes)
+- ✅ Student enrollment via classroom codes
+- ✅ Unit tests for classroom code generation (5 tests passing)
+- ✅ Integration testing with curl (all endpoints working)
 
-**Next Steps:**
-1. Complete Phase 1 authentication features
-2. Set up file upload infrastructure (Phase 2)
-3. Integrate Claude API for vocabulary extraction (Phase 3)
+**Phase 2 - Next Steps:**
+- **Week 2:** MinIO setup, vocabulary upload backend/frontend
+- **Week 3:** Claude Vision API integration (image → vocabulary extraction → test generation)
+- **Week 4:** E2E tests, deployment to staging
 
-See `docs/plans/implementation-plan.md` for detailed roadmap.
+See `/home/node/.claude/plans/flickering-wobbling-candy.md` for detailed Phase 2 plan.
 
 ## Development Workflow
 
@@ -485,6 +489,7 @@ If you're switching environments or onboarding a new developer:
 ---
 
 **Last Updated:** 2026-01-18
-**Current Phase:** Phase 1 - Foundation & Authentication (In Progress)
+**Current Phase:** Phase 2 Week 1 - Classroom Management (✅ Complete)
 **CI Status:** ✅ Passing
 **Staging:** ✅ Deployed (auto-deploys on `main` push)
+**Next:** Week 2 - MinIO setup & vocabulary upload

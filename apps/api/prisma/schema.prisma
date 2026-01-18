@@ -29,9 +29,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  refreshTokens RefreshToken[]
-  students      Student[]
-  documents     Document[]
+  refreshTokens    RefreshToken[]
+  students         Student[]
+  classrooms       Classroom[]         // Teachers have classrooms
+  vocabularySheets VocabularySheet[]  // Teachers upload vocabulary sheets
 
   @@index([email])
 }
@@ -57,53 +58,196 @@ model Student {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents Document[]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments  StudentEnrollment[] // Classroom enrollments
+  testAttempts TestAttempt[]       // Tests taken by student
 
   @@index([userId])
 }
 
 // ============================================================================
-// Phase 2: File Upload & Document Management
+// Phase 2: Classroom Management & Vocabulary Upload
 // ============================================================================
 
-enum DocumentStatus {
-  PENDING    // Uploaded, awaiting Claude processing
-  PROCESSING // Being processed by Claude API
-  COMPLETED  // Successfully extracted vocabulary
-  FAILED     // Processing failed
+// ===== CLASSROOM MANAGEMENT =====
+
+model Classroom {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "Grade 3A", "Advanced English"
+  code        String   @unique // Unique 6-char code (ABC123)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacherId       String
+  teacher         User                @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments     StudentEnrollment[]
+  testAssignments TestAssignment[]
+
+  @@index([teacherId])
+  @@index([code])
 }
+
+model StudentEnrollment {
+  id          String   @id @default(cuid())
+  enrolledAt  DateTime @default(now())
+
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classroomId])
+  @@index([studentId])
+  @@index([classroomId])
+}
+
+// ===== VOCABULARY & TESTS =====
 
 enum DocumentType {
   PDF
-  IMAGE // jpg, png, gif, webp
+  IMAGE
 }
 
-model Document {
-  id           String         @id @default(cuid())
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
 
-  // File metadata
-  originalName String         // Original filename from upload
-  fileName     String         @unique // Unique filename in MinIO
-  s3Key        String         @unique // MinIO object key: {userId}/{fileName}
-  fileType     DocumentType
-  mimeType     String         // e.g., "application/pdf", "image/jpeg"
-  fileSize     Int            // Bytes
+model VocabularySheet {
+  id              String           @id @default(cuid())
+  originalName    String
+  fileName        String           @unique
+  s3Key           String           @unique // MinIO key: {userId}/{fileName}
+  fileType        DocumentType
+  mimeType        String
+  fileSize        Int
+  status          ProcessingStatus @default(PENDING)
+  errorMessage    String?          @db.Text
+  extractedText   String?          @db.Text
+  testsToGenerate Int              @default(3) // 3-10
+  uploadedAt      DateTime         @default(now())
+  processedAt     DateTime?
 
-  // Processing
-  status       DocumentStatus @default(PENDING)
+  teacherId String
+  teacher   User             @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  words     VocabularyWord[]
+  tests     Test[]
 
-  // Relationships
-  studentId    String
-  student      Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  userId       String         // Denormalized for fast queries
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([teacherId])
+  @@index([status])
+}
 
-  // Timestamps
-  uploadedAt   DateTime       @default(now())
-  processedAt  DateTime?
+model VocabularyWord {
+  id         String    @id @default(cuid())
+  word       String
+  definition String?   @db.Text
+  context    String?   @db.Text
+  createdAt  DateTime  @default(now())
 
-  @@index([userId])
+  sheetId   String
+  sheet     VocabularySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  questions TestQuestion[]
+
+  @@index([sheetId])
+  @@index([word])
+}
+
+model Test {
+  id        String   @id @default(cuid())
+  name      String   // e.g., "Week 1 Spelling"
+  variant   String   // "A", "B", "C"...
+  createdAt DateTime @default(now())
+
+  sheetId     String
+  sheet       VocabularySheet  @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  questions   TestQuestion[]
+  assignments TestAssignment[]
+  attempts    TestAttempt[]
+
+  @@index([sheetId])
+}
+
+enum QuestionType {
+  SPELLING
+  DEFINITION
+  FILL_BLANK
+  MULTIPLE_CHOICE
+}
+
+model TestQuestion {
+  id            String       @id @default(cuid())
+  questionText  String       @db.Text
+  questionType  QuestionType
+  correctAnswer String
+  options       String?      @db.Text // JSON for multiple choice
+  orderIndex    Int
+
+  testId  String
+  test    Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  wordId  String
+  word    VocabularyWord @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  answers TestAnswer[]
+
+  @@index([testId])
+  @@index([wordId])
+}
+
+model TestAssignment {
+  id         String    @id @default(cuid())
+  dueDate    DateTime?
+  assignedAt DateTime  @default(now())
+
+  testId      String
+  test        Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, classroomId])
+  @@index([testId])
+  @@index([classroomId])
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+model TestAttempt {
+  id             String        @id @default(cuid())
+  totalQuestions Int
+  correctAnswers Int?
+  score          Int? // 0-100
+  status         AttemptStatus @default(IN_PROGRESS)
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+
+  testId    String
+  test      Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers   TestAnswer[]
+
+  @@index([testId])
   @@index([studentId])
   @@index([status])
+}
+
+model TestAnswer {
+  id         String    @id @default(cuid())
+  answer     String
+  isCorrect  Boolean?
+  answeredAt DateTime  @default(now())
+
+  attemptId  String
+  attempt    TestAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  question   TestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+  @@index([questionId])
 }

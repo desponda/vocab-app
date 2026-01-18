@@ -23,10 +23,14 @@ This directory contains all project documentation organized by topic.
   - Quick reference for developers
 
 ### Project Planning
-- **[Implementation Plan](plans/implementation-plan.md)** - Full project roadmap
-  - Phase 1: Authentication (In Progress)
-  - Phase 2: File Upload & Vocabulary Extraction
-  - Phase 3: Practice Tests & Scoring
+- **[Implementation Plan](plans/implementation-plan.md)** - Original project roadmap
+  - Phase 1: Authentication (✅ Complete)
+  - Phase 2-3: Original upload/extraction plan (superseded)
+- **[Phase 2 Plan](../home/node/.claude/plans/flickering-wobbling-candy.md)** - Current implementation
+  - Week 1: Classroom Management (✅ Complete)
+  - Week 2: Vocabulary Upload (MinIO setup)
+  - Week 3: Claude Vision API Integration
+  - Week 4: Testing & Deployment
 
 ### Reference
 - **[Architecture Decision Records](adr/)** - Design decisions and rationale

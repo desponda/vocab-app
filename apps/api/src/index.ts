@@ -6,6 +6,7 @@ import multipart from '@fastify/multipart';
 import { config } from './lib/config';
 import { authRoutes } from './routes/auth';
 import { studentRoutes } from './routes/students';
+import { classroomRoutes } from './routes/classrooms';
 // import { documentRoutes } from './routes/documents'; // Phase 2: Uncomment when MinIO is deployed
 import { errorHandler } from './middleware/error-handler';
 // import { ensureBucket } from './lib/minio'; // Phase 2: Uncomment when MinIO is deployed
@@ -54,6 +55,7 @@ app.register(multipart, {
 // Register routes
 app.register(authRoutes, { prefix: '/api/auth' });
 app.register(studentRoutes, { prefix: '/api/students' });
+app.register(classroomRoutes, { prefix: '/api/classrooms' });
 // app.register(documentRoutes, { prefix: '/api/documents' }); // Phase 2: Uncomment when MinIO is deployed
 
 // Health check (under /api for consistency with frontend API_URL)
