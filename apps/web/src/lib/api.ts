@@ -24,9 +24,13 @@ async function request<T>(
   const { token, ...fetchOptions } = options;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(fetchOptions.headers as Record<string, string>),
   };
+
+  // Only set Content-Type if there's a body
+  if (fetchOptions.body) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
