@@ -53,7 +53,7 @@ spec:
               key: anthropic-api-key
               optional: true
         - name: MINIO_ENDPOINT
-          value: {{ .Values.minio.endpoint | quote }}
+          value: {{ printf "%s-storage-hl.%s.svc.cluster.local" .Release.Name .Release.Namespace | quote }}
         - name: MINIO_PORT
           value: {{ .Values.minio.port | quote }}
         - name: MINIO_USE_SSL

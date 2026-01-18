@@ -78,10 +78,9 @@ minio:
   secretName: "vocab-app-minio-secret"
 
   # MinIO endpoint configuration
-  # MinIO Tenant is deployed by this Helm chart to the same namespace
-  # The headless service endpoint is: {release-name}-storage-hl.{namespace}.svc.cluster.local
-  # For staging: vocab-app-staging-storage-hl.vocab-app-staging.svc.cluster.local
-  endpoint: "vocab-app-staging-storage-hl.vocab-app-staging.svc.cluster.local"
+  # MinIO Tenant is auto-deployed by this Helm chart with the same release name
+  # Endpoint is auto-generated from release name at deployment time
+  # Service name: {release-name}-storage-hl.{namespace}.svc.cluster.local
   port: 9000
   useSSL: false
   bucket: "vocab-documents"
