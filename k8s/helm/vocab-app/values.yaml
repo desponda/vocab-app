@@ -83,7 +83,7 @@ minio:
   # Service name: {release-name}-storage-hl.{namespace}.svc.cluster.local
   # Example: vocab-app-staging-storage-hl.vocab-app-staging.svc.cluster.local
   port: 9000
-  useSSL: false
+  useSSL: true
   bucket: "vocab-documents"
 
 ingress:
