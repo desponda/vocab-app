@@ -340,7 +340,7 @@ export const testsApi = {
     testId: string,
     studentId: string,
     token: string
-  ): Promise<{ attempt: any }> => {
+  ): Promise<{ attempt: TestAttempt & { test: TestDetail } }> => {
     // Start the attempt
     const { attempt } = await request('/api/tests/attempts/start', {
       method: 'POST',
