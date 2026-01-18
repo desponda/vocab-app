@@ -78,8 +78,7 @@ app.addHook('onReady', async () => {
   } catch (error) {
     // Log warning but don't crash - MinIO might not be available yet
     app.log.warn(
-      'Failed to initialize MinIO bucket. File upload features may not be available.',
-      error
+      `Failed to initialize MinIO bucket. File upload features may not be available. Error: ${error instanceof Error ? error.message : String(error)}`
     );
   }
   createVocabularyWorker();
