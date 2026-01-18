@@ -78,9 +78,10 @@ minio:
   secretName: "vocab-app-minio-secret"
 
   # MinIO endpoint configuration
-  # MinIO Tenant is auto-deployed by this Helm chart with the same release name
-  # Endpoint is auto-generated from release name at deployment time
+  # MinIO Tenant CRD is deployed as part of this Helm chart (templates/minio-tenant.yaml)
+  # Requires MinIO Operator to be installed in the cluster
   # Service name: {release-name}-storage-hl.{namespace}.svc.cluster.local
+  # Example: vocab-app-staging-storage-hl.vocab-app-staging.svc.cluster.local
   port: 9000
   useSSL: false
   bucket: "vocab-documents"
