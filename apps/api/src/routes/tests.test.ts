@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { prisma } from '../lib/prisma';
+
+// Lazy load prisma to avoid initialization errors when tests are skipped
+let prisma: any = null;
+function getPrisma() {
+  if (!prisma) {
+    prisma = require('../lib/prisma').prisma;
+  }
+  return prisma;
+}
 
 // Database tests require DATABASE_URL with valid connection
 // Skip if not in a CI environment with a proper database setup
@@ -15,7 +23,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
 
   beforeAll(async () => {
     // Create test teacher user
-    const user = await prisma.user.create({
+    const user = await getPrisma().user.create({
       data: {
         email: `teacher-${Date.now()}@test.com`,
         name: 'Test Teacher',
@@ -26,7 +34,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     teacherId = user.id;
 
     // Create test student user
-    const studentUser = await prisma.user.create({
+    const studentUser = await getPrisma().user.create({
       data: {
         email: `student-${Date.now()}@test.com`,
         name: 'Test Student',
@@ -36,7 +44,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     // Create student for the parent user
-    const student = await prisma.student.create({
+    const student = await getPrisma().student.create({
       data: {
         name: 'Test Student',
         gradeLevel: 3,
@@ -46,7 +54,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     studentId = student.id;
 
     // Create classroom
-    const classroom = await prisma.classroom.create({
+    const classroom = await getPrisma().classroom.create({
       data: {
         name: 'Test Classroom',
         code: 'TST123',
@@ -56,7 +64,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     classroomId = classroom.id;
 
     // Enroll student
-    await prisma.studentEnrollment.create({
+    await getPrisma().studentEnrollment.create({
       data: {
         studentId,
         classroomId,
@@ -64,7 +72,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     // Create vocabulary sheet
-    const sheet = await prisma.vocabularySheet.create({
+    const sheet = await getPrisma().vocabularySheet.create({
       data: {
         originalName: 'Test Sheet.pdf',
         fileName: 'test-sheet-123',
@@ -79,7 +87,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     // Create test
-    const test = await prisma.test.create({
+    const test = await getPrisma().test.create({
       data: {
         name: 'Test 1',
         variant: 'A',
@@ -89,7 +97,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     testId = test.id;
 
     // Create vocabulary word
-    const word = await prisma.vocabularyWord.create({
+    const word = await getPrisma().vocabularyWord.create({
       data: {
         word: 'hello',
         definition: 'a greeting',
@@ -98,7 +106,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     // Create test question
-    const question = await prisma.testQuestion.create({
+    const question = await getPrisma().testQuestion.create({
       data: {
         questionText: 'What is a greeting?',
         questionType: 'DEFINITION',
@@ -114,12 +122,12 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
   afterAll(async () => {
     // Cleanup will be handled by database reset
     // For now, just ensure connection closes cleanly
-    await prisma.$disconnect();
+    await getPrisma().$disconnect();
   });
 
   describe('Test Assignment', () => {
     it('should assign a test to a classroom', async () => {
-      const assignment = await prisma.testAssignment.create({
+      const assignment = await getPrisma().testAssignment.create({
         data: {
           testId,
           classroomId,
@@ -133,7 +141,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
 
     it('should prevent duplicate test assignments', async () => {
       await expect(
-        prisma.testAssignment.create({
+        getPrisma().testAssignment.create({
           data: {
             testId,
             classroomId,
@@ -143,7 +151,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     it('should list assigned tests for a classroom', async () => {
-      const assignments = await prisma.testAssignment.findMany({
+      const assignments = await getPrisma().testAssignment.findMany({
         where: { classroomId },
         include: { test: true },
       });
@@ -155,12 +163,12 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
 
   describe('Test Attempts', () => {
     it('should start a test attempt', async () => {
-      const test = await prisma.test.findUnique({
+      const test = await getPrisma().test.findUnique({
         where: { id: testId },
         include: { questions: true },
       });
 
-      const attempt = await prisma.testAttempt.create({
+      const attempt = await getPrisma().testAttempt.create({
         data: {
           testId,
           studentId,
@@ -176,7 +184,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     it('should submit an answer to a question', async () => {
-      const answer = await prisma.testAnswer.create({
+      const answer = await getPrisma().testAnswer.create({
         data: {
           attemptId,
           questionId,
@@ -191,7 +199,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
 
     it('should complete a test attempt and calculate score', async () => {
       // Get the attempt with answers
-      const attempt = await prisma.testAttempt.findUnique({
+      const attempt = await getPrisma().testAttempt.findUnique({
         where: { id: attemptId },
         include: { answers: true },
       });
@@ -200,7 +208,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
       const score = Math.round((correctAnswers / attempt!.totalQuestions) * 100);
 
       // Update attempt with score
-      const completed = await prisma.testAttempt.update({
+      const completed = await getPrisma().testAttempt.update({
         where: { id: attemptId },
         data: {
           status: 'SUBMITTED',
@@ -218,7 +226,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
 
   describe('Test Retrieval', () => {
     it('should get a test with all questions', async () => {
-      const test = await prisma.test.findUnique({
+      const test = await getPrisma().test.findUnique({
         where: { id: testId },
         include: {
           questions: {
@@ -233,7 +241,7 @@ describe.skipIf(shouldSkipDatabaseTests)('Tests Routes', () => {
     });
 
     it('should get attempt history for a student', async () => {
-      const attempts = await prisma.testAttempt.findMany({
+      const attempts = await getPrisma().testAttempt.findMany({
         where: { studentId },
         include: {
           test: true,
