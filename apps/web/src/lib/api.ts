@@ -480,7 +480,6 @@ export const StudentSchema = z.object({
   enrollments: z.array(z.object({
     id: z.string(),
     classroomId: z.string(),
-    createdAt: z.string(),
   })).optional(),
 });
 
@@ -515,6 +514,7 @@ export const ClassroomSchema = z.object({
   id: z.string(),
   name: z.string(),
   code: z.string(),
+  gradeLevel: z.number().int().min(1).max(12),
   isActive: z.boolean(),
   createdAt: z.string(),
   _count: z.object({

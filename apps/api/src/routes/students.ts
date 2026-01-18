@@ -37,7 +37,6 @@ export const studentRoutes = async (app: FastifyInstance) => {
           select: {
             id: true,
             classroomId: true,
-            createdAt: true,
           },
         },
       },

@@ -250,8 +250,8 @@ export default function ClassroomDetailPage() {
                           <TableCell className="font-medium">{student.name}</TableCell>
                           <TableCell>{student.gradeLevel}</TableCell>
                           <TableCell>
-                            {enrollment?.createdAt
-                              ? new Date(enrollment.createdAt).toLocaleDateString()
+                            {student.createdAt
+                              ? new Date(student.createdAt).toLocaleDateString()
                               : 'N/A'}
                           </TableCell>
                         </TableRow>
