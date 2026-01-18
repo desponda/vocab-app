@@ -62,11 +62,13 @@ export default function StudentDashboardPage() {
 
         // Filter out old-format tests (created before 2026-01-18)
         // Old tests don't have multiple choice options and will fail to start
+        // Also filter out tests with 0 questions (failed processing)
         const newFormatCutoff = new Date('2026-01-18T00:00:00Z');
         const validAssignments = response.assignments.filter((assignment) => {
           if (!assignment.test?.createdAt) return false;
           const testCreatedAt = new Date(assignment.test.createdAt);
-          return testCreatedAt >= newFormatCutoff;
+          const hasQuestions = (assignment.test?._count?.questions || 0) > 0;
+          return testCreatedAt >= newFormatCutoff && hasQuestions;
         });
 
         setAssignments(validAssignments);

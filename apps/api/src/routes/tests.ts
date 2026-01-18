@@ -278,6 +278,11 @@ export const testRoutes = async (app: FastifyInstance) => {
       return reply.code(404).send({ error: 'Test not found' });
     }
 
+    // Validate test has questions
+    if (test._count.questions === 0) {
+      return reply.code(400).send({ error: 'This test has no questions and cannot be started' });
+    }
+
     // Create attempt
     const attempt = await prisma.testAttempt.create({
       data: {
@@ -530,6 +535,7 @@ export const testRoutes = async (app: FastifyInstance) => {
       where: { classroomId: params.classroomId },
       select: {
         id: true,
+        testId: true,
         dueDate: true,
         assignedAt: true,
         test: {
@@ -585,6 +591,7 @@ export const testRoutes = async (app: FastifyInstance) => {
       where: { classroomId: { in: classroomIds } },
       select: {
         id: true,
+        testId: true,
         dueDate: true,
         assignedAt: true,
         test: {
