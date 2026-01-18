@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
 
 export default function StudentsPage() {
   const { accessToken } = useAuth();
@@ -96,9 +97,11 @@ export default function StudentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <Button className="w-full" variant="outline">
-                    View Progress
-                  </Button>
+                  <Link href={`/students/${student.id}`}>
+                    <Button className="w-full" variant="outline">
+                      View & Upload Files
+                    </Button>
+                  </Link>
                   <Button className="w-full" variant="outline">
                     Practice Tests
                   </Button>

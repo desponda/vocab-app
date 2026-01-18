@@ -31,6 +31,7 @@ model User {
 
   refreshTokens RefreshToken[]
   students      Student[]
+  documents     Document[]
 
   @@index([email])
 }
@@ -56,7 +57,53 @@ model Student {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents Document[]
 
   @@index([userId])
+}
+
+// ============================================================================
+// Phase 2: File Upload & Document Management
+// ============================================================================
+
+enum DocumentStatus {
+  PENDING    // Uploaded, awaiting Claude processing
+  PROCESSING // Being processed by Claude API
+  COMPLETED  // Successfully extracted vocabulary
+  FAILED     // Processing failed
+}
+
+enum DocumentType {
+  PDF
+  IMAGE // jpg, png, gif, webp
+}
+
+model Document {
+  id           String         @id @default(cuid())
+
+  // File metadata
+  originalName String         // Original filename from upload
+  fileName     String         @unique // Unique filename in MinIO
+  s3Key        String         @unique // MinIO object key: {userId}/{fileName}
+  fileType     DocumentType
+  mimeType     String         // e.g., "application/pdf", "image/jpeg"
+  fileSize     Int            // Bytes
+
+  // Processing
+  status       DocumentStatus @default(PENDING)
+
+  // Relationships
+  studentId    String
+  student      Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  userId       String         // Denormalized for fast queries
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  uploadedAt   DateTime       @default(now())
+  processedAt  DateTime?
+
+  @@index([userId])
+  @@index([studentId])
+  @@index([status])
 }

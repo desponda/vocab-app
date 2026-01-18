@@ -28,6 +28,28 @@ const configSchema = z.object({
 
   // Anthropic
   anthropicApiKey: z.string().optional(),
+
+  // MinIO Object Storage
+  minio: z.object({
+    endpoint: z.string().default('localhost'),
+    port: z.coerce.number().default(9000),
+    useSSL: z.coerce.boolean().default(false),
+    accessKey: z.string().min(1),
+    secretKey: z.string().min(32),
+    bucket: z.string().default('vocab-documents'),
+  }),
+
+  // File Upload
+  upload: z.object({
+    maxFileSize: z.coerce.number().default(10 * 1024 * 1024), // 10 MB
+    allowedMimeTypes: z.array(z.string()).default([
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ]),
+  }),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -50,4 +72,17 @@ export const config: Config = configSchema.parse({
 
   corsOrigin: process.env.CORS_ORIGIN,
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+
+  minio: {
+    endpoint: process.env.MINIO_ENDPOINT,
+    port: process.env.MINIO_PORT,
+    useSSL: process.env.MINIO_USE_SSL,
+    accessKey: process.env.MINIO_ACCESS_KEY,
+    secretKey: process.env.MINIO_SECRET_KEY,
+    bucket: process.env.MINIO_BUCKET,
+  },
+
+  upload: {
+    maxFileSize: process.env.MAX_FILE_SIZE,
+  },
 });

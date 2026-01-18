@@ -132,6 +132,66 @@ export const studentsApi = {
     }),
 };
 
+// Documents API
+export const documentsApi = {
+  upload: (
+    file: File,
+    studentId: string,
+    token: string,
+    onProgress?: (progress: number) => void
+  ): Promise<{ document: Document }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('studentId', studentId);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const progress = Math.round((e.loaded / e.total) * 100);
+            onProgress(progress);
+          }
+        });
+      }
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          const errorData = JSON.parse(xhr.responseText);
+          reject(new ApiError(errorData.error || 'Upload failed', xhr.status));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new ApiError('Network error', 0));
+      });
+
+      xhr.open('POST', `${API_URL}/api/documents`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.send(formData);
+    });
+  },
+
+  list: (token: string, studentId?: string): Promise<{ documents: Document[] }> => {
+    const url = studentId
+      ? `/api/documents?studentId=${studentId}`
+      : '/api/documents';
+    return request(url, { token });
+  },
+
+  get: (id: string, token: string): Promise<{ document: Document }> =>
+    request(`/api/documents/${id}`, { token }),
+
+  download: (id: string, token: string): string =>
+    `${API_URL}/api/documents/${id}/download?token=${token}`,
+
+  delete: (id: string, token: string): Promise<void> =>
+    request(`/api/documents/${id}`, { method: 'DELETE', token }),
+};
+
 // Types
 export const UserRoleSchema = z.enum(['PARENT', 'TEACHER', 'ADMIN']);
 
@@ -152,6 +212,35 @@ export const StudentSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const DocumentStatusSchema = z.enum([
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+]);
+
+export const DocumentTypeSchema = z.enum(['PDF', 'IMAGE']);
+
+export const DocumentSchema = z.object({
+  id: z.string(),
+  originalName: z.string(),
+  fileName: z.string(),
+  fileType: DocumentTypeSchema,
+  mimeType: z.string().optional(),
+  fileSize: z.number(),
+  status: DocumentStatusSchema,
+  uploadedAt: z.string(),
+  processedAt: z.string().optional(),
+  student: z.object({
+    id: z.string(),
+    name: z.string(),
+    gradeLevel: z.number().optional(),
+  }),
+});
+
 export type User = z.infer<typeof UserSchema>;
 export type Student = z.infer<typeof StudentSchema>;
 export type UserRole = z.infer<typeof UserRoleSchema>;
+export type Document = z.infer<typeof DocumentSchema>;
+export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
+export type DocumentType = z.infer<typeof DocumentTypeSchema>;

@@ -2,10 +2,13 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import { config } from './lib/config';
 import { authRoutes } from './routes/auth';
 import { studentRoutes } from './routes/students';
+import { documentRoutes } from './routes/documents';
 import { errorHandler } from './middleware/error-handler';
+import { ensureBucket } from './lib/minio';
 
 const app = Fastify({
   logger: {
@@ -41,6 +44,13 @@ app.register(jwt, {
   },
 });
 
+app.register(multipart, {
+  limits: {
+    fileSize: config.upload.maxFileSize,
+    files: 1, // One file per request
+  },
+});
+
 // Health check
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
@@ -49,9 +59,15 @@ app.get('/health', async () => {
 // Register routes
 app.register(authRoutes, { prefix: '/api/auth' });
 app.register(studentRoutes, { prefix: '/api/students' });
+app.register(documentRoutes, { prefix: '/api/documents' });
 
 // Error handler
 app.setErrorHandler(errorHandler);
+
+// Initialize MinIO bucket on startup
+app.addHook('onReady', async () => {
+  await ensureBucket();
+});
 
 // Start server
 const start = async () => {
