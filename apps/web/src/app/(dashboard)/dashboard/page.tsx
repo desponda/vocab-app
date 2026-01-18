@@ -37,29 +37,29 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Classrooms</CardTitle>
+            <CardDescription>
+              Create and manage classrooms
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/classrooms">
+              <Button className="w-full">Manage Classrooms</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Vocabulary Lists</CardTitle>
             <CardDescription>
               Upload and manage vocabulary sheets
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" disabled>
-              Coming Soon
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Practice Tests</CardTitle>
-            <CardDescription>
-              Generate and take vocabulary tests
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full" disabled>
-              Coming Soon
-            </Button>
+            <Link href="/vocabulary">
+              <Button className="w-full">Upload Vocabulary</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

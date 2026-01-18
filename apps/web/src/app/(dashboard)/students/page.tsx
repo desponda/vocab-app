@@ -111,16 +111,11 @@ export default function StudentsPage() {
                 <CardDescription>Grade {student.gradeLevel}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <Link href={`/students/${student.id}`}>
-                    <Button className="w-full" variant="outline">
-                      View & Upload Files
-                    </Button>
-                  </Link>
+                <Link href={`/students/${student.id}`}>
                   <Button className="w-full" variant="outline">
-                    Practice Tests
+                    View Profile
                   </Button>
-                </div>
+                </Link>
               </CardContent>
             </Card>
           ))}
