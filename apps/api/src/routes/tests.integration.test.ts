@@ -8,7 +8,7 @@ import { prisma } from '../lib/prisma';
  * To run locally:
  *   1. Start Docker: docker-compose up -d postgres
  *   2. Run migrations: cd apps/api && pnpm prisma migrate dev
- *   3. Run tests: pnpm test -- --include='**/*.integration.test.ts'
+ *   3. Run tests: pnpm test -- --include=**.integration.test.ts
  */
 describe('Tests Routes', () => {
   let teacherId: string;
