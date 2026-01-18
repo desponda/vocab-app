@@ -32,24 +32,24 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: {{ include "vocab-app.fullname" . }}-secrets
+              name: {{ .Values.secrets.externalSecretName }}
               key: database-url
         - name: REDIS_URL
           value: "redis://{{ include "vocab-app.fullname" . }}-redis:{{ .Values.redis.service.port }}"
         - name: JWT_ACCESS_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ include "vocab-app.fullname" . }}-secrets
+              name: {{ .Values.secrets.externalSecretName }}
               key: jwt-access-secret
         - name: JWT_REFRESH_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ include "vocab-app.fullname" . }}-secrets
+              name: {{ .Values.secrets.externalSecretName }}
               key: jwt-refresh-secret
         - name: ANTHROPIC_API_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "vocab-app.fullname" . }}-secrets
+              name: {{ .Values.secrets.externalSecretName }}
               key: anthropic-api-key
               optional: true
         resources:

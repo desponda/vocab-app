@@ -31,5 +31,5 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: {{ include "vocab-app.fullname" . }}-secrets
+              name: {{ .Values.secrets.externalSecretName }}
               key: database-url

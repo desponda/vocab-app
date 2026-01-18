@@ -29,7 +29,7 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "vocab-app.fullname" . }}-secrets
+              name: {{ .Values.secrets.externalSecretName }}
               key: postgres-password
         volumeMounts:
         - name: postgres-data

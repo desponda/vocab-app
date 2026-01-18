@@ -78,9 +78,21 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: "cloudflare"
 
+# Secrets Management:
+# IMPORTANT: Secrets are NOT stored in this file (which is checked into git)
+# Instead, create them manually using: k8s/scripts/create-secrets.sh
+# Or override with: helm install --set-file secrets.jwtAccessSecret=./jwt-secret.txt
 secrets:
-  # Generate these with: openssl rand -base64 32
-  postgresPassword: "CHANGE_ME_postgres_password"
-  jwtAccessSecret: "CHANGE_ME_jwt_access_secret"
-  jwtRefreshSecret: "CHANGE_ME_jwt_refresh_secret"
-  anthropicApiKey: ""  # Optional: Add Claude API key for AI features
+  # External secret name (created outside of Helm)
+  externalSecretName: "vocab-app-secrets"
+
+  # Set to true only for local development (creates secret from values below)
+  # NEVER use in production - use external secret management instead
+  createFromHelm: false
+
+  # Only used if createFromHelm=true (local dev only)
+  # Must meet validation: JWT secrets >= 32 chars
+  postgresPassword: ""
+  jwtAccessSecret: ""
+  jwtRefreshSecret: ""
+  anthropicApiKey: ""
