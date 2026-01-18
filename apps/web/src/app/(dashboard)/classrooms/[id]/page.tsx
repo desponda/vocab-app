@@ -49,7 +49,7 @@ export default function ClassroomDetailPage() {
   const params = useParams();
   const router = useRouter();
   const classroomId = params.id as string;
-  const { user, accessToken, isLoading: isAuthLoading } = useAuth();
+  const { accessToken } = useAuth();
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -62,16 +62,9 @@ export default function ClassroomDetailPage() {
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
 
-  // Redirect if not authenticated or not a teacher
-  useEffect(() => {
-    if (!isAuthLoading && (!user || user.role !== 'TEACHER')) {
-      router.push('/login');
-    }
-  }, [user, isAuthLoading, router]);
-
   // Load classroom details
   useEffect(() => {
-    if (!accessToken || !user) return;
+    if (!accessToken) return;
 
     const loadClassroom = async () => {
       try {
@@ -100,7 +93,7 @@ export default function ClassroomDetailPage() {
     };
 
     loadClassroom();
-  }, [classroomId, accessToken, user]);
+  }, [classroomId, accessToken]);
 
   // Load available tests for assignment
   useEffect(() => {
@@ -146,7 +139,7 @@ export default function ClassroomDetailPage() {
     }
   };
 
-  if (isAuthLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
