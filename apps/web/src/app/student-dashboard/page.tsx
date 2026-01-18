@@ -42,13 +42,15 @@ export default function StudentDashboardPage() {
 
         // First, get the student record (students are created for PARENT users on signup)
         const { students } = await studentsApi.list(accessToken);
-        const userStudent = students.find((s) => s.id); // There should only be one for this user
 
-        if (!userStudent) {
+        if (students.length === 0) {
           setError('No student record found. Please contact your teacher.');
           setIsLoadingTests(false);
           return;
         }
+
+        // PARENT users should only have one student record
+        const userStudent = students[0];
 
         setStudent(userStudent);
 
@@ -111,7 +113,7 @@ export default function StudentDashboardPage() {
                   <div className="flex-1">
                     <CardTitle className="text-lg">{assignment.test?.name}</CardTitle>
                     <CardDescription>
-                      {assignment.test?.sheet?.title || 'Vocabulary Test'}
+                      {assignment.test?.sheet?.originalName || 'Vocabulary Test'}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="ml-2">

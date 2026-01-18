@@ -283,7 +283,7 @@ export const testsApi = {
     studentId: string,
     token: string
   ): Promise<{ attempt: TestAttempt }> =>
-    request(`/api/tests/attempts/${attemptId}?id=${attemptId}&studentId=${studentId}`, {
+    request(`/api/tests/attempts/${attemptId}?studentId=${studentId}`, {
       token,
     }),
 
@@ -553,7 +553,7 @@ export const TestQuestionSchema = z.object({
 export const TestDetailSchema = TestSchema.extend({
   sheet: z.object({
     id: z.string(),
-    title: z.string(),
+    originalName: z.string(),
     teacherId: z.string(),
   }).optional(),
   questions: z.array(TestQuestionSchema).optional(),
@@ -572,7 +572,7 @@ export const TestAssignmentSchema = z.object({
     createdAt: z.string(),
     sheet: z.object({
       id: z.string(),
-      title: z.string(),
+      originalName: z.string(),
     }).optional(),
     _count: z.object({
       questions: z.number(),
