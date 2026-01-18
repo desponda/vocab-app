@@ -16,6 +16,14 @@ This directory contains all project documentation organized by topic.
   - Integration tests
 - **[Testing Guide](testing-guide.md)** - K8s and staging testing procedures
 
+### Phase 3 - Test-Taking Feature
+- **[Phase 3 Testing Index](phase-3-testing-index.md)** - Navigation guide to all testing docs
+- **[Phase 3 UAT Report](phase-3-uat-report.md)** - Comprehensive product owner testing results
+- **[Phase 3 Bug Fixes](phase-3-bug-fixes.md)** - Detailed bug fixes and improvements
+- **[Phase 3 Completion Summary](phase-3-completion-summary.md)** - Executive summary
+- **[Phase 3 Delivery Summary](phase-3-delivery-summary.txt)** - Complete delivery report
+- **[Test-Taking User Guide](user-guides/test-taking-student-teacher-guide.md)** - Step-by-step guide for users
+
 ### CI/CD
 - **[Workflow Documentation](../.github/workflows/README.md)** - CI/CD pipeline guide
   - Workflow overview and job descriptions
@@ -39,17 +47,24 @@ This directory contains all project documentation organized by topic.
 
 ```
 docs/
-├── README.md                    # This file
-├── workflows/                   # Development workflow guides
-│   └── pre-push-checklist.md   # Pre-commit validation steps
-├── plans/                       # Implementation plans
-│   └── implementation-plan.md  # Full project roadmap
-├── adr/                         # Architecture Decision Records
-├── testing-strategy.md          # Testing approach and best practices
-└── testing-guide.md             # K8s and staging testing
+├── README.md                              # This file
+├── workflows/                             # Development workflow guides
+│   └── pre-push-checklist.md             # Pre-commit validation steps
+├── plans/                                 # Implementation plans
+│   └── implementation-plan.md            # Full project roadmap
+├── user-guides/                           # End-user documentation
+│   └── test-taking-student-teacher-guide.md  # Test-taking instructions
+├── adr/                                   # Architecture Decision Records
+├── testing-strategy.md                    # Testing approach and best practices
+├── testing-guide.md                       # K8s and staging testing
+├── phase-3-testing-index.md              # Phase 3 testing docs index
+├── phase-3-uat-report.md                 # UAT testing results
+├── phase-3-bug-fixes.md                  # Bug fixes documentation
+├── phase-3-completion-summary.md         # Executive summary
+└── phase-3-delivery-summary.txt          # Delivery report
 
 .github/workflows/
-└── README.md                    # CI/CD workflow documentation
+└── README.md                              # CI/CD workflow documentation
 ```
 
 ## Contributing to Documentation
@@ -72,4 +87,4 @@ When adding new documentation:
 
 ---
 
-**Last Updated:** 2026-01-18
+**Last Updated:** 2026-01-18 (Phase 3 Test-Taking Feature UAT Complete)

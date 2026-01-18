@@ -237,6 +237,99 @@ export const vocabularySheetsApi = {
     request(`/api/vocabulary-sheets/${id}`, { method: 'DELETE', token }),
 };
 
+// Tests API
+export const testsApi = {
+  // Assign test to classroom
+  assign: (
+    testId: string,
+    classroomId: string,
+    token: string,
+    dueDate?: string
+  ): Promise<{ assignment: TestAssignment }> =>
+    request(`/api/tests/${testId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ classroomId, dueDate }),
+      token,
+    }),
+
+  // Remove test assignment
+  removeAssignment: (assignmentId: string, token: string): Promise<void> =>
+    request(`/api/tests/assignments/${assignmentId}`, {
+      method: 'DELETE',
+      token,
+    }),
+
+  // Get test with questions
+  get: (testId: string, token: string): Promise<{ test: TestDetail }> =>
+    request(`/api/tests/${testId}`, { token }),
+
+  // Start test attempt
+  startAttempt: (
+    testId: string,
+    studentId: string,
+    token: string
+  ): Promise<{ attempt: TestAttempt }> =>
+    request('/api/tests/attempts/start', {
+      method: 'POST',
+      body: JSON.stringify({ testId, studentId }),
+      token,
+    }),
+
+  // Get attempt details
+  getAttempt: (
+    attemptId: string,
+    studentId: string,
+    token: string
+  ): Promise<{ attempt: TestAttempt }> =>
+    request(`/api/tests/attempts/${attemptId}?id=${attemptId}&studentId=${studentId}`, {
+      token,
+    }),
+
+  // Submit answer to question
+  submitAnswer: (
+    attemptId: string,
+    questionId: string,
+    answer: string,
+    token: string
+  ): Promise<{ answer: TestAnswer }> =>
+    request(`/api/tests/attempts/${attemptId}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ questionId, answer }),
+      token,
+    }),
+
+  // Complete test attempt
+  completeAttempt: (
+    attemptId: string,
+    token: string
+  ): Promise<{ attempt: TestAttempt }> =>
+    request(`/api/tests/attempts/${attemptId}/complete`, {
+      method: 'POST',
+      token,
+    }),
+
+  // List assigned tests for classroom (teacher view)
+  listAssignedToClassroom: (
+    classroomId: string,
+    token: string
+  ): Promise<{ assignments: TestAssignment[] }> =>
+    request(`/api/tests/classrooms/${classroomId}/assigned`, { token }),
+
+  // List assigned tests for student
+  listAssignedToStudent: (
+    studentId: string,
+    token: string
+  ): Promise<{ assignments: TestAssignment[] }> =>
+    request(`/api/tests/students/${studentId}/assigned`, { token }),
+
+  // Get student's attempt history
+  getAttemptHistory: (
+    studentId: string,
+    token: string
+  ): Promise<{ attempts: TestAttempt[] }> =>
+    request(`/api/tests/students/${studentId}/attempts`, { token }),
+};
+
 // Documents API (Deprecated - use vocabularySheetsApi instead)
 export const documentsApi = {
   upload: (
@@ -435,8 +528,101 @@ export const VocabularySheetDetailSchema = VocabularySheetSchema.extend({
   tests: z.array(TestSchema).optional(),
 });
 
+export const QuestionTypeSchema = z.enum([
+  'SPELLING',
+  'DEFINITION',
+  'FILL_BLANK',
+  'MULTIPLE_CHOICE',
+]);
+
+export const TestQuestionSchema = z.object({
+  id: z.string(),
+  questionText: z.string(),
+  questionType: QuestionTypeSchema,
+  options: z.string().nullable().optional(),
+  orderIndex: z.number(),
+  word: z.object({
+    id: z.string(),
+    word: z.string(),
+    definition: z.string().nullable().optional(),
+  }).optional(),
+});
+
+export const TestDetailSchema = TestSchema.extend({
+  sheet: z.object({
+    id: z.string(),
+    title: z.string(),
+    teacherId: z.string(),
+  }).optional(),
+  questions: z.array(TestQuestionSchema).optional(),
+});
+
+export const TestAssignmentSchema = z.object({
+  id: z.string(),
+  testId: z.string(),
+  classroomId: z.string(),
+  dueDate: z.string().nullable().optional(),
+  assignedAt: z.string(),
+  test: z.object({
+    id: z.string(),
+    name: z.string(),
+    variant: z.string(),
+    createdAt: z.string(),
+    sheet: z.object({
+      id: z.string(),
+      title: z.string(),
+    }).optional(),
+    _count: z.object({
+      questions: z.number(),
+    }).optional(),
+  }).optional(),
+});
+
+export const TestAnswerSchema = z.object({
+  id: z.string(),
+  questionId: z.string(),
+  answer: z.string(),
+  isCorrect: z.boolean().nullable().optional(),
+  answeredAt: z.string(),
+});
+
+export const AttemptStatusSchema = z.enum([
+  'IN_PROGRESS',
+  'SUBMITTED',
+  'GRADED',
+]);
+
+export const TestAttemptSchema = z.object({
+  id: z.string(),
+  testId: z.string(),
+  studentId: z.string(),
+  totalQuestions: z.number(),
+  correctAnswers: z.number().nullable().optional(),
+  score: z.number().nullable().optional(),
+  status: AttemptStatusSchema,
+  startedAt: z.string(),
+  completedAt: z.string().nullable().optional(),
+  answers: z.array(TestAnswerSchema).optional(),
+  student: z.object({
+    id: z.string(),
+    name: z.string(),
+  }).optional(),
+  test: z.object({
+    id: z.string(),
+    name: z.string(),
+    variant: z.string(),
+  }).optional(),
+});
+
 export type ProcessingStatus = z.infer<typeof ProcessingStatusSchema>;
 export type VocabularySheet = z.infer<typeof VocabularySheetSchema>;
 export type VocabularySheetDetail = z.infer<typeof VocabularySheetDetailSchema>;
 export type VocabularyWord = z.infer<typeof VocabularyWordSchema>;
 export type Test = z.infer<typeof TestSchema>;
+export type TestDetail = z.infer<typeof TestDetailSchema>;
+export type TestQuestion = z.infer<typeof TestQuestionSchema>;
+export type TestAssignment = z.infer<typeof TestAssignmentSchema>;
+export type TestAnswer = z.infer<typeof TestAnswerSchema>;
+export type TestAttempt = z.infer<typeof TestAttemptSchema>;
+export type QuestionType = z.infer<typeof QuestionTypeSchema>;
+export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
