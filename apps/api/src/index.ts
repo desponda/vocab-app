@@ -53,7 +53,11 @@ app.register(multipart, {
 
 // Health check
 app.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
+  return {
+    status: 'ok',
+    version: config.version,
+    timestamp: new Date().toISOString(),
+  };
 });
 
 // Register routes

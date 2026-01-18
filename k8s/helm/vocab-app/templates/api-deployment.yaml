@@ -27,6 +27,8 @@ spec:
         - name: {{ .name }}
           value: {{ .value | quote }}
         {{- end }}
+        - name: VERSION
+          value: {{ .Values.api.image.tag | quote }}
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:

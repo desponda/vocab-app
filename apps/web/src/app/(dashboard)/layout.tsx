@@ -3,6 +3,7 @@
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
+import { VersionFooter } from '@/components/version-footer';
 
 export default function DashboardLayout({
   children,
@@ -28,6 +29,7 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className="container mx-auto px-4 py-8">{children}</main>
+        <VersionFooter />
       </div>
     </ProtectedRoute>
   );

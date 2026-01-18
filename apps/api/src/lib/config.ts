@@ -8,6 +8,7 @@ const configSchema = z.object({
   port: z.coerce.number().default(3001),
   host: z.string().default('0.0.0.0'),
   logLevel: z.string().default('info'),
+  version: z.string().default('dev'),
 
   // Database
   databaseUrl: z.string().url(),
@@ -59,6 +60,7 @@ export const config: Config = configSchema.parse({
   port: process.env.PORT,
   host: process.env.HOST,
   logLevel: process.env.LOG_LEVEL,
+  version: process.env.VERSION,
 
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL,

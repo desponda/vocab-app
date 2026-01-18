@@ -27,6 +27,8 @@ spec:
         - name: {{ .name }}
           value: {{ .value | quote }}
         {{- end }}
+        - name: NEXT_PUBLIC_VERSION
+          value: {{ .Values.web.image.tag | quote }}
         resources:
           {{- toYaml .Values.web.resources | nindent 10 }}
 ---
