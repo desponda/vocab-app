@@ -672,6 +672,7 @@ export const TestAssignmentSchema = z.object({
     createdAt: z.string(),
     sheet: z.object({
       id: z.string(),
+      name: z.string(),
       originalName: z.string(),
     }).optional(),
     _count: z.object({

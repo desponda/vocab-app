@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet } from '@/lib/api';
+import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet, type TestAssignment } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -55,6 +55,7 @@ export default function ClassroomDetailPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [vocabularySheets, setVocabularySheets] = useState<VocabularySheet[]>([]);
+  const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState(false);
@@ -133,6 +134,22 @@ export default function ClassroomDetailPage() {
     loadVocabularySheets();
   }, [accessToken]);
 
+  // Load assigned tests for this classroom
+  const loadAssignedTests = async () => {
+    if (!accessToken) return;
+
+    try {
+      const { assignments } = await testsApi.listAssignedToClassroom(classroomId, accessToken);
+      setAssignedTests(assignments);
+    } catch (err) {
+      console.error('Error loading assigned tests:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadAssignedTests();
+  }, [classroomId, accessToken]);
+
   const handleCopyCode = () => {
     if (classroom?.code) {
       navigator.clipboard.writeText(classroom.code);
@@ -176,6 +193,9 @@ export default function ClassroomDetailPage() {
       setAssignSuccess(true);
       setIsAssignDialogOpen(false);
       setSelectedSheetId('');
+
+      // Reload assigned tests to show the new assignments
+      await loadAssignedTests();
 
       // Show success message with variant count
       setTimeout(() => setAssignSuccess(false), 3000);
@@ -385,10 +405,45 @@ export default function ClassroomDetailPage() {
                   Test assigned successfully!
                 </div>
               )}
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Assigned tests will be displayed here</p>
-                <p className="text-sm mt-2">This feature will be completed in the next update</p>
-              </div>
+              {assignedTests.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No tests assigned yet</p>
+                  <p className="text-sm mt-2">Click "Assign Test" to assign vocabulary tests to this classroom</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Test Name</TableHead>
+                      <TableHead>Variant</TableHead>
+                      <TableHead>Questions</TableHead>
+                      <TableHead>Assigned</TableHead>
+                      <TableHead>Due Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignedTests.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell className="font-medium">
+                          {assignment.test?.sheet?.name || assignment.test?.name || 'Unknown Test'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{assignment.test?.variant}</Badge>
+                        </TableCell>
+                        <TableCell>{assignment.test?._count?.questions || 0}</TableCell>
+                        <TableCell>
+                          {new Date(assignment.assignedAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {assignment.dueDate
+                            ? new Date(assignment.dueDate).toLocaleDateString()
+                            : 'No due date'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
