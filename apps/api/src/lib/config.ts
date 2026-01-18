@@ -13,8 +13,8 @@ const configSchema = z.object({
   // Database
   databaseUrl: z.string().url(),
 
-  // Redis
-  redisUrl: z.string().url(),
+  // Redis (optional for tests)
+  redisUrl: z.string().url().optional(),
 
   // JWT
   jwt: z.object({

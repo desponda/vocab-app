@@ -6,11 +6,16 @@ import { VocabularyProcessingJob } from '../lib/queue';
 import { config } from '../lib/config';
 
 // Parse Redis URL to extract connection details
-const redisUrl = new URL(config.redisUrl);
-
-const connection = {
-  host: redisUrl.hostname,
-  port: parseInt(redisUrl.port || '6379'),
+// This will only be used if the worker is started (which requires Redis)
+const connection = config.redisUrl ? (() => {
+  const redisUrl = new URL(config.redisUrl);
+  return {
+    host: redisUrl.hostname,
+    port: parseInt(redisUrl.port || '6379'),
+  };
+})() : {
+  host: 'localhost',
+  port: 6379,
 };
 
 /**
