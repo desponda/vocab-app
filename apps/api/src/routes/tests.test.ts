@@ -64,6 +64,7 @@ describe('Tests Routes', () => {
       data: {
         originalName: 'Test Sheet.pdf',
         fileName: 'test-sheet-123',
+        s3Key: `${teacherId}/test-sheet-123`,
         fileType: 'PDF',
         mimeType: 'application/pdf',
         fileSize: 1024,

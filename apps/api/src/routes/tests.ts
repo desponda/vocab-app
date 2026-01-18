@@ -14,7 +14,7 @@ const testIdSchema = z.object({
 });
 
 const classroomIdSchema = z.object({
-  id: z.string().cuid(),
+  classroomId: z.string().cuid(),
 });
 
 const assignmentIdSchema = z.object({
@@ -150,7 +150,7 @@ export const testRoutes = async (app: FastifyInstance) => {
         sheet: {
           select: {
             id: true,
-            title: true,
+            originalName: true,
             teacherId: true,
           },
         },
@@ -506,7 +506,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             sheet: {
               select: {
                 id: true,
-                title: true,
+                originalName: true,
               },
             },
             _count: {
@@ -560,7 +560,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             sheet: {
               select: {
                 id: true,
-                title: true,
+                originalName: true,
               },
             },
             _count: {
@@ -610,7 +610,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             sheet: {
               select: {
                 id: true,
-                title: true,
+                originalName: true,
               },
             },
           },
