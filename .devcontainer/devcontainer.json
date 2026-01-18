@@ -82,7 +82,7 @@
     }
   },
 
-  "postCreateCommand": "pnpm install",
+  "postCreateCommand": "pnpm install && cd apps/web && npx playwright install --with-deps chromium",
 
   "remoteUser": "node"
 }
