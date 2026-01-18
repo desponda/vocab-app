@@ -34,7 +34,7 @@ const configSchema = z.object({
   minio: z.object({
     endpoint: z.string().default('localhost'),
     port: z.coerce.number().default(9000),
-    useSSL: z.coerce.boolean().default(false),
+    useSSL: z.string().transform((val) => val === 'true').default('false'),
     accessKey: z.string().optional(),
     secretKey: z.string().optional(),
     bucket: z.string().default('vocab-documents'),

@@ -182,7 +182,62 @@ export const classroomsApi = {
     }),
 };
 
-// Documents API
+// Vocabulary Sheets API
+export const vocabularySheetsApi = {
+  upload: (
+    file: File,
+    testsToGenerate: number = 3,
+    token: string,
+    onProgress?: (progress: number) => void
+  ): Promise<{ sheet: VocabularySheet }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const progress = Math.round((e.loaded / e.total) * 100);
+            onProgress(progress);
+          }
+        });
+      }
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          const errorData = JSON.parse(xhr.responseText);
+          reject(new ApiError(errorData.error || 'Upload failed', xhr.status));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new ApiError('Network error', 0));
+      });
+
+      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?testsToGenerate=${testsToGenerate}`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.send(formData);
+    });
+  },
+
+  list: (token: string): Promise<{ sheets: VocabularySheet[] }> =>
+    request('/api/vocabulary-sheets', { token }),
+
+  get: (id: string, token: string): Promise<{ sheet: VocabularySheetDetail }> =>
+    request(`/api/vocabulary-sheets/${id}`, { token }),
+
+  download: (id: string, token: string): string =>
+    `${API_URL}/api/vocabulary-sheets/${id}/download?token=${token}`,
+
+  delete: (id: string, token: string): Promise<void> =>
+    request(`/api/vocabulary-sheets/${id}`, { method: 'DELETE', token }),
+};
+
+// Documents API (Deprecated - use vocabularySheetsApi instead)
 export const documentsApi = {
   upload: (
     file: File,
@@ -330,3 +385,58 @@ export type DocumentType = z.infer<typeof DocumentTypeSchema>;
 export type Classroom = z.infer<typeof ClassroomSchema>;
 export type ClassroomDetail = z.infer<typeof ClassroomDetailSchema>;
 export type Enrollment = z.infer<typeof EnrollmentSchema>;
+
+// Vocabulary Sheet schemas
+export const ProcessingStatusSchema = z.enum([
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+]);
+
+export const VocabularySheetSchema = z.object({
+  id: z.string(),
+  originalName: z.string(),
+  fileName: z.string(),
+  fileType: DocumentTypeSchema,
+  mimeType: z.string(),
+  fileSize: z.number(),
+  status: ProcessingStatusSchema,
+  errorMessage: z.string().nullable().optional(),
+  testsToGenerate: z.number(),
+  uploadedAt: z.string(),
+  processedAt: z.string().nullable().optional(),
+  _count: z.object({
+    words: z.number(),
+    tests: z.number(),
+  }).optional(),
+});
+
+export const VocabularyWordSchema = z.object({
+  id: z.string(),
+  word: z.string(),
+  definition: z.string().nullable().optional(),
+  context: z.string().nullable().optional(),
+});
+
+export const TestSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  variant: z.string(),
+  createdAt: z.string(),
+  _count: z.object({
+    questions: z.number(),
+  }).optional(),
+});
+
+export const VocabularySheetDetailSchema = VocabularySheetSchema.extend({
+  extractedText: z.string().nullable().optional(),
+  words: z.array(VocabularyWordSchema).optional(),
+  tests: z.array(TestSchema).optional(),
+});
+
+export type ProcessingStatus = z.infer<typeof ProcessingStatusSchema>;
+export type VocabularySheet = z.infer<typeof VocabularySheetSchema>;
+export type VocabularySheetDetail = z.infer<typeof VocabularySheetDetailSchema>;
+export type VocabularyWord = z.infer<typeof VocabularyWordSchema>;
+export type Test = z.infer<typeof TestSchema>;

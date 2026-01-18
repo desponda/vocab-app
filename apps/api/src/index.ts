@@ -7,9 +7,9 @@ import { config } from './lib/config';
 import { authRoutes } from './routes/auth';
 import { studentRoutes } from './routes/students';
 import { classroomRoutes } from './routes/classrooms';
-// import { documentRoutes } from './routes/documents'; // Phase 2: Uncomment when MinIO is deployed
+import { vocabularySheetRoutes } from './routes/vocabulary-sheets';
 import { errorHandler } from './middleware/error-handler';
-// import { ensureBucket } from './lib/minio'; // Phase 2: Uncomment when MinIO is deployed
+import { initializeBucket } from './lib/minio';
 
 const app = Fastify({
   logger: {
@@ -56,7 +56,7 @@ app.register(multipart, {
 app.register(authRoutes, { prefix: '/api/auth' });
 app.register(studentRoutes, { prefix: '/api/students' });
 app.register(classroomRoutes, { prefix: '/api/classrooms' });
-// app.register(documentRoutes, { prefix: '/api/documents' }); // Phase 2: Uncomment when MinIO is deployed
+app.register(vocabularySheetRoutes, { prefix: '/api/vocabulary-sheets' });
 
 // Health check (under /api for consistency with frontend API_URL)
 app.get('/api/health', async () => {
@@ -70,10 +70,10 @@ app.get('/api/health', async () => {
 // Error handler
 app.setErrorHandler(errorHandler);
 
-// Phase 2: Initialize MinIO bucket on startup (uncomment when MinIO is deployed)
-// app.addHook('onReady', async () => {
-//   await ensureBucket();
-// });
+// Initialize MinIO bucket on startup
+app.addHook('onReady', async () => {
+  await initializeBucket();
+});
 
 // Start server
 const start = async () => {

@@ -20,6 +20,7 @@ export default function DashboardLayout({
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/students', label: 'Students' },
     { href: '/classrooms', label: 'Classrooms' },
+    { href: '/vocabulary', label: 'Vocabulary' },
   ];
 
   return (
