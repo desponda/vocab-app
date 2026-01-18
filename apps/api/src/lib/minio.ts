@@ -1,24 +1,30 @@
 import { Client } from 'minio';
 import { config } from './config';
-import * as https from 'https';
 
 // MinIO is optional - create client only if credentials are configured
 export const minioClient: Client | null = config.minio?.accessKey && config.minio?.secretKey
-  ? new Client({
-      endPoint: config.minio.endpoint,
-      port: config.minio.port,
-      useSSL: config.minio.useSSL,
-      accessKey: config.minio.accessKey,
-      secretKey: config.minio.secretKey,
-      // Accept self-signed certificates for MinIO Operator-managed tenants
-      // This is safe for internal Kubernetes cluster communication
-      ...(config.minio.useSSL && {
-        transport: new https.Agent({
-          rejectUnauthorized: false,
-        }),
-      }),
-    })
+  ? createMinIOClient()
   : null;
+
+function createMinIOClient(): Client {
+  const client = new Client({
+    endPoint: config.minio.endpoint,
+    port: config.minio.port,
+    useSSL: config.minio.useSSL,
+    accessKey: config.minio.accessKey,
+    secretKey: config.minio.secretKey,
+  });
+
+  // Accept self-signed certificates for MinIO Operator-managed tenants
+  // This is safe for internal Kubernetes cluster communication
+  if (config.minio.useSSL) {
+    client.setRequestOptions({
+      rejectUnauthorized: false,
+    });
+  }
+
+  return client;
+}
 
 export const BUCKET_NAME = config.minio?.bucket || 'vocab-documents';
 
