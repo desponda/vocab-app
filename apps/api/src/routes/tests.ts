@@ -55,6 +55,7 @@ export const testRoutes = async (app: FastifyInstance) => {
         sheet: {
           select: {
             id: true,
+            name: true,
             originalName: true,
           },
         },
@@ -183,6 +184,7 @@ export const testRoutes = async (app: FastifyInstance) => {
         sheet: {
           select: {
             id: true,
+            name: true,
             originalName: true,
             teacherId: true,
           },
@@ -539,6 +541,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             sheet: {
               select: {
                 id: true,
+                name: true,
                 originalName: true,
               },
             },
@@ -593,6 +596,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             sheet: {
               select: {
                 id: true,
+                name: true,
                 originalName: true,
               },
             },
@@ -643,6 +647,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             sheet: {
               select: {
                 id: true,
+                name: true,
                 originalName: true,
               },
             },

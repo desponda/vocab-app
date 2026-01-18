@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, Trash2, Download, CheckCircle, AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -35,6 +37,8 @@ export default function VocabularyPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const [testsToGenerate] = useState(3); // Default: 3 test variants
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [vocabularyName, setVocabularyName] = useState('');
 
   useEffect(() => {
     if (!accessToken) return;
@@ -53,9 +57,16 @@ export default function VocabularyPage() {
     fetchSheets();
   }, [accessToken]);
 
+  const generateSmartName = (filename: string): string => {
+    return filename
+      .replace(/\.[^.]+$/, '') // Remove extension
+      .replace(/[_-]/g, ' ')    // Replace underscores/dashes with spaces
+      .replace(/\b\w/g, (c) => c.toUpperCase()); // Title case
+  };
+
   const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
-      if (!accessToken || acceptedFiles.length === 0) return;
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
 
       const file = acceptedFiles[0];
 
@@ -71,32 +82,42 @@ export default function VocabularyPage() {
         return;
       }
 
-      setUploadingFileName(file.name);
-      setUploadProgress(0);
-
-      try {
-        const { sheet } = await vocabularySheetsApi.upload(
-          file,
-          testsToGenerate,
-          accessToken,
-          (progress) => {
-            setUploadProgress(progress);
-          }
-        );
-
-        // Add new sheet to the list
-        setSheets((prev) => [sheet, ...prev]);
-        setUploadProgress(null);
-        setUploadingFileName(null);
-      } catch (error) {
-        console.error('Failed to upload file:', error);
-        alert(error instanceof Error ? error.message : 'Upload failed');
-        setUploadProgress(null);
-        setUploadingFileName(null);
-      }
+      setSelectedFile(file);
+      setVocabularyName(generateSmartName(file.name));
     },
-    [accessToken, testsToGenerate]
+    []
   );
+
+  const handleUpload = async () => {
+    if (!accessToken || !selectedFile || !vocabularyName.trim()) return;
+
+    setUploadingFileName(selectedFile.name);
+    setUploadProgress(0);
+
+    try {
+      const { sheet } = await vocabularySheetsApi.upload(
+        selectedFile,
+        vocabularyName.trim(),
+        testsToGenerate,
+        accessToken,
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
+
+      // Add new sheet to the list
+      setSheets((prev) => [sheet, ...prev]);
+      setUploadProgress(null);
+      setUploadingFileName(null);
+      setSelectedFile(null);
+      setVocabularyName('');
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+      alert(error instanceof Error ? error.message : 'Upload failed');
+      setUploadProgress(null);
+      setUploadingFileName(null);
+    }
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -153,29 +174,77 @@ export default function VocabularyPage() {
           <CardTitle>Upload Vocabulary Sheet</CardTitle>
         </CardHeader>
         <CardContent>
-          <div
-            {...getRootProps()}
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-              ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
-              ${uploadProgress !== null ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5'}
-            `}
-          >
-            <input {...getInputProps()} />
-            <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            {isDragActive ? (
-              <p className="text-lg font-medium">Drop the file here</p>
-            ) : (
-              <>
-                <p className="text-lg font-medium mb-2">
-                  Drag and drop a file here, or click to select
-                </p>
+          {!selectedFile ? (
+            <div
+              {...getRootProps()}
+              className={`
+                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
+                ${uploadProgress !== null ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary hover:bg-primary/5'}
+              `}
+            >
+              <input {...getInputProps()} />
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              {isDragActive ? (
+                <p className="text-lg font-medium">Drop the file here</p>
+              ) : (
+                <>
+                  <p className="text-lg font-medium mb-2">
+                    Drag and drop a file here, or click to select
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Accepts PDF, JPEG, PNG, GIF, WebP (max 10 MB)
+                  </p>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm p-4 bg-muted rounded-lg">
+                <FileText className="h-4 w-4" />
+                <span className="font-medium">{selectedFile.name}</span>
+                <Badge variant="outline">{formatFileSize(selectedFile.size)}</Badge>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vocabulary-name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="vocabulary-name"
+                  value={vocabularyName}
+                  onChange={(e) => setVocabularyName(e.target.value)}
+                  placeholder="e.g., Week 1 Spelling, Chapter 3 Vocabulary"
+                  maxLength={100}
+                  disabled={uploadProgress !== null}
+                />
                 <p className="text-sm text-muted-foreground">
-                  Accepts PDF, JPEG, PNG, GIF, WebP (max 10 MB)
+                  This name will help you identify the vocabulary set and its tests later.
                 </p>
-              </>
-            )}
-          </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleUpload}
+                  disabled={!vocabularyName.trim() || uploadProgress !== null}
+                  className="flex-1"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload & Generate Tests
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setVocabularyName('');
+                  }}
+                  disabled={uploadProgress !== null}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
           {uploadProgress !== null && (
             <div className="mt-4 space-y-2">
@@ -215,7 +284,7 @@ export default function VocabularyPage() {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-3">
                           <FileText className="h-5 w-5 text-muted-foreground" />
-                          <h4 className="font-medium">{sheet.originalName}</h4>
+                          <h4 className="font-medium">{sheet.name || sheet.originalName}</h4>
                           <Badge variant={statusConfig.variant} className="flex items-center gap-1">
                             <StatusIcon className={`h-3 w-3 ${sheet.status === 'PROCESSING' ? 'animate-spin' : ''}`} />
                             {statusConfig.label}

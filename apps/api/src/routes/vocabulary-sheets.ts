@@ -11,7 +11,13 @@ const sheetIdSchema = z.object({
 });
 
 const uploadQuerySchema = z.object({
+  name: z.string().min(1).max(100).trim(),
   testsToGenerate: z.coerce.number().min(3).max(10).default(3),
+});
+
+const assignBulkSchema = z.object({
+  classroomId: z.string().cuid(),
+  dueDate: z.string().datetime().optional(),
 });
 
 // File type signatures (magic bytes)
@@ -123,6 +129,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
     // Create database record
     const sheet = await prisma.vocabularySheet.create({
       data: {
+        name: query.name,
         originalName: data.filename,
         fileName,
         s3Key,
@@ -135,6 +142,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
       },
       select: {
         id: true,
+        name: true,
         originalName: true,
         fileName: true,
         fileType: true,
@@ -170,6 +178,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
       orderBy: { uploadedAt: 'desc' },
       select: {
         id: true,
+        name: true,
         originalName: true,
         fileName: true,
         fileType: true,
@@ -206,6 +215,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
       },
       select: {
         id: true,
+        name: true,
         originalName: true,
         fileName: true,
         fileType: true,
@@ -309,5 +319,88 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
     });
 
     return reply.code(204).send();
+  });
+
+  /**
+   * POST /api/vocabulary-sheets/:id/assign
+   * Bulk assign all test variants from a vocabulary sheet to a classroom
+   */
+  app.post('/:id/assign', async (request: FastifyRequest, reply) => {
+    const params = sheetIdSchema.parse(request.params);
+    const body = assignBulkSchema.parse(request.body);
+
+    // Verify vocabulary sheet exists and belongs to teacher
+    const sheet = await prisma.vocabularySheet.findFirst({
+      where: {
+        id: params.id,
+        teacherId: request.userId,
+      },
+      include: {
+        tests: {
+          select: {
+            id: true,
+            name: true,
+            variant: true,
+          },
+        },
+      },
+    });
+
+    if (!sheet) {
+      return reply.code(404).send({ error: 'Vocabulary sheet not found' });
+    }
+
+    if (sheet.tests.length === 0) {
+      return reply.code(400).send({ error: 'No tests generated for this vocabulary sheet yet' });
+    }
+
+    // Verify classroom belongs to teacher
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id: body.classroomId,
+        teacherId: request.userId,
+      },
+    });
+
+    if (!classroom) {
+      return reply.code(404).send({ error: 'Classroom not found' });
+    }
+
+    // Create assignments for all test variants
+    const assignmentsData = sheet.tests.map((test) => ({
+      testId: test.id,
+      classroomId: body.classroomId,
+      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+    }));
+
+    // Use createMany with skipDuplicates to handle already-assigned tests
+    await prisma.testAssignment.createMany({
+      data: assignmentsData,
+      skipDuplicates: true,
+    });
+
+    // Fetch created/existing assignments for response
+    const assignments = await prisma.testAssignment.findMany({
+      where: {
+        testId: { in: sheet.tests.map((t) => t.id) },
+        classroomId: body.classroomId,
+      },
+      select: {
+        id: true,
+        testId: true,
+        classroomId: true,
+        dueDate: true,
+        assignedAt: true,
+      },
+    });
+
+    return reply.code(201).send({
+      assignments,
+      sheet: {
+        id: sheet.id,
+        name: sheet.name,
+      },
+      variantsAssigned: sheet.tests.length,
+    });
   });
 };

@@ -71,6 +71,7 @@ describe('Tests Routes', () => {
     // Create vocabulary sheet
     const sheet = await prisma.vocabularySheet.create({
       data: {
+        name: 'Test Sheet',
         originalName: 'Test Sheet.pdf',
         fileName: 'test-sheet-123',
         s3Key: `${teacherId}/test-sheet-123`,

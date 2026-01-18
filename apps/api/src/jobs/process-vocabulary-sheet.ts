@@ -37,6 +37,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       where: { id: sheetId },
       select: {
         id: true,
+        name: true,
         s3Key: true,
         mimeType: true,
         testsToGenerate: true,
@@ -119,7 +120,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       // Create test record
       const test = await prisma.test.create({
         data: {
-          name: `Variant ${variant}`,
+          name: `${sheet.name} - Variant ${variant}`,
           variant,
           sheetId: sheet.id,
         },

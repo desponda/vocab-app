@@ -196,6 +196,7 @@ export const classroomsApi = {
 export const vocabularySheetsApi = {
   upload: (
     file: File,
+    name: string,
     testsToGenerate: number = 3,
     token: string,
     onProgress?: (progress: number) => void
@@ -228,7 +229,8 @@ export const vocabularySheetsApi = {
         reject(new ApiError('Network error', 0));
       });
 
-      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?testsToGenerate=${testsToGenerate}`);
+      const encodedName = encodeURIComponent(name);
+      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.send(formData);
     });
@@ -245,6 +247,28 @@ export const vocabularySheetsApi = {
 
   delete: (id: string, token: string): Promise<void> =>
     request(`/api/vocabulary-sheets/${id}`, { method: 'DELETE', token }),
+
+  assignToClassroom: (
+    sheetId: string,
+    classroomId: string,
+    dueDate: string | undefined,
+    token: string
+  ): Promise<{
+    assignments: Array<{
+      id: string;
+      testId: string;
+      classroomId: string;
+      dueDate: string | null;
+      assignedAt: string;
+    }>;
+    sheet: { id: string; name: string };
+    variantsAssigned: number;
+  }> =>
+    request(`/api/vocabulary-sheets/${sheetId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ classroomId, dueDate }),
+      token,
+    }),
 };
 
 // Tests API
@@ -566,6 +590,7 @@ export const ProcessingStatusSchema = z.enum([
 
 export const VocabularySheetSchema = z.object({
   id: z.string(),
+  name: z.string(),
   originalName: z.string(),
   fileName: z.string(),
   fileType: DocumentTypeSchema,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { classroomsApi, testsApi, type Classroom, type Student, type Test } from '@/lib/api';
+import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -54,11 +54,13 @@ export default function ClassroomDetailPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
+  const [vocabularySheets, setVocabularySheets] = useState<VocabularySheet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedTestId, setSelectedTestId] = useState<string>('');
+  const [selectedSheetId, setSelectedSheetId] = useState<string>('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
 
@@ -111,6 +113,26 @@ export default function ClassroomDetailPage() {
     loadTests();
   }, [accessToken]);
 
+  // Load vocabulary sheets for bulk assignment
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const loadVocabularySheets = async () => {
+      try {
+        const { sheets } = await vocabularySheetsApi.list(accessToken);
+        // Filter to only completed sheets with tests
+        const completedSheets = sheets.filter(
+          (sheet) => sheet.status === 'COMPLETED' && sheet._count && sheet._count.tests > 0
+        );
+        setVocabularySheets(completedSheets);
+      } catch (err) {
+        console.error('Error loading vocabulary sheets:', err);
+      }
+    };
+
+    loadVocabularySheets();
+  }, [accessToken]);
+
   const handleCopyCode = () => {
     if (classroom?.code) {
       navigator.clipboard.writeText(classroom.code);
@@ -134,6 +156,32 @@ export default function ClassroomDetailPage() {
     } catch (err) {
       console.error('Error assigning test:', err);
       setError('Failed to assign test. Please try again.');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleBulkAssignVocabSheet = async () => {
+    if (!selectedSheetId || !accessToken) return;
+
+    setIsAssigning(true);
+    try {
+      const result = await vocabularySheetsApi.assignToClassroom(
+        selectedSheetId,
+        classroomId,
+        undefined, // no due date for now
+        accessToken
+      );
+
+      setAssignSuccess(true);
+      setIsAssignDialogOpen(false);
+      setSelectedSheetId('');
+
+      // Show success message with variant count
+      setTimeout(() => setAssignSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error assigning vocabulary sheet:', err);
+      setError('Failed to assign tests. Please try again.');
     } finally {
       setIsAssigning(false);
     }
@@ -279,29 +327,34 @@ export default function ClassroomDetailPage() {
                     <DialogHeader>
                       <DialogTitle>Assign Test to {classroom?.name}</DialogTitle>
                       <DialogDescription>
-                        Select a test to assign to all students in this classroom
+                        Select a vocabulary set to assign all its test variants to this classroom
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label htmlFor="test">Select Test</Label>
-                        {tests.length === 0 ? (
+                        <Label htmlFor="vocab-sheet">Select Vocabulary Set</Label>
+                        {vocabularySheets.length === 0 ? (
                           <p className="text-sm text-muted-foreground">
                             No tests available. Upload vocabulary sheets to generate tests.
                           </p>
                         ) : (
-                          <Select value={selectedTestId} onValueChange={setSelectedTestId}>
-                            <SelectTrigger id="test">
-                              <SelectValue placeholder="Choose a test" />
+                          <Select value={selectedSheetId} onValueChange={setSelectedSheetId}>
+                            <SelectTrigger id="vocab-sheet">
+                              <SelectValue placeholder="Choose a vocabulary set" />
                             </SelectTrigger>
                             <SelectContent>
-                              {tests.map((test) => (
-                                <SelectItem key={test.id} value={test.id}>
-                                  {test.name} (Variant {test.variant})
+                              {vocabularySheets.map((sheet) => (
+                                <SelectItem key={sheet.id} value={sheet.id}>
+                                  {sheet.name} ({sheet._count?.tests || 0} variants)
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                        )}
+                        {selectedSheetId && (
+                          <p className="text-sm text-muted-foreground">
+                            All test variants will be assigned to this classroom
+                          </p>
                         )}
                       </div>
                       <div className="flex justify-end gap-2">
@@ -309,16 +362,16 @@ export default function ClassroomDetailPage() {
                           variant="outline"
                           onClick={() => {
                             setIsAssignDialogOpen(false);
-                            setSelectedTestId('');
+                            setSelectedSheetId('');
                           }}
                         >
                           Cancel
                         </Button>
                         <Button
-                          onClick={handleAssignTest}
-                          disabled={!selectedTestId || isAssigning}
+                          onClick={handleBulkAssignVocabSheet}
+                          disabled={!selectedSheetId || isAssigning}
                         >
-                          {isAssigning ? 'Assigning...' : 'Assign Test'}
+                          {isAssigning ? 'Assigning...' : 'Assign All Variants'}
                         </Button>
                       </div>
                     </div>

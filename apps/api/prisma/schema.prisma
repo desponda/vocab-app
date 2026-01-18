@@ -118,7 +118,8 @@ enum ProcessingStatus {
 
 model VocabularySheet {
   id              String           @id @default(cuid())
-  originalName    String
+  name            String           // User-provided name for vocabulary set
+  originalName    String           // Filename for reference
   fileName        String           @unique
   s3Key           String           @unique // MinIO key: {userId}/{fileName}
   fileType        DocumentType
