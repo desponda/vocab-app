@@ -52,6 +52,24 @@ spec:
               name: {{ .Values.secrets.externalSecretName }}
               key: anthropic-api-key
               optional: true
+        - name: MINIO_ENDPOINT
+          value: {{ .Values.minio.endpoint | quote }}
+        - name: MINIO_PORT
+          value: {{ .Values.minio.port | quote }}
+        - name: MINIO_USE_SSL
+          value: {{ .Values.minio.useSSL | quote }}
+        - name: MINIO_BUCKET
+          value: {{ .Values.minio.bucket | quote }}
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.minio.secretName }}
+              key: accessKey
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.minio.secretName }}
+              key: secretKey
         resources:
           {{- toYaml .Values.api.resources | nindent 10 }}
 ---
