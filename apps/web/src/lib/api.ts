@@ -342,7 +342,7 @@ export const testsApi = {
     token: string
   ): Promise<{ attempt: TestAttempt & { test: TestDetail } }> => {
     // Start the attempt
-    const { attempt } = await request('/api/tests/attempts/start', {
+    const { attempt } = await request<{ attempt: TestAttempt }>('/api/tests/attempts/start', {
       method: 'POST',
       body: JSON.stringify({ testId, studentId }),
       token,
