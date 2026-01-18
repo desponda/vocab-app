@@ -1,5 +1,6 @@
 import { Client } from 'minio';
 import { config } from './config';
+import * as https from 'https';
 
 // MinIO is optional - create client only if credentials are configured
 export const minioClient: Client | null = config.minio?.accessKey && config.minio?.secretKey
@@ -9,6 +10,13 @@ export const minioClient: Client | null = config.minio?.accessKey && config.mini
       useSSL: config.minio.useSSL,
       accessKey: config.minio.accessKey,
       secretKey: config.minio.secretKey,
+      // Accept self-signed certificates for MinIO Operator-managed tenants
+      // This is safe for internal Kubernetes cluster communication
+      ...(config.minio.useSSL && {
+        transport: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+      }),
     })
   : null;
 
