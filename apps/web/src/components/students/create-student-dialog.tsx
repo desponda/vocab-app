@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ const createStudentSchema = z.object({
   gradeLevel: z.coerce
     .number()
     .int()
-    .min(1, 'Grade must be between 1 and 12')
+    .min(1, 'Grade must be at least 1')
     .max(12, 'Grade must be between 1 and 12'),
 });
 
@@ -53,26 +53,8 @@ export function CreateStudentDialog({
     resolver: zodResolver(createStudentSchema),
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[CreateStudentDialog] Component mounted');
-    return () => console.log('[CreateStudentDialog] Component unmounted');
-  }, []);
-
-  useEffect(() => {
-    console.log('[CreateStudentDialog] Dialog open state changed:', open);
-  }, [open]);
-
-  useEffect(() => {
-    if (error) {
-      console.error('[CreateStudentDialog] Error:', error);
-    }
-  }, [error]);
-
   const onSubmit = async (data: CreateStudentFormData) => {
-    console.log('[CreateStudentDialog] Form submitted with data:', data);
     if (!accessToken) {
-      console.error('[CreateStudentDialog] No access token available');
       return;
     }
 
@@ -80,7 +62,6 @@ export function CreateStudentDialog({
     setError(null);
 
     try {
-      console.log('[CreateStudentDialog] Creating student...');
       const { student } = await studentsApi.create(
         {
           name: data.name,
@@ -89,26 +70,19 @@ export function CreateStudentDialog({
         accessToken
       );
 
-      console.log('[CreateStudentDialog] Student created successfully:', student);
       onStudentCreated(student);
       setOpen(false);
       reset();
     } catch (err) {
-      console.error('[CreateStudentDialog] Failed to create student:', err);
       setError(err instanceof Error ? err.message : 'Failed to create student');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  console.log('[CreateStudentDialog] Rendering with open:', open);
-
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      console.log('[CreateStudentDialog] Dialog onOpenChange called with:', newOpen);
-      setOpen(newOpen);
-    }}>
-      <DialogTrigger asChild onClick={() => console.log('[CreateStudentDialog] Trigger clicked')}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         {trigger || <Button>Add Student</Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

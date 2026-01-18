@@ -43,11 +43,8 @@ export default function StudentsPage() {
   }, [accessToken]);
 
   const handleStudentCreated = (student: Student) => {
-    console.log('[StudentsPage] Student created:', student);
     setStudents((prev) => [...prev, student]);
   };
-
-  console.log('[StudentsPage] Rendering with', students.length, 'students');
 
   if (isLoading) {
     return (
@@ -67,13 +64,6 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded text-xs">
-          Debug: {students.length} students loaded
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Students</h2>

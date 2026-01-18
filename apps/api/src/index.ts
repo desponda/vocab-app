@@ -51,19 +51,19 @@ app.register(multipart, {
   },
 });
 
-// Health check
-app.get('/health', async () => {
+// Register routes
+app.register(authRoutes, { prefix: '/api/auth' });
+app.register(studentRoutes, { prefix: '/api/students' });
+app.register(documentRoutes, { prefix: '/api/documents' });
+
+// Health check (under /api for consistency with frontend API_URL)
+app.get('/api/health', async () => {
   return {
     status: 'ok',
     version: config.version,
     timestamp: new Date().toISOString(),
   };
 });
-
-// Register routes
-app.register(authRoutes, { prefix: '/api/auth' });
-app.register(studentRoutes, { prefix: '/api/students' });
-app.register(documentRoutes, { prefix: '/api/documents' });
 
 // Error handler
 app.setErrorHandler(errorHandler);
