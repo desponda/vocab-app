@@ -13,18 +13,21 @@ export function HeroSection() {
           {/* Badge */}
           <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white backdrop-blur-sm">
             <Sparkles className="h-4 w-4" />
-            <span>AI-Powered Vocabulary Testing</span>
+            <span>AI-Powered Test Generation for K-12 Teachers</span>
           </div>
 
           {/* Headline */}
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
-            AI-Powered Vocabulary Practice for Students
+            Create Perfect Practice Tests
+            <br />
+            From Any Image in Seconds
           </h1>
 
           {/* Subheadline */}
           <p className="mx-auto mb-10 max-w-2xl text-lg text-white/90 sm:text-xl md:text-2xl">
-            Transform vocabulary lists into personalized practice tests in seconds.
-            Upload images, generate tests, and track student progress automatically.
+            Upload photos of worksheets, vocabulary lists, or study guides.
+            Our AI generates customized spelling, vocabulary, and knowledge tests
+            with auto-grading and instant feedback.
           </p>
 
           {/* CTAs */}
@@ -47,7 +50,7 @@ export function HeroSection() {
 
           {/* Trust signal */}
           <p className="mt-6 text-sm text-white/70">
-            No credit card required • Free to start
+            ✓ No credit card required  •  ✓ 3-test free trial  •  ✓ Join 500+ teachers
           </p>
         </div>
       </div>

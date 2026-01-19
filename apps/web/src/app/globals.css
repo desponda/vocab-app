@@ -10,17 +10,18 @@
   --color-popover: oklch(100% 0 0);
   --color-popover-foreground: oklch(9% 0 0);
 
-  --color-primary: oklch(47.08% 0.237 262.02);
-  --color-primary-foreground: oklch(98.85% 0.002 264.54);
+  /* TestCraft AI Brand Colors */
+  --color-primary: oklch(55% 0.20 240);  /* Deep Electric Blue - Trust & Intelligence */
+  --color-primary-foreground: oklch(99% 0 0);
 
-  --color-secondary: oklch(96.48% 0.001 286.38);
-  --color-secondary-foreground: oklch(18.23% 0.004 285.89);
+  --color-secondary: oklch(68% 0.18 50);  /* Vibrant Orange - Energy & Action */
+  --color-secondary-foreground: oklch(15% 0 0);
 
   --color-muted: oklch(96.48% 0.001 286.38);
   --color-muted-foreground: oklch(45.75% 0.006 286.32);
 
-  --color-accent: oklch(96.48% 0.001 286.38);
-  --color-accent-foreground: oklch(18.23% 0.004 285.89);
+  --color-accent: oklch(65% 0.18 155);  /* Emerald Green - Success & Growth */
+  --color-accent-foreground: oklch(15% 0 0);
 
   --color-destructive: oklch(58.25% 0.228 29.23);
   --color-destructive-foreground: oklch(98.85% 0.002 264.54);
@@ -48,17 +49,18 @@
     --color-popover: oklch(9% 0 0);
     --color-popover-foreground: oklch(98.85% 0.002 264.54);
 
-    --color-primary: oklch(70.89% 0.196 264.54);
-    --color-primary-foreground: oklch(18.23% 0.004 285.89);
+    /* TestCraft AI Brand Colors - Dark Mode */
+    --color-primary: oklch(65% 0.22 240);  /* Brighter Electric Blue for dark mode */
+    --color-primary-foreground: oklch(15% 0 0);
 
-    --color-secondary: oklch(20.51% 0.014 285.82);
-    --color-secondary-foreground: oklch(98.85% 0.002 264.54);
+    --color-secondary: oklch(72% 0.20 50);  /* Brighter Orange for dark mode */
+    --color-secondary-foreground: oklch(15% 0 0);
 
     --color-muted: oklch(20.51% 0.014 285.82);
     --color-muted-foreground: oklch(65.12% 0.013 285.88);
 
-    --color-accent: oklch(20.51% 0.014 285.82);
-    --color-accent-foreground: oklch(98.85% 0.002 264.54);
+    --color-accent: oklch(70% 0.20 155);  /* Brighter Green for dark mode */
+    --color-accent-foreground: oklch(15% 0 0);
 
     --color-destructive: oklch(62.8% 0.257 29.23);
     --color-destructive-foreground: oklch(98.85% 0.002 264.54);

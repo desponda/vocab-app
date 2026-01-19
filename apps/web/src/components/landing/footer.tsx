@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { GraduationCap } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -12,12 +12,12 @@ export function Footer() {
           <div className="md:col-span-1">
             <div className="mb-4 flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                <GraduationCap className="h-6 w-6 text-primary-foreground" />
+                <Sparkles className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">Vocab App</span>
+              <span className="text-xl font-bold">TestCraft AI</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              AI-powered vocabulary testing for modern classrooms
+              Craft perfect practice tests in seconds with AI
             </p>
           </div>
 
@@ -85,7 +85,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>© {currentYear} Vocab App. All rights reserved.</p>
+          <p>© {currentYear} TestCraft AI. All rights reserved.</p>
         </div>
       </div>
     </footer>

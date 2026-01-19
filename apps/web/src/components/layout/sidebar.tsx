@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, BookOpen, GraduationCap, Menu } from 'lucide-react';
+import { Home, Users, BookOpen, Sparkles, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -75,8 +75,8 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
           <div className="flex items-center gap-2 px-6 py-4 border-b">
-            <GraduationCap className="h-6 w-6 text-primary" aria-hidden="true" />
-            <span className="text-lg font-semibold">Vocab App</span>
+            <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
+            <span className="text-lg font-semibold">TestCraft AI</span>
           </div>
 
           {/* Navigation */}
@@ -113,8 +113,8 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
             <div className="flex flex-col h-full">
               {/* Logo/Header */}
               <div className="flex items-center gap-2 px-6 py-4 border-b">
-                <GraduationCap className="h-6 w-6 text-primary" />
-                <span className="text-lg font-semibold">Vocab App</span>
+                <Sparkles className="h-6 w-6 text-primary" />
+                <span className="text-lg font-semibold">TestCraft AI</span>
               </div>
 
               {/* Navigation */}
