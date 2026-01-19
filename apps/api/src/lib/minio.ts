@@ -74,6 +74,17 @@ export async function initializeBucket(): Promise<void> {
     } else {
       logger.info({ bucket: BUCKET_NAME }, 'MinIO bucket already exists');
     }
+
+    // Enable versioning for backup and recovery
+    try {
+      await minioClient.setBucketVersioning(BUCKET_NAME, { Status: 'Enabled' });
+      logger.info({ bucket: BUCKET_NAME }, 'MinIO bucket versioning enabled');
+    } catch (versionError) {
+      logger.warn(
+        { err: versionError, bucket: BUCKET_NAME },
+        'Failed to enable bucket versioning (may not be supported)'
+      );
+    }
   } catch (error) {
     // Log error but don't throw - MinIO might not be available
     logger.warn(

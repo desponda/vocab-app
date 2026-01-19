@@ -95,6 +95,16 @@ minio:
   useSSL: true
   bucket: "vocab-documents"
 
+  backup:
+    enabled: true
+    # Schedule in cron format (daily at 3:00 AM UTC, 1 hour after database backup)
+    schedule: "0 3 * * *"
+    # Keep backups for 30 days
+    retentionDays: 30
+    # Storage size for backup PVC (~1-2x expected bucket size for ~1,000 users)
+    # Estimated: 5-10GB for 1,000 users with 5 files each
+    storageSize: 15Gi
+
 ingress:
   enabled: true
   className: cloudflare-tunnel
