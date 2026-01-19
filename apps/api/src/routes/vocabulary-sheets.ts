@@ -524,9 +524,12 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
   /**
    * POST /api/vocabulary-sheets/:id/regenerate-tests
    * Delete existing tests and regenerate them from current vocabulary words
+   * Query params: ?force=true to bypass safety checks
    */
   app.post('/:id/regenerate-tests', async (request: FastifyRequest, reply) => {
     const params = sheetIdSchema.parse(request.params);
+    const query = request.query as { force?: string };
+    const forceRegenerate = query.force === 'true';
 
     // Verify vocabulary sheet exists and belongs to teacher
     const sheet = await prisma.vocabularySheet.findFirst({
@@ -540,12 +543,24 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         status: true,
         testsToGenerate: true,
         gradeLevel: true,
+        testType: true,
         words: {
           select: {
             id: true,
             word: true,
             definition: true,
             context: true,
+          },
+        },
+        tests: {
+          select: {
+            id: true,
+            _count: {
+              select: {
+                attempts: true,
+                assignments: true,
+              },
+            },
           },
         },
       },
@@ -559,13 +574,43 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
       return reply.code(400).send({ error: 'Vocabulary sheet must be completed before regenerating tests' });
     }
 
-    const vocabularyWords = sheet.words.filter(w => w.definition); // Only words with definitions
+    // Safety check: Prevent data loss if students have taken tests or tests are assigned
+    if (!forceRegenerate && sheet.tests.length > 0) {
+      const totalAttempts = sheet.tests.reduce((sum, test) => sum + test._count.attempts, 0);
+      const totalAssignments = sheet.tests.reduce((sum, test) => sum + test._count.assignments, 0);
 
-    if (vocabularyWords.length === 0) {
-      return reply.code(400).send({ error: 'No vocabulary words with definitions found' });
+      if (totalAttempts > 0 || totalAssignments > 0) {
+        return reply.code(409).send({
+          error: 'Cannot regenerate tests with existing student data',
+          message: `This action would delete ${totalAttempts} student test attempt(s) and ${totalAssignments} classroom assignment(s). Students would lose their scores and progress.`,
+          details: {
+            studentAttempts: totalAttempts,
+            classroomAssignments: totalAssignments,
+            affectedTests: sheet.tests.length,
+          },
+          action: 'To proceed, you must first manually delete all test assignments and wait for students to finish in-progress attempts, or contact support for data archival options.',
+        });
+      }
     }
 
-    // Delete existing tests and their questions
+    // Validate words based on test type
+    let wordsForValidation;
+    if (sheet.testType === 'SPELLING') {
+      // For spelling tests, all words are valid (don't require definitions)
+      wordsForValidation = sheet.words;
+    } else {
+      // For vocabulary tests, only words with definitions
+      wordsForValidation = sheet.words.filter(w => w.definition);
+    }
+
+    if (wordsForValidation.length === 0) {
+      const errorMessage = sheet.testType === 'SPELLING'
+        ? 'No words found for spelling test generation'
+        : 'No vocabulary words with definitions found';
+      return reply.code(400).send({ error: errorMessage });
+    }
+
+    // Delete existing tests and their questions (cascade will handle attempts/assignments if force=true)
     await prisma.test.deleteMany({
       where: { sheetId: params.id },
     });
@@ -583,7 +628,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
 
     return reply.send({
       message: 'Test regeneration started',
-      vocabularyCount: vocabularyWords.length,
+      vocabularyCount: wordsForValidation.length,
       testsToGenerate: sheet.testsToGenerate,
     });
   });

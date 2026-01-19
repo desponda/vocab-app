@@ -107,9 +107,9 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       const fileBuffer = await downloadFile(sheet.s3Key);
 
       // Extract vocabulary using Claude Vision API
-      console.log(`[Job ${job.id}] Extracting vocabulary with Claude Vision API`);
+      console.log(`[Job ${job.id}] Extracting ${sheet.testType} content with Claude Vision API`);
       await job.updateProgress(20);
-      const extractionResult = await extractVocabulary(fileBuffer, sheet.mimeType);
+      const extractionResult = await extractVocabulary(fileBuffer, sheet.mimeType, sheet.testType);
 
       console.log(
         `[Job ${job.id}] Extracted ${extractionResult.vocabulary.length} vocab words and ${extractionResult.spelling.length} spelling words`

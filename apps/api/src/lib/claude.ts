@@ -164,7 +164,8 @@ interface VocabularyExtractionResult {
  */
 export async function extractVocabulary(
   imageBuffer: Buffer,
-  mimeType: string
+  mimeType: string,
+  testType?: 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE'
 ): Promise<VocabularyExtractionResult> {
   if (!config.anthropicApiKey) {
     throw new Error('ANTHROPIC_API_KEY not configured');
@@ -218,7 +219,43 @@ export async function extractVocabulary(
           },
           {
             type: 'text',
-            text: `Analyze this vocabulary/spelling sheet image.
+            text: testType === 'SPELLING'
+              ? `Analyze this spelling word list image.
+
+TASK: Extract ONLY spelling words (individual words without definitions).
+
+INSTRUCTIONS:
+1. Look for word lists, typically numbered or bulleted
+2. Ignore any definitions, explanations, or example sentences
+3. Extract just the words themselves
+4. Handle handwritten and printed text
+5. Preserve correct spelling as shown
+
+Return ONLY valid JSON (no markdown code blocks, no explanation):
+{
+  "vocabulary": [],
+  "spelling": ["word1", "word2", "word3"]
+}`
+              : testType === 'VOCABULARY'
+              ? `Analyze this vocabulary sheet image.
+
+TASK: Extract ONLY vocabulary words WITH their definitions.
+
+INSTRUCTIONS:
+1. Look for words paired with definitions or explanations
+2. Extract the word, its definition, and any example sentences
+3. Ignore plain word lists without definitions
+4. Handle handwritten and printed text
+5. If you see numbered/lettered items with explanations, those are vocabulary
+
+Return ONLY valid JSON (no markdown code blocks, no explanation):
+{
+  "vocabulary": [
+    {"word": "example", "definition": "a thing characteristic of its kind", "context": "optional example sentence"}
+  ],
+  "spelling": []
+}`
+              : `Analyze this vocabulary/spelling sheet image.
 
 TASK: Extract all words, identifying which are vocabulary (with definitions) and which are spelling words.
 
