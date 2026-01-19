@@ -104,38 +104,9 @@ export const authApi = {
 
 // Students API
 export const studentsApi = {
+  // List students - used by student dashboard to get logged-in student's record
   list: (token: string): Promise<{ students: Student[] }> =>
     request('/api/students', { token }),
-
-  get: (id: string, token: string): Promise<{ student: Student }> =>
-    request(`/api/students/${id}`, { token }),
-
-  create: (
-    data: { name: string; gradeLevel: number },
-    token: string
-  ): Promise<{ student: Student }> =>
-    request('/api/students', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      token,
-    }),
-
-  update: (
-    id: string,
-    data: { name?: string; gradeLevel?: number },
-    token: string
-  ): Promise<{ student: Student }> =>
-    request(`/api/students/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-      token,
-    }),
-
-  delete: (id: string, token: string): Promise<void> =>
-    request(`/api/students/${id}`, {
-      method: 'DELETE',
-      token,
-    }),
 };
 
 // Classrooms API
