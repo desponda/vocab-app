@@ -58,8 +58,15 @@ const generateTokens = async (
 };
 
 export const authRoutes = async (app: FastifyInstance) => {
-  // Register
-  app.post('/register', async (request, reply) => {
+  // Register - Stricter rate limit to prevent spam account creation
+  app.post('/register', {
+    config: {
+      rateLimit: {
+        max: 3, // Maximum 3 registrations
+        timeWindow: '1 hour', // Per hour
+      },
+    },
+  }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
 
     // Check if user already exists
@@ -165,8 +172,15 @@ export const authRoutes = async (app: FastifyInstance) => {
     });
   });
 
-  // Login
-  app.post('/login', async (request, reply) => {
+  // Login - Stricter rate limit to prevent brute force attacks
+  app.post('/login', {
+    config: {
+      rateLimit: {
+        max: 5, // Maximum 5 login attempts
+        timeWindow: '15 minutes', // Per 15 minutes
+      },
+    },
+  }, async (request, reply) => {
     const body = loginSchema.parse(request.body);
 
     // Find user

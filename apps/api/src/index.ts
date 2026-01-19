@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 import { config } from './lib/config';
 import { authRoutes } from './routes/auth';
 import { studentRoutes } from './routes/students';
@@ -27,6 +29,38 @@ const app = Fastify({
             },
           }
         : undefined,
+  },
+});
+
+// Security: Helmet headers (HSTS, CSP, X-Frame-Options, etc.)
+app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow embedding from same origin
+});
+
+// Security: Rate limiting to prevent abuse
+app.register(rateLimit, {
+  max: 100, // Maximum 100 requests
+  timeWindow: '15 minutes', // Per 15 minute window
+  errorResponseBuilder: (request, context) => {
+    const retryAfter = typeof context.after === 'string' ? context.after : Math.ceil((context.after as number) / 1000);
+    return {
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: `Rate limit exceeded. Retry after ${retryAfter} seconds.`,
+    };
   },
 });
 

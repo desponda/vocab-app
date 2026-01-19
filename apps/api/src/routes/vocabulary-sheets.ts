@@ -98,7 +98,14 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
    * POST /api/vocabulary-sheets
    * Upload a new vocabulary sheet
    */
-  app.post('/', async (request: FastifyRequest, reply) => {
+  app.post('/', {
+    config: {
+      rateLimit: {
+        max: 10, // Maximum 10 uploads
+        timeWindow: '1 hour', // Per hour (AI processing is expensive)
+      },
+    },
+  }, async (request: FastifyRequest, reply) => {
     // Parse query params
     const query = uploadQuerySchema.parse(request.query);
 
