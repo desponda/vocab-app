@@ -298,7 +298,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
             },
           },
         },
-        status: 'GRADED',
+        status: 'SUBMITTED',
       },
       select: {
         score: true,
@@ -323,7 +323,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
             },
           },
         },
-        status: 'GRADED',
+        status: 'SUBMITTED',
       },
       select: {
         studentId: true,
@@ -391,7 +391,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
             },
           },
         },
-        status: 'GRADED',
+        status: 'SUBMITTED',
       },
       select: {
         completedAt: true,

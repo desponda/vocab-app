@@ -96,7 +96,7 @@ export const studentRoutes = async (app: FastifyInstance) => {
                 name: true,
                 gradeLevel: true,
                 testAttempts: {
-                  where: { status: 'GRADED' },
+                  where: { status: 'SUBMITTED' },
                   select: {
                     score: true,
                     completedAt: true,
@@ -184,7 +184,7 @@ export const studentRoutes = async (app: FastifyInstance) => {
     const completedAttempts = await prisma.testAttempt.findMany({
       where: {
         studentId: student.id,
-        status: 'GRADED',
+        status: 'SUBMITTED',
       },
       select: {
         score: true,

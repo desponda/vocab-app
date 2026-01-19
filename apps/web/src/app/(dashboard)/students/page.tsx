@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { studentsApi } from '@/lib/api';
 import {
@@ -36,6 +37,7 @@ interface EnrichedStudent {
 }
 
 export default function StudentsPage() {
+  const router = useRouter();
   const { accessToken } = useAuth();
   const [students, setStudents] = useState<EnrichedStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,7 +153,11 @@ export default function StudentsPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredStudents.map((student) => (
-                      <TableRow key={`${student.id}-${student.classroomId}`}>
+                      <TableRow
+                        key={`${student.id}-${student.classroomId}`}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => router.push(`/students/${student.id}`)}
+                      >
                         <TableCell className="font-medium">{student.name}</TableCell>
                         <TableCell>{student.classroomName}</TableCell>
                         <TableCell className="hidden md:table-cell">
