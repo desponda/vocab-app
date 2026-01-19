@@ -645,8 +645,8 @@ export default function ClassroomDetailPage() {
                     testGroups.get(key)!.scores.push(attempt.score);
                   });
 
-                  return Array.from(testGroups.entries())
-                    .map(([_, data]) => ({
+                  return Array.from(testGroups.values())
+                    .map((data) => ({
                       testName: data.name,
                       avgScore: Math.round(data.scores.reduce((sum, s) => sum + s, 0) / data.scores.length),
                       attempts: data.scores.length,

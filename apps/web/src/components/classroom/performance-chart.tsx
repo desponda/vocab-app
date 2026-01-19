@@ -54,7 +54,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '0.5rem',
               }}
-              formatter={(value: number) => [`${value}%`, 'Avg Score']}
+              formatter={(value: number | undefined) => [`${value}%`, 'Avg Score']}
             />
             <Legend />
             <Bar
