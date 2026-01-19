@@ -226,7 +226,7 @@ export const vocabularySheetsApi = {
     name: string,
     testsToGenerate: number = 3,
     gradeLevel: number | undefined,
-    testType: 'VOCABULARY' | 'SPELLING' = 'VOCABULARY',
+    testType: 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE' = 'VOCABULARY',
     token: string,
     onProgress?: (progress: number) => void
   ): Promise<{ sheet: VocabularySheet }> => {

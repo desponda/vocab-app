@@ -16,6 +16,7 @@ import { Step2FileUpload } from './Step2FileUpload';
 import { Step3Configuration } from './Step3Configuration';
 import { Step4Review } from './Step4Review';
 import { Step5Processing } from './Step5Processing';
+import { useTestUpload } from './useTestUpload';
 
 interface TestCreationWizardProps {
   open: boolean;
@@ -24,28 +25,70 @@ interface TestCreationWizardProps {
 }
 
 function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTestCreated?: (sheetId: string) => void }) {
-  const { state, resetWizard } = useWizard();
-  const { currentStep, processing } = state;
+  const { state, resetWizard, nextStep, updateProcessing } = useWizard();
+  const { currentStep, testType, file, config } = state;
+  const uploadHook = useTestUpload();
+
+  // Sync upload hook state to wizard context
+  useEffect(() => {
+    updateProcessing({
+      stage: uploadHook.stage,
+      progress: uploadHook.progress,
+      message: uploadHook.message,
+      sheetId: uploadHook.sheetId,
+      error: uploadHook.error,
+    });
+  }, [uploadHook.stage, uploadHook.progress, uploadHook.message, uploadHook.sheetId, uploadHook.error, updateProcessing]);
 
   // Call onTestCreated when processing completes
   useEffect(() => {
-    if (processing.stage === 'complete' && processing.sheetId && onTestCreated) {
-      onTestCreated(processing.sheetId);
+    if (uploadHook.stage === 'complete' && uploadHook.sheetId && onTestCreated) {
+      onTestCreated(uploadHook.sheetId);
     }
-  }, [processing.stage, processing.sheetId, onTestCreated]);
+  }, [uploadHook.stage, uploadHook.sheetId, onTestCreated]);
+
+  // Handle "Create Test" button click on Step 4
+  const handleCreateTest = async () => {
+    if (!testType || !file) {
+      return;
+    }
+
+    // Move to processing step
+    nextStep();
+
+    // Start upload
+    await uploadHook.upload({
+      file,
+      name: config.name,
+      testType,
+      variants: config.variants,
+      gradeLevel: config.gradeLevel,
+      useAllWords: config.useAllWords,
+      generatePreview: config.generatePreview,
+    });
+  };
+
+  // Handle "Next" button - on step 4 this becomes "Create Test"
+  const handleNext = () => {
+    if (currentStep === 4) {
+      handleCreateTest();
+    } else {
+      nextStep();
+    }
+  };
 
   // Handle dialog close with confirmation if needed
   const handleClose = () => {
-    if (processing.stage === 'uploading') {
+    if (uploadHook.stage === 'uploading') {
       if (confirm('Upload in progress. Cancel upload?')) {
-        // TODO: Cancel upload XHR
+        uploadHook.reset();
         resetWizard();
         onClose();
       }
       return;
     }
 
-    if (processing.stage === 'extracting' || processing.stage === 'generating') {
+    if (uploadHook.stage === 'extracting' || uploadHook.stage === 'generating') {
       if (confirm('Processing will continue in background. Close wizard?')) {
         onClose();
       }
@@ -53,6 +96,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
     }
 
     // Safe to close in other stages
+    uploadHook.reset();
     resetWizard();
     onClose();
   };
@@ -60,7 +104,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
   // Browser-level protection during upload
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (processing.stage === 'uploading') {
+      if (uploadHook.stage === 'uploading') {
         e.preventDefault();
         e.returnValue = 'Upload in progress. Leave page?';
       }
@@ -68,7 +112,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [processing.stage]);
+  }, [uploadHook.stage]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -100,7 +144,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
         {renderStep()}
       </div>
 
-      <WizardNavigation onCancel={handleClose} />
+      <WizardNavigation onCancel={handleClose} onNext={handleNext} />
     </div>
   );
 }
