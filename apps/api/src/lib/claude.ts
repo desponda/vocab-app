@@ -179,6 +179,14 @@ export async function extractVocabulary(
     processedMimeType = 'image/png';
   }
 
+  // Fix image orientation (auto-rotate based on EXIF metadata)
+  // This is critical for text recognition - sideways images confuse the AI
+  console.log('Checking image orientation and applying EXIF corrections...');
+  processedBuffer = await sharp(processedBuffer)
+    .rotate() // Auto-rotate based on EXIF Orientation tag
+    .toBuffer();
+  console.log('✓ Image orientation corrected');
+
   // Ensure image is in supported format
   const { buffer: formattedBuffer, mimeType: formattedMimeType } = await ensureSupportedFormat(
     processedBuffer,

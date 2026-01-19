@@ -21,6 +21,17 @@ const assignBulkSchema = z.object({
   dueDate: z.string().datetime().optional(),
 });
 
+const wordIdSchema = z.object({
+  id: z.string().cuid(),
+  wordId: z.string().cuid(),
+});
+
+const updateWordSchema = z.object({
+  word: z.string().min(1).max(100).optional(),
+  definition: z.string().max(500).optional(),
+  context: z.string().max(500).optional(),
+});
+
 // File type signatures (magic bytes)
 interface FileSignature {
   mimeType: string;
@@ -460,6 +471,115 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         name: sheet.name,
       },
       variantsAssigned: sheet.tests.length,
+    });
+  });
+
+  /**
+   * PATCH /api/vocabulary-sheets/:id/words/:wordId
+   * Update a vocabulary word (for fixing AI extraction errors)
+   */
+  app.patch('/:id/words/:wordId', async (request: FastifyRequest, reply) => {
+    const params = wordIdSchema.parse(request.params);
+    const body = updateWordSchema.parse(request.body);
+
+    // Verify vocabulary sheet exists and belongs to teacher
+    const sheet = await prisma.vocabularySheet.findFirst({
+      where: {
+        id: params.id,
+        teacherId: request.userId,
+      },
+    });
+
+    if (!sheet) {
+      return reply.code(404).send({ error: 'Vocabulary sheet not found' });
+    }
+
+    // Update the word
+    const word = await prisma.vocabularyWord.update({
+      where: {
+        id: params.wordId,
+        sheetId: params.id, // Ensure word belongs to this sheet
+      },
+      data: {
+        word: body.word,
+        definition: body.definition,
+        context: body.context,
+      },
+      select: {
+        id: true,
+        word: true,
+        definition: true,
+        context: true,
+      },
+    });
+
+    return reply.send({ word });
+  });
+
+  /**
+   * POST /api/vocabulary-sheets/:id/regenerate-tests
+   * Delete existing tests and regenerate them from current vocabulary words
+   */
+  app.post('/:id/regenerate-tests', async (request: FastifyRequest, reply) => {
+    const params = sheetIdSchema.parse(request.params);
+
+    // Verify vocabulary sheet exists and belongs to teacher
+    const sheet = await prisma.vocabularySheet.findFirst({
+      where: {
+        id: params.id,
+        teacherId: request.userId,
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        testsToGenerate: true,
+        gradeLevel: true,
+        words: {
+          select: {
+            id: true,
+            word: true,
+            definition: true,
+            context: true,
+          },
+        },
+      },
+    });
+
+    if (!sheet) {
+      return reply.code(404).send({ error: 'Vocabulary sheet not found' });
+    }
+
+    if (sheet.status !== 'COMPLETED') {
+      return reply.code(400).send({ error: 'Vocabulary sheet must be completed before regenerating tests' });
+    }
+
+    const vocabularyWords = sheet.words.filter(w => w.definition); // Only words with definitions
+
+    if (vocabularyWords.length === 0) {
+      return reply.code(400).send({ error: 'No vocabulary words with definitions found' });
+    }
+
+    // Delete existing tests and their questions
+    await prisma.test.deleteMany({
+      where: { sheetId: params.id },
+    });
+
+    // Queue regeneration job (reuses existing test generation logic)
+    const queue = await getVocabularyQueue();
+    if (!queue) {
+      return reply.code(503).send({ error: 'Background job queue not available' });
+    }
+
+    await queue.add('regenerate-tests', {
+      sheetId: params.id,
+      action: 'regenerate',
+    });
+
+    return reply.send({
+      message: 'Test regeneration started',
+      vocabularyCount: vocabularyWords.length,
+      testsToGenerate: sheet.testsToGenerate,
     });
   });
 };

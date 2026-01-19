@@ -25,11 +25,12 @@ const TEST_VARIANTS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
 /**
  * Process vocabulary sheet: extract words and generate tests
+ * OR regenerate tests from existing words (when action='regenerate')
  */
 async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
-  const { sheetId } = job.data;
+  const { sheetId, action = 'process' } = job.data;
 
-  console.log(`[Job ${job.id}] Processing vocabulary sheet: ${sheetId}`);
+  console.log(`[Job ${job.id}] ${action === 'regenerate' ? 'Regenerating tests for' : 'Processing'} vocabulary sheet: ${sheetId}`);
 
   try {
     // Get vocabulary sheet from database
@@ -42,6 +43,14 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
         mimeType: true,
         gradeLevel: true,
         testsToGenerate: true,
+        words: action === 'regenerate' ? {
+          select: {
+            id: true,
+            word: true,
+            definition: true,
+            context: true,
+          },
+        } : undefined,
       },
     });
 
@@ -49,97 +58,126 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       throw new Error(`Vocabulary sheet ${sheetId} not found`);
     }
 
-    // Update status to PROCESSING
-    await prisma.vocabularySheet.update({
-      where: { id: sheetId },
-      data: { status: 'PROCESSING' },
-    });
-
-    // Download file from MinIO
-    console.log(`[Job ${job.id}] Downloading file from MinIO: ${sheet.s3Key}`);
-    const fileBuffer = await downloadFile(sheet.s3Key);
-
-    // Extract vocabulary using Claude Vision API
-    console.log(`[Job ${job.id}] Extracting vocabulary with Claude Vision API`);
-    await job.updateProgress(20);
-    const extractionResult = await extractVocabulary(fileBuffer, sheet.mimeType);
-
-    console.log(
-      `[Job ${job.id}] Extracted ${extractionResult.vocabulary.length} vocab words and ${extractionResult.spelling.length} spelling words`
-    );
-
-    // Save processed/compressed image to MinIO so teachers can download it
-    let processedS3Key: string | null = null;
-    if (extractionResult.processedImage) {
-      const extension = extractionResult.processedImage.mimeType === 'image/png' ? 'png' : 'jpg';
-      processedS3Key = sheet.s3Key.replace(/\.[^.]+$/, `_processed.${extension}`); // e.g., userId/file_processed.png
-      console.log(`[Job ${job.id}] Saving processed image to MinIO: ${processedS3Key}`);
-
-      await uploadFile(
-        processedS3Key,
-        extractionResult.processedImage.buffer,
-        { 'Content-Type': extractionResult.processedImage.mimeType }
-      );
-
-      console.log(`[Job ${job.id}] Processed image saved: ${processedS3Key}`);
+    // Update status to PROCESSING (only for initial processing)
+    if (action === 'process') {
+      await prisma.vocabularySheet.update({
+        where: { id: sheetId },
+        data: { status: 'PROCESSING' },
+      });
     }
 
-    // Combine all words (vocab + spelling) for database storage
-    const allWords = [
-      ...extractionResult.vocabulary.map((v) => ({
+    let vocabularyWordsForTests: Array<{ word: string; definition: string; context?: string }>;
+
+    if (action === 'regenerate') {
+      // REGENERATE MODE: Use existing words from database
+      console.log(`[Job ${job.id}] Using existing vocabulary words from database`);
+      await job.updateProgress(20);
+
+      if (!sheet.words || sheet.words.length === 0) {
+        throw new Error('No vocabulary words found in database');
+      }
+
+      vocabularyWordsForTests = sheet.words
+        .filter(w => w.definition) // Only words with definitions
+        .map(w => ({
+          word: w.word,
+          definition: w.definition!,
+          context: w.context || undefined,
+        }));
+
+      if (vocabularyWordsForTests.length === 0) {
+        throw new Error('No vocabulary words with definitions found');
+      }
+
+      console.log(`[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test regeneration`);
+    } else {
+      // PROCESS MODE: Extract vocabulary from uploaded file
+      console.log(`[Job ${job.id}] Downloading file from MinIO: ${sheet.s3Key}`);
+      const fileBuffer = await downloadFile(sheet.s3Key);
+
+      // Extract vocabulary using Claude Vision API
+      console.log(`[Job ${job.id}] Extracting vocabulary with Claude Vision API`);
+      await job.updateProgress(20);
+      const extractionResult = await extractVocabulary(fileBuffer, sheet.mimeType);
+
+      console.log(
+        `[Job ${job.id}] Extracted ${extractionResult.vocabulary.length} vocab words and ${extractionResult.spelling.length} spelling words`
+      );
+
+      // Save processed/compressed image to MinIO so teachers can download it
+      let processedS3Key: string | null = null;
+      if (extractionResult.processedImage) {
+        const extension = extractionResult.processedImage.mimeType === 'image/png' ? 'png' : 'jpg';
+        processedS3Key = sheet.s3Key.replace(/\.[^.]+$/, `_processed.${extension}`);
+        console.log(`[Job ${job.id}] Saving processed image to MinIO: ${processedS3Key}`);
+
+        await uploadFile(
+          processedS3Key,
+          extractionResult.processedImage.buffer,
+          { 'Content-Type': extractionResult.processedImage.mimeType }
+        );
+
+        console.log(`[Job ${job.id}] Processed image saved: ${processedS3Key}`);
+      }
+
+      // Combine all words (vocab + spelling) for database storage
+      const allWords = [
+        ...extractionResult.vocabulary.map((v) => ({
+          word: v.word,
+          definition: v.definition,
+          context: v.context,
+        })),
+        ...extractionResult.spelling.map((word) => ({
+          word,
+          definition: undefined as string | undefined,
+          context: undefined as string | undefined,
+        })),
+      ];
+
+      if (allWords.length === 0) {
+        throw new Error('No words extracted from the vocabulary sheet');
+      }
+
+      vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
         word: v.word,
         definition: v.definition,
         context: v.context,
-      })),
-      ...extractionResult.spelling.map((word) => ({
-        word,
-        definition: undefined as string | undefined,
-        context: undefined as string | undefined,
-      })),
-    ];
+      }));
 
-    if (allWords.length === 0) {
-      throw new Error('No words extracted from the vocabulary sheet');
-    }
+      if (vocabularyWordsForTests.length === 0) {
+        throw new Error(
+          'No vocabulary words with definitions found. Please upload a document with vocabulary words that include definitions or example sentences.'
+        );
+      }
 
-    // TODO: Future enhancement - Generate different test types
-    // - Vocabulary words → definition/context-based tests (current implementation)
-    // - Spelling words → spelling/fill-in-the-blank tests (to be implemented)
-    // For now, only vocabulary words with definitions are used for test generation.
-    // Spelling words are saved to database but not used in tests yet.
-
-    // Only use vocabulary words (with definitions) for test generation
-    const vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
-      word: v.word,
-      definition: v.definition,
-      context: v.context,
-    }));
-
-    if (vocabularyWordsForTests.length === 0) {
-      throw new Error(
-        'No vocabulary words with definitions found. Please upload a document with vocabulary words that include definitions or example sentences.'
+      console.log(
+        `[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test generation` +
+        (extractionResult.spelling.length > 0
+          ? ` (${extractionResult.spelling.length} spelling words saved but not used in tests yet)`
+          : '')
       );
+
+      // Save all words to database (vocabulary + spelling)
+      console.log(`[Job ${job.id}] Saving ${allWords.length} words to database`);
+      await job.updateProgress(40);
+
+      await prisma.vocabularyWord.createMany({
+        data: allWords.map((word) => ({
+          word: word.word,
+          definition: word.definition,
+          context: word.context,
+          sheetId: sheet.id,
+        })),
+      });
+
+      // Update processedS3Key in sheet
+      if (processedS3Key) {
+        await prisma.vocabularySheet.update({
+          where: { id: sheetId },
+          data: { processedS3Key },
+        });
+      }
     }
-
-    console.log(
-      `[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test generation` +
-      (extractionResult.spelling.length > 0
-        ? ` (${extractionResult.spelling.length} spelling words saved but not used in tests yet)`
-        : '')
-    );
-
-    // Save all words to database (vocabulary + spelling)
-    console.log(`[Job ${job.id}] Saving ${allWords.length} words to database`);
-    await job.updateProgress(40);
-
-    await prisma.vocabularyWord.createMany({
-      data: allWords.map((word) => ({
-        word: word.word,
-        definition: word.definition,
-        context: word.context,
-        sheetId: sheet.id,
-      })),
-    });
 
     // Generate test variants using only vocabulary words
     const testsToGenerate = Math.min(sheet.testsToGenerate, TEST_VARIANTS.length);
@@ -217,20 +255,26 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       console.log(`[Job ${job.id}] Created test variant ${variant} with ${questions.length} questions`);
     }
 
-    // Update status to COMPLETED
-    await prisma.vocabularySheet.update({
-      where: { id: sheetId },
-      data: {
-        status: 'COMPLETED',
-        processedAt: new Date(),
-        processedS3Key,
-      },
-    });
+    // Update status to COMPLETED (only for initial processing)
+    if (action === 'process') {
+      await prisma.vocabularySheet.update({
+        where: { id: sheetId },
+        data: {
+          status: 'COMPLETED',
+          processedAt: new Date(),
+        },
+      });
+    }
 
     await job.updateProgress(100);
-    console.log(`[Job ${job.id}] Successfully processed vocabulary sheet: ${sheetId}`);
+    console.log(`[Job ${job.id}] Successfully ${action === 'regenerate' ? 'regenerated tests for' : 'processed'} vocabulary sheet: ${sheetId}`);
 
-    return { success: true, sheetId, wordsExtracted: allWords.length, testsGenerated: testsToGenerate };
+    return {
+      success: true,
+      sheetId,
+      wordsExtracted: vocabularyWordsForTests.length,
+      testsGenerated: testsToGenerate,
+    };
   } catch (error) {
     console.error(`[Job ${job.id}] Error processing vocabulary sheet:`, error);
 

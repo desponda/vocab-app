@@ -46,4 +46,5 @@ export function getVocabularyQueue(): Queue | null {
 
 export interface VocabularyProcessingJob {
   sheetId: string;
+  action?: 'process' | 'regenerate'; // process = extract + generate, regenerate = only generate
 }
