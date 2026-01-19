@@ -698,16 +698,22 @@ export const testRoutes = async (app: FastifyInstance) => {
   app.get('/students/:studentId/attempts', async (request: FastifyRequest, reply) => {
     const studentId = (request.params as any).studentId;
 
-    // Verify student belongs to user
+    // Verify student is enrolled in one of the teacher's classrooms
     const student = await prisma.student.findFirst({
       where: {
         id: studentId,
-        userId: request.userId,
+        enrollments: {
+          some: {
+            classroom: {
+              teacherId: request.userId,
+            },
+          },
+        },
       },
     });
 
     if (!student) {
-      return reply.code(404).send({ error: 'Student not found' });
+      return reply.code(404).send({ error: 'Student not found or not in your classrooms' });
     }
 
     const attempts = await prisma.testAttempt.findMany({
