@@ -51,14 +51,14 @@ export default function VocabularySheetDetailPage() {
 
   const handleDelete = async () => {
     if (!accessToken || !sheet) return;
-    if (!confirm('Are you sure you want to delete this vocabulary sheet?')) return;
+    if (!confirm('Are you sure you want to delete this test?')) return;
 
     try {
       await vocabularySheetsApi.delete(sheet.id, accessToken);
-      router.push('/vocabulary');
+      router.push('/tests');
     } catch (error) {
       console.error('Failed to delete sheet:', error);
-      alert('Failed to delete vocabulary sheet');
+      alert('Failed to delete test');
     }
   };
 
@@ -72,7 +72,7 @@ export default function VocabularySheetDetailPage() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="ml-3 text-muted-foreground">Loading vocabulary sheet...</p>
+        <p className="ml-3 text-muted-foreground">Loading test...</p>
       </div>
     );
   }
@@ -80,16 +80,16 @@ export default function VocabularySheetDetailPage() {
   if (error || !sheet) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" onClick={() => router.push('/vocabulary')}>
+        <Button variant="ghost" onClick={() => router.push('/tests')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Vocabulary Sheets
+          Back to Tests
         </Button>
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
             <h3 className="text-lg font-medium mb-2">Error Loading Sheet</h3>
             <p className="text-sm text-muted-foreground">
-              {error || 'Vocabulary sheet not found'}
+              {error || 'Test not found'}
             </p>
           </CardContent>
         </Card>
@@ -105,7 +105,7 @@ export default function VocabularySheetDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.push('/vocabulary')}>
+          <Button variant="ghost" onClick={() => router.push('/tests')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
@@ -182,11 +182,11 @@ export default function VocabularySheetDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Vocabulary Words */}
+      {/* Words */}
       {sheet.words && sheet.words.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Vocabulary Words ({sheet.words.length})</CardTitle>
+            <CardTitle>Words ({sheet.words.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -268,9 +268,9 @@ export default function VocabularySheetDetailPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Vocabulary Words</h3>
+            <h3 className="text-lg font-medium mb-2">No Words Found</h3>
             <p className="text-sm text-muted-foreground">
-              No vocabulary words were extracted from this sheet.
+              No words were extracted from this file.
             </p>
           </CardContent>
         </Card>
@@ -282,7 +282,7 @@ export default function VocabularySheetDetailPage() {
             <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Processing Pending</h3>
             <p className="text-sm text-muted-foreground">
-              This vocabulary sheet is queued for processing. Please check back soon.
+              This test is queued for processing. Please check back soon.
             </p>
           </CardContent>
         </Card>
@@ -294,7 +294,7 @@ export default function VocabularySheetDetailPage() {
             <Loader2 className="mx-auto h-12 w-12 text-primary mb-4 animate-spin" />
             <h3 className="text-lg font-medium mb-2">Processing in Progress</h3>
             <p className="text-sm text-muted-foreground">
-              Claude AI is extracting vocabulary words and generating tests. This may take a few minutes.
+              AI is extracting words and generating tests. This may take a few minutes.
             </p>
           </CardContent>
         </Card>

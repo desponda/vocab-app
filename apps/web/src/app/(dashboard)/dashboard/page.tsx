@@ -154,11 +154,11 @@ export default function DashboardPage() {
             onClick={() => router.push('/classrooms')}
           />
           <StatCard
-            title="Vocabulary Sheets"
+            title="Tests"
             value={stats.vocabularySheets.total}
             icon={BookOpen}
             color="blue"
-            onClick={() => router.push('/vocabulary')}
+            onClick={() => router.push('/tests')}
           />
           <StatCard
             title="Recent Activity"
@@ -177,9 +177,9 @@ export default function DashboardPage() {
             <Plus className="h-4 w-4" />
             Create Classroom
           </Button>
-          <Button onClick={() => router.push('/vocabulary')} variant="outline" className="gap-2">
+          <Button onClick={() => router.push('/tests')} variant="outline" className="gap-2">
             <Upload className="h-4 w-4" />
-            Upload Vocabulary
+            Create Test
           </Button>
           <Button onClick={() => router.push('/students')} variant="outline" className="gap-2">
             <Users className="h-4 w-4" />
@@ -242,8 +242,8 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Recent Vocabulary</CardTitle>
-              <Link href="/vocabulary">
+              <CardTitle>Recent Tests</CardTitle>
+              <Link href="/tests">
                 <Button variant="ghost" size="sm">View All</Button>
               </Link>
             </div>
@@ -253,10 +253,10 @@ export default function DashboardPage() {
               <EmptyState
                 icon={FileText}
                 title="No vocabulary sheets yet"
-                description="Upload your first vocabulary sheet"
+                description="Create your first test"
                 action={{
-                  label: 'Upload Vocabulary',
-                  onClick: () => router.push('/vocabulary'),
+                  label: 'Create Test',
+                  onClick: () => router.push('/tests'),
                 }}
               />
             ) : (
@@ -265,7 +265,7 @@ export default function DashboardPage() {
                   <div
                     key={sheet.id}
                     className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 hover:shadow-sm transition-all cursor-pointer group"
-                    onClick={() => router.push(`/vocabulary/${sheet.id}`)}
+                    onClick={() => router.push(`/tests/${sheet.id}`)}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">

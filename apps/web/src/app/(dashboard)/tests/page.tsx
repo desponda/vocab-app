@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { VocabularySheetListItem } from '@/components/vocabulary/vocabulary-sheet-list-item';
-import { UploadVocabularyDialog } from '@/components/vocabulary/upload-vocabulary-dialog';
+import { VocabularySheetListItem } from '@/components/tests/vocabulary-sheet-list-item';
+import { UploadVocabularyDialog } from '@/components/tests/upload-vocabulary-dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { FileText, Loader2 } from 'lucide-react';
 
@@ -163,8 +163,8 @@ export default function VocabularyPage() {
       {sheets.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No vocabulary sheets yet"
-          description="Upload your first vocabulary sheet to generate spelling tests for your students"
+          title="No tests yet"
+          description="Upload your first worksheet or study guide to generate practice tests for your students"
         />
       ) : (
         <>

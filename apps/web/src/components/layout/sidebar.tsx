@@ -18,7 +18,7 @@ interface NavItem {
 const teacherNavItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: Home },
   { label: 'Classrooms', href: '/classrooms', icon: School },
-  { label: 'Vocabulary', href: '/vocabulary', icon: BookOpen },
+  { label: 'Tests', href: '/tests', icon: BookOpen },
   { label: 'Students', href: '/students', icon: Users },
 ];
 
