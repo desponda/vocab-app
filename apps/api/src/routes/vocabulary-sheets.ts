@@ -295,6 +295,46 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
   });
 
   /**
+   * GET /api/vocabulary-sheets/:id/download-processed
+   * Download compressed/processed image that was sent to Claude AI
+   */
+  app.get('/:id/download-processed', async (request: FastifyRequest, reply) => {
+    const params = sheetIdSchema.parse(request.params);
+
+    const sheet = await prisma.vocabularySheet.findFirst({
+      where: {
+        id: params.id,
+        teacherId: request.userId, // Verify ownership
+      },
+      select: {
+        processedS3Key: true,
+        originalName: true,
+      },
+    });
+
+    if (!sheet) {
+      return reply.code(404).send({ error: 'Vocabulary sheet not found' });
+    }
+
+    if (!sheet.processedS3Key) {
+      return reply.code(404).send({ error: 'Processed image not available' });
+    }
+
+    // Download from MinIO
+    const buffer = await downloadFile(sheet.processedS3Key);
+
+    // Determine file extension from processed S3 key
+    const extension = sheet.processedS3Key.split('.').pop() || 'png';
+    const processedFileName = sheet.originalName.replace(/\.[^.]+$/, `_processed.${extension}`);
+
+    // Send file to client
+    return reply
+      .header('Content-Type', extension === 'png' ? 'image/png' : 'image/jpeg')
+      .header('Content-Disposition', `attachment; filename="${processedFileName}"`)
+      .send(buffer);
+  });
+
+  /**
    * DELETE /api/vocabulary-sheets/:id
    * Delete vocabulary sheet
    */

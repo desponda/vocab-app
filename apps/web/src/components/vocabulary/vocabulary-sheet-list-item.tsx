@@ -27,6 +27,7 @@ interface VocabularySheetListItemProps {
   errorMessage?: string;
   onDelete: (id: string) => void;
   onDownload: (id: string) => void;
+  onDownloadProcessed?: (id: string) => void;
 }
 
 export function VocabularySheetListItem({
@@ -42,6 +43,7 @@ export function VocabularySheetListItem({
   errorMessage,
   onDelete,
   onDownload,
+  onDownloadProcessed,
 }: VocabularySheetListItemProps) {
   const statusConfig = STATUS_CONFIG[status];
   const StatusIcon = statusConfig.icon;
@@ -106,6 +108,18 @@ export function VocabularySheetListItem({
               <Download className="h-4 w-4" />
               Download
             </Button>
+            {status === 'COMPLETED' && onDownloadProcessed && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadProcessed(id)}
+                className="gap-2"
+                title="Download the compressed/processed image sent to AI"
+              >
+                <Download className="h-4 w-4" />
+                AI Image
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

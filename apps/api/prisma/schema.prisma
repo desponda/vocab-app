@@ -123,6 +123,7 @@ model VocabularySheet {
   originalName    String           // Filename for reference
   fileName        String           @unique
   s3Key           String           @unique // MinIO key: {userId}/{fileName}
+  processedS3Key  String?          // Compressed/processed image sent to Claude AI
   fileType        DocumentType
   mimeType        String
   fileSize        Int

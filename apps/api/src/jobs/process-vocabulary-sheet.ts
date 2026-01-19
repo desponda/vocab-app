@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
-import { downloadFile } from '../lib/minio';
+import { downloadFile, uploadFile } from '../lib/minio';
 import { extractVocabulary, generateTestQuestions } from '../lib/claude';
 import { VocabularyProcessingJob } from '../lib/queue';
 import { config } from '../lib/config';
@@ -67,6 +67,22 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
     console.log(
       `[Job ${job.id}] Extracted ${extractionResult.vocabulary.length} vocab words and ${extractionResult.spelling.length} spelling words`
     );
+
+    // Save processed/compressed image to MinIO so teachers can download it
+    let processedS3Key: string | null = null;
+    if (extractionResult.processedImage) {
+      const extension = extractionResult.processedImage.mimeType === 'image/png' ? 'png' : 'jpg';
+      processedS3Key = sheet.s3Key.replace(/\.[^.]+$/, `_processed.${extension}`); // e.g., userId/file_processed.png
+      console.log(`[Job ${job.id}] Saving processed image to MinIO: ${processedS3Key}`);
+
+      await uploadFile(
+        processedS3Key,
+        extractionResult.processedImage.buffer,
+        { 'Content-Type': extractionResult.processedImage.mimeType }
+      );
+
+      console.log(`[Job ${job.id}] Processed image saved: ${processedS3Key}`);
+    }
 
     // Combine all words (vocab + spelling) for database storage
     const allWords = [
@@ -207,6 +223,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       data: {
         status: 'COMPLETED',
         processedAt: new Date(),
+        processedS3Key,
       },
     });
 

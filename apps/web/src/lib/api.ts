@@ -274,6 +274,9 @@ export const vocabularySheetsApi = {
   download: (id: string, token: string): string =>
     `${API_URL}/api/vocabulary-sheets/${id}/download?token=${token}`,
 
+  downloadProcessed: (id: string, token: string): string =>
+    `${API_URL}/api/vocabulary-sheets/${id}/download-processed?token=${token}`,
+
   delete: (id: string, token: string): Promise<void> =>
     request(`/api/vocabulary-sheets/${id}`, { method: 'DELETE', token }),
 

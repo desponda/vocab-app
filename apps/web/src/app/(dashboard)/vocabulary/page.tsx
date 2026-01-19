@@ -61,6 +61,12 @@ export default function VocabularyPage() {
     window.open(url, '_blank');
   };
 
+  const handleDownloadProcessed = (id: string) => {
+    if (!accessToken) return;
+    const url = vocabularySheetsApi.downloadProcessed(id, accessToken);
+    window.open(url, '_blank');
+  };
+
   // Filter sheets based on status
   const filteredSheets = useMemo(() => {
     if (statusFilter === 'ALL') return sheets;
@@ -143,6 +149,7 @@ export default function VocabularyPage() {
                   errorMessage={sheet.errorMessage || undefined}
                   onDelete={handleDelete}
                   onDownload={handleDownload}
+                  onDownloadProcessed={handleDownloadProcessed}
                 />
               ))}
             </div>

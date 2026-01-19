@@ -34,6 +34,12 @@ async function ensureSupportedFormat(
 /**
  * Compress image to stay under Claude API's 5MB limit
  * Target 4MB to leave buffer for base64 encoding overhead
+ *
+ * Strategy for text-heavy images (vocabulary sheets):
+ * 1. Prefer PNG (lossless) for text clarity
+ * 2. Resize before reducing quality (maintains text sharpness)
+ * 3. Higher minimum quality (70) to preserve text readability
+ * 4. Only use JPEG as last resort
  */
 async function compressImageIfNeeded(
   buffer: Buffer,
@@ -47,53 +53,78 @@ async function compressImageIfNeeded(
 
   console.log(`Image size ${(buffer.length / 1024 / 1024).toFixed(2)}MB exceeds 4MB, compressing...`);
 
-  // Start with original image metadata
   const image = sharp(buffer);
   const metadata = await image.metadata();
 
-  let quality = 85;
   let width = metadata.width;
   let compressedBuffer = buffer;
+  let finalMimeType = mimeType;
 
-  // Iteratively compress until under limit
-  while (compressedBuffer.length > MAX_SIZE && quality > 20) {
-    // Try reducing quality first
-    if (quality > 50) {
-      quality -= 15;
-    } else if (quality > 30) {
-      quality -= 10;
-    } else {
-      quality -= 5;
+  // Step 1: Try PNG compression with resizing (best for text)
+  let resizeScale = 1.0;
+  while (compressedBuffer.length > MAX_SIZE && width && width > 800) {
+    resizeScale -= 0.1;
+    width = Math.floor(metadata.width! * resizeScale);
+
+    compressedBuffer = await sharp(buffer)
+      .resize(width, null, { withoutEnlargement: true })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+
+    console.log(`Resized to ${width}px width (${(resizeScale * 100).toFixed(0)}% scale): ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+
+    if (compressedBuffer.length <= MAX_SIZE) {
+      finalMimeType = 'image/png';
+      console.log(`✓ PNG compression successful at ${width}px`);
+      return { buffer: compressedBuffer, mimeType: finalMimeType };
+    }
+  }
+
+  // Step 2: If PNG didn't work, try JPEG with high quality (preserves text better)
+  let quality = 90;
+  const MIN_QUALITY = 70; // Higher minimum to preserve text readability
+
+  width = Math.floor(metadata.width! * resizeScale); // Start from current resize
+
+  while (compressedBuffer.length > MAX_SIZE && quality >= MIN_QUALITY) {
+    compressedBuffer = await sharp(buffer)
+      .resize(width || undefined, null, { withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer();
+
+    console.log(`JPEG quality ${quality}${width ? ` at ${width}px` : ''}: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+
+    if (compressedBuffer.length <= MAX_SIZE) {
+      finalMimeType = 'image/jpeg';
+      console.log(`✓ JPEG compression successful at quality ${quality}`);
+      return { buffer: compressedBuffer, mimeType: finalMimeType };
     }
 
-    // If still too large and quality is getting low, also resize
-    if (compressedBuffer.length > MAX_SIZE && quality < 60 && width && width > 1920) {
+    quality -= 5;
+  }
+
+  // Step 3: If still too large, try more aggressive resizing with JPEG
+  if (compressedBuffer.length > MAX_SIZE && width && width > 600) {
+    while (compressedBuffer.length > MAX_SIZE && width > 600) {
       width = Math.floor(width * 0.8);
+
+      compressedBuffer = await sharp(buffer)
+        .resize(width, null, { withoutEnlargement: true })
+        .jpeg({ quality: MIN_QUALITY })
+        .toBuffer();
+
+      console.log(`Aggressive resize to ${width}px: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
     }
 
-    // Apply compression
-    const compressor = sharp(buffer);
-
-    if (width && width !== metadata.width) {
-      compressor.resize(width, null, { withoutEnlargement: true });
+    if (compressedBuffer.length <= MAX_SIZE) {
+      finalMimeType = 'image/jpeg';
+      console.log(`✓ Aggressive resize successful at ${width}px`);
+      return { buffer: compressedBuffer, mimeType: finalMimeType };
     }
-
-    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-      compressedBuffer = await compressor.jpeg({ quality }).toBuffer();
-    } else {
-      // Convert to JPEG for better compression
-      compressedBuffer = await compressor.jpeg({ quality }).toBuffer();
-      mimeType = 'image/jpeg';
-    }
-
-    console.log(`Compressed to ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB (quality: ${quality}${width !== metadata.width ? `, width: ${width}px` : ''})`);
   }
 
-  if (compressedBuffer.length > MAX_SIZE) {
-    console.warn(`Warning: Could not compress image below 4MB. Final size: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
-  }
-
-  return { buffer: compressedBuffer, mimeType };
+  console.warn(`Warning: Could not compress image below 4MB. Final size: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+  return { buffer: compressedBuffer, mimeType: finalMimeType };
 }
 
 /**
@@ -120,6 +151,11 @@ interface VocabularyExtractionResult {
     context?: string;
   }>;
   spelling: string[];
+  // Processed image data for teacher download (shows exactly what Claude saw)
+  processedImage?: {
+    buffer: Buffer;
+    mimeType: string;
+  };
 }
 
 /**
@@ -225,7 +261,14 @@ Return ONLY valid JSON (no markdown code blocks, no explanation):
       result.spelling = [];
     }
 
-    return result;
+    // Include processed image so teacher can download what Claude saw
+    return {
+      ...result,
+      processedImage: {
+        buffer: finalBuffer,
+        mimeType: finalMimeType,
+      },
+    };
   } catch (parseError) {
     console.error('Failed to parse Claude response:', jsonText);
     throw new Error(`Failed to parse vocabulary extraction result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
