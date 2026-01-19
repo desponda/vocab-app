@@ -233,7 +233,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Tests will be generated with age-appropriate vocabulary and question complexity.
+                  All words from your upload will be used. Grade level only affects how test questions are phrased and sentence complexity.
                 </p>
               </div>
 
