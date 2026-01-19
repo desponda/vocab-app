@@ -14,6 +14,13 @@ spec:
       labels:
         app: web
     spec:
+      # Security: Run as non-root user
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
       - name: ghcr-credentials
       containers:
@@ -22,6 +29,30 @@ spec:
         imagePullPolicy: {{ .Values.web.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.web.service.port }}
+        # Security: Container-level security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false  # Next.js needs write access for build cache
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.web.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.web.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
         env:
         {{- range .Values.web.env }}
         - name: {{ .name }}

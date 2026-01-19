@@ -14,6 +14,13 @@ spec:
       labels:
         app: api
     spec:
+      # Security: Run as non-root user
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
       - name: ghcr-credentials
       containers:
@@ -22,6 +29,30 @@ spec:
         imagePullPolicy: {{ .Values.api.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.api.service.port }}
+        # Security: Container-level security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false  # Node.js apps need write access for temp files
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: {{ .Values.api.service.port }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health/ready
+            port: {{ .Values.api.service.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
         env:
         {{- range .Values.api.env }}
         - name: {{ .name }}

@@ -27,6 +27,9 @@ api:
     limits:
       memory: "1Gi"
       cpu: "1000m"
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1  # Ensure at least 1 pod available during rollouts
 
 web:
   replicaCount: 2
@@ -49,6 +52,9 @@ web:
     limits:
       memory: "512Mi"
       cpu: "500m"
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1  # Ensure at least 1 pod available during rollouts
 
 postgres:
   enabled: true
@@ -111,6 +117,11 @@ ingress:
   host: vocab-staging.dresponda.com
   annotations:
     cert-manager.io/cluster-issuer: "cloudflare"
+
+# Network Policies (restrict pod-to-pod communication)
+networkPolicy:
+  enabled: false  # Disabled by default, enable when cluster supports NetworkPolicy
+  # Note: Requires a CNI plugin that supports NetworkPolicy (e.g., Calico, Cilium, Weave Net)
 
 # Secrets Management:
 # IMPORTANT: Secrets are NOT stored in this file (which is checked into git)
