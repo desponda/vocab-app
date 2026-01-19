@@ -1,3 +1,7 @@
+// Initialize Sentry FIRST (before other imports) for proper error tracking
+import { initializeSentry } from './lib/sentry';
+initializeSentry();
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
@@ -123,6 +127,13 @@ const start = async () => {
       host: config.host,
     });
     app.log.info(`Server listening on ${config.host}:${config.port}`);
+
+    // Log Sentry status
+    if (config.sentryDsn) {
+      app.log.info('Sentry error tracking enabled');
+    } else {
+      app.log.warn('Sentry error tracking not configured (SENTRY_DSN missing)');
+    }
   } catch (err) {
     app.log.error(err);
     process.exit(1);

@@ -30,6 +30,9 @@ const configSchema = z.object({
   // Anthropic
   anthropicApiKey: z.string().optional(),
 
+  // Sentry Error Tracking (optional)
+  sentryDsn: z.string().optional(),
+
   // MinIO Object Storage (optional, for Phase 2 file upload)
   minio: z.object({
     endpoint: z.string().default('localhost'),
@@ -74,6 +77,7 @@ export const config: Config = configSchema.parse({
 
   corsOrigin: process.env.CORS_ORIGIN,
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  sentryDsn: process.env.SENTRY_DSN,
 
   minio: {
     endpoint: process.env.MINIO_ENDPOINT,
