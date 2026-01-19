@@ -40,6 +40,15 @@ export function StatCard({
         className
       )}
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      aria-label={onClick ? `${title}: ${value}. Click to view details.` : undefined}
     >
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
@@ -53,6 +62,7 @@ export function StatCard({
                     'text-xs font-medium',
                     trend.direction === 'up' ? 'text-green-600' : 'text-red-600'
                   )}
+                  aria-label={`${trend.direction === 'up' ? 'Increased' : 'Decreased'} by ${Math.abs(trend.value)} percent`}
                 >
                   {trend.direction === 'up' ? '↑' : '↓'} {Math.abs(trend.value)}%
                 </span>
@@ -64,6 +74,7 @@ export function StatCard({
               'h-12 w-12 rounded-lg flex items-center justify-center',
               colorVariants[color]
             )}
+            aria-hidden="true"
           >
             <Icon className="h-6 w-6" />
           </div>

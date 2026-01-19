@@ -34,7 +34,7 @@ interface SidebarProps {
 
 function SidebarNav({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
   return (
-    <nav className="space-y-1">
+    <nav className="space-y-1" aria-label="Main navigation">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
@@ -43,6 +43,7 @@ function SidebarNav({ items, currentPath }: { items: NavItem[]; currentPath: str
           <Link
             key={item.href}
             href={item.href}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               isActive
@@ -50,10 +51,10 @@ function SidebarNav({ items, currentPath }: { items: NavItem[]; currentPath: str
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4" aria-hidden="true" />
             {item.label}
             {item.badge && (
-              <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs">
+              <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs" aria-label={`${item.badge} items`}>
                 {item.badge}
               </span>
             )}
@@ -71,11 +72,11 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64 md:border-r md:bg-background">
+      <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64 md:border-r md:bg-background" aria-label="Sidebar">
         <div className="flex flex-col h-full">
           {/* Logo/Header */}
           <div className="flex items-center gap-2 px-6 py-4 border-b">
-            <GraduationCap className="h-6 w-6 text-primary" />
+            <GraduationCap className="h-6 w-6 text-primary" aria-hidden="true" />
             <span className="text-lg font-semibold">Vocab App</span>
           </div>
 

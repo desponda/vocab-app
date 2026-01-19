@@ -22,10 +22,10 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <Card className={cn('p-12', className)}>
+    <Card className={cn('p-12', className)} role="status" aria-live="polite">
       <div className="flex flex-col items-center justify-center text-center space-y-4">
         <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-          <Icon className="h-8 w-8 text-muted-foreground" />
+          <Icon className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
         </div>
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">{title}</h3>
