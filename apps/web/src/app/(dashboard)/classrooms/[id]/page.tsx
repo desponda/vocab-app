@@ -468,26 +468,28 @@ export default function ClassroomDetailPage() {
                   <p>No students found matching &quot;{studentSearchQuery}&quot;</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Grade Level</TableHead>
-                      <TableHead>Enrolled</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEnrollments.map((enrollment) => (
-                      <TableRow key={enrollment.id}>
-                        <TableCell className="font-medium">
-                          {enrollment.student?.name || 'Unknown'}
-                        </TableCell>
-                        <TableCell>{enrollment.student?.gradeLevel || 'N/A'}</TableCell>
-                        <TableCell>{formatRelativeDate(enrollment.enrolledAt)}</TableCell>
+                <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">Grade Level</TableHead>
+                        <TableHead>Enrolled</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEnrollments.map((enrollment) => (
+                        <TableRow key={enrollment.id}>
+                          <TableCell className="font-medium">
+                            {enrollment.student?.name || 'Unknown'}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{enrollment.student?.gradeLevel || 'N/A'}</TableCell>
+                          <TableCell>{formatRelativeDate(enrollment.enrolledAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -575,36 +577,38 @@ export default function ClassroomDetailPage() {
                   </p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Test Name</TableHead>
-                      <TableHead>Variant</TableHead>
-                      <TableHead>Questions</TableHead>
-                      <TableHead>Assigned</TableHead>
-                      <TableHead>Due Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignedTests.map((assignment) => (
-                      <TableRow key={assignment.id}>
-                        <TableCell className="font-medium">
-                          {assignment.test?.sheet?.name || assignment.test?.name || 'Unknown Test'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{assignment.test?.variant}</Badge>
-                        </TableCell>
-                        <TableCell>{assignment.test?._count?.questions || 0}</TableCell>
-                        <TableCell>{formatRelativeDate(assignment.assignedAt)}</TableCell>
-                        <TableCell>
-                          {assignment.dueDate
-                            ? formatRelativeDate(assignment.dueDate)
-                            : 'No due date'}
-                        </TableCell>
+                <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Test Name</TableHead>
+                        <TableHead>Variant</TableHead>
+                        <TableHead className="hidden md:table-cell">Questions</TableHead>
+                        <TableHead className="hidden lg:table-cell">Assigned</TableHead>
+                        <TableHead className="hidden md:table-cell">Due Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {assignedTests.map((assignment) => (
+                        <TableRow key={assignment.id}>
+                          <TableCell className="font-medium">
+                            {assignment.test?.sheet?.name || assignment.test?.name || 'Unknown Test'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{assignment.test?.variant}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">{assignment.test?._count?.questions || 0}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{formatRelativeDate(assignment.assignedAt)}</TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {assignment.dueDate
+                              ? formatRelativeDate(assignment.dueDate)
+                              : 'No due date'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

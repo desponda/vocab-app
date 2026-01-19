@@ -137,52 +137,54 @@ export default function StudentsPage() {
                 </p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Classroom</TableHead>
-                    <TableHead>Grade Level</TableHead>
-                    <TableHead>Tests Taken</TableHead>
-                    <TableHead>Avg Score</TableHead>
-                    <TableHead>Last Active</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => (
-                    <TableRow key={`${student.id}-${student.classroomId}`}>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>{student.classroomName}</TableCell>
-                      <TableCell>
-                        {student.gradeLevel ? (
-                          <Badge variant="secondary">Grade {student.gradeLevel}</Badge>
-                        ) : (
-                          'N/A'
-                        )}
-                      </TableCell>
-                      <TableCell>{student.testsAttempted}</TableCell>
-                      <TableCell>
-                        {student.avgScore !== null ? (
-                          <Badge variant={getScoreBadgeVariant(student.avgScore)}>
-                            {Math.round(student.avgScore)}%
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {student.lastActive ? (
-                          <span className="text-muted-foreground">
-                            {formatRelativeDate(student.lastActive)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">Never</span>
-                        )}
-                      </TableCell>
+              <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Classroom</TableHead>
+                      <TableHead className="hidden md:table-cell">Grade Level</TableHead>
+                      <TableHead className="hidden lg:table-cell">Tests Taken</TableHead>
+                      <TableHead>Avg Score</TableHead>
+                      <TableHead className="hidden lg:table-cell">Last Active</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student) => (
+                      <TableRow key={`${student.id}-${student.classroomId}`}>
+                        <TableCell className="font-medium">{student.name}</TableCell>
+                        <TableCell>{student.classroomName}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {student.gradeLevel ? (
+                            <Badge variant="secondary">Grade {student.gradeLevel}</Badge>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">{student.testsAttempted}</TableCell>
+                        <TableCell>
+                          {student.avgScore !== null ? (
+                            <Badge variant={getScoreBadgeVariant(student.avgScore)}>
+                              {Math.round(student.avgScore)}%
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {student.lastActive ? (
+                            <span className="text-muted-foreground">
+                              {formatRelativeDate(student.lastActive)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Never</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
