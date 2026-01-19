@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet, type TestAssignment } from '@/lib/api';
+import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet, type TestAssignment, type Enrollment } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -52,7 +52,7 @@ export default function ClassroomDetailPage() {
   const { accessToken } = useAuth();
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [vocabularySheets, setVocabularySheets] = useState<VocabularySheet[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,19 +72,12 @@ export default function ClassroomDetailPage() {
         setIsLoading(true);
         setError('');
 
-        // Get classroom details
+        // Get classroom details with enrolled students
         const classroomData = await classroomsApi.get(classroomId, accessToken);
         setClassroom(classroomData.classroom);
 
-        // Get all students and filter by classroom enrollment
-        const { students: allStudents } = await classroomsApi.listStudents(accessToken);
-
-        // Filter students enrolled in this classroom
-        const enrolledStudents = allStudents.filter((student) =>
-          student.enrollments?.some((enrollment) => enrollment.classroomId === classroomId)
-        );
-
-        setStudents(enrolledStudents);
+        // Store enrollments (includes student data and enrollment date)
+        setEnrollments(classroomData.classroom.enrollments || []);
       } catch (err) {
         console.error('Error loading classroom:', err);
         setError('Failed to load classroom details. Please try again.');
@@ -240,7 +233,7 @@ export default function ClassroomDetailPage() {
       <Tabs defaultValue="students" className="space-y-4">
         <TabsList>
           <TabsTrigger value="students">
-            Students ({students.length})
+            Students ({enrollments.length})
           </TabsTrigger>
           <TabsTrigger value="tests">Assigned Tests</TabsTrigger>
           <TabsTrigger value="results">Results</TabsTrigger>
@@ -256,7 +249,7 @@ export default function ClassroomDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {students.length === 0 ? (
+              {enrollments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p className="mb-2">No students enrolled yet</p>
                   <p className="text-sm">
@@ -273,14 +266,12 @@ export default function ClassroomDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.name}</TableCell>
-                        <TableCell>{student.gradeLevel}</TableCell>
+                    {enrollments.map((enrollment) => (
+                      <TableRow key={enrollment.id}>
+                        <TableCell className="font-medium">{enrollment.student?.name || 'Unknown'}</TableCell>
+                        <TableCell>{enrollment.student?.gradeLevel || 'N/A'}</TableCell>
                         <TableCell>
-                          {student.createdAt
-                            ? new Date(student.createdAt).toLocaleDateString()
-                            : 'N/A'}
+                          {new Date(enrollment.enrolledAt).toLocaleDateString()}
                         </TableCell>
                       </TableRow>
                     ))}
