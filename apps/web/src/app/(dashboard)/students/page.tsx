@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { classroomsApi } from '@/lib/api';
+import { studentsApi } from '@/lib/api';
 import {
   Card,
   CardContent,
@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -18,20 +19,28 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { Users, Search, Loader2 } from 'lucide-react';
+import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
 
-interface StudentWithClassroom {
+interface EnrichedStudent {
   id: string;
   name: string;
-  gradeLevel: number | null | undefined;
+  gradeLevel: number | null;
   classroomName: string;
-  enrolledAt: string;
+  classroomId: string;
+  testsAttempted: number;
+  avgScore: number | null;
+  lastActive: Date | null;
 }
 
 export default function StudentsPage() {
   const { accessToken } = useAuth();
-  const [students, setStudents] = useState<StudentWithClassroom[]>([]);
+  const [students, setStudents] = useState<EnrichedStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -39,40 +48,8 @@ export default function StudentsPage() {
 
       try {
         setIsLoading(true);
-
-        // Get all classrooms with enrollments
-        const { classrooms } = await classroomsApi.list(accessToken);
-
-        // Fetch detailed enrollment data for each classroom
-        const allStudents: StudentWithClassroom[] = [];
-
-        for (const classroom of classrooms) {
-          const { classroom: detailedClassroom } = await classroomsApi.get(
-            classroom.id,
-            accessToken
-          );
-
-          const enrollments = detailedClassroom.enrollments || [];
-
-          enrollments.forEach((enrollment) => {
-            if (enrollment.student) {
-              allStudents.push({
-                id: enrollment.student.id,
-                name: enrollment.student.name,
-                gradeLevel: enrollment.student.gradeLevel,
-                classroomName: detailedClassroom.name,
-                enrolledAt: enrollment.enrolledAt,
-              });
-            }
-          });
-        }
-
-        // Sort by enrollment date (most recent first)
-        allStudents.sort((a, b) =>
-          new Date(b.enrolledAt).getTime() - new Date(a.enrolledAt).getTime()
-        );
-
-        setStudents(allStudents);
+        const { students } = await studentsApi.getAllEnriched(accessToken);
+        setStudents(students);
       } catch (err) {
         console.error('Failed to fetch students:', err);
         setError('Failed to load students');
@@ -84,10 +61,23 @@ export default function StudentsPage() {
     fetchStudents();
   }, [accessToken]);
 
+  // Filter students based on search query
+  const filteredStudents = useMemo(() => {
+    if (!searchQuery.trim()) return students;
+
+    const query = searchQuery.toLowerCase();
+    return students.filter(
+      (student) =>
+        student.name.toLowerCase().includes(query) ||
+        student.classroomName.toLowerCase().includes(query) ||
+        (student.gradeLevel && `grade ${student.gradeLevel}`.includes(query))
+    );
+  }, [students, searchQuery]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">Loading students...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -110,52 +100,90 @@ export default function StudentsPage() {
       </div>
 
       {students.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No students yet</CardTitle>
-            <CardDescription>
-              Students will appear here once they sign up using your classroom codes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Share your classroom codes with students so they can register and enroll.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Users}
+          title="No students yet"
+          description="Students will appear here once they sign up using your classroom codes. Share your classroom codes to get started."
+        />
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Enrolled Students ({students.length})</CardTitle>
-            <CardDescription>
-              Students who have registered and joined your classrooms
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Enrolled Students ({students.length})</CardTitle>
+                <CardDescription>
+                  Students who have registered and joined your classrooms
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Classroom</TableHead>
-                  <TableHead>Grade Level</TableHead>
-                  <TableHead>Enrolled</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((student) => (
-                  <TableRow key={`${student.id}-${student.classroomName}`}>
-                    <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell>{student.classroomName}</TableCell>
-                    <TableCell>
-                      {student.gradeLevel ? `Grade ${student.gradeLevel}` : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(student.enrolledAt).toLocaleDateString()}
-                    </TableCell>
+          <CardContent className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search students by name, classroom, or grade..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Students Table */}
+            {filteredStudents.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  No students found matching &quot;{searchQuery}&quot;
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Classroom</TableHead>
+                    <TableHead>Grade Level</TableHead>
+                    <TableHead>Tests Taken</TableHead>
+                    <TableHead>Avg Score</TableHead>
+                    <TableHead>Last Active</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredStudents.map((student) => (
+                    <TableRow key={`${student.id}-${student.classroomId}`}>
+                      <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell>{student.classroomName}</TableCell>
+                      <TableCell>
+                        {student.gradeLevel ? (
+                          <Badge variant="secondary">Grade {student.gradeLevel}</Badge>
+                        ) : (
+                          'N/A'
+                        )}
+                      </TableCell>
+                      <TableCell>{student.testsAttempted}</TableCell>
+                      <TableCell>
+                        {student.avgScore !== null ? (
+                          <Badge variant={getScoreBadgeVariant(student.avgScore)}>
+                            {Math.round(student.avgScore)}%
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {student.lastActive ? (
+                          <span className="text-muted-foreground">
+                            {formatRelativeDate(student.lastActive)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Never</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}

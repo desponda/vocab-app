@@ -107,6 +107,22 @@ export const studentsApi = {
   // List students - used by student dashboard to get logged-in student's record
   list: (token: string): Promise<{ students: Student[] }> =>
     request('/api/students', { token }),
+
+  // Get all enriched student data (teacher only)
+  getAllEnriched: (
+    token: string
+  ): Promise<{
+    students: Array<{
+      id: string;
+      name: string;
+      gradeLevel: number | null;
+      classroomName: string;
+      classroomId: string;
+      testsAttempted: number;
+      avgScore: number | null;
+      lastActive: Date | null;
+    }>;
+  }> => request('/api/students/all-enriched', { token }),
 };
 
 // Classrooms API
