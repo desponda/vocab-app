@@ -175,10 +175,15 @@ interface TestQuestion {
  * 1. Sentence completion: "Which word best fits in this sentence: ___?"
  * 2. Definition matching: "Which definition best matches the word ___?"
  * Questions are randomized in order.
+ *
+ * @param words - Array of vocabulary words with definitions and context
+ * @param testVariant - Test variant identifier (A, B, C, etc.)
+ * @param gradeLevel - Optional grade level (1-12) for age-appropriate difficulty
  */
 export async function generateTestQuestions(
   words: Array<{ word: string; definition?: string; context?: string }>,
-  testVariant: string
+  testVariant: string,
+  gradeLevel?: number | null
 ): Promise<TestQuestion[]> {
   if (!config.anthropicApiKey) {
     throw new Error('ANTHROPIC_API_KEY not configured');
@@ -193,6 +198,15 @@ export async function generateTestQuestions(
     .map((w, i) => `${i + 1}. ${w.word}${w.definition ? ` - ${w.definition}` : ''}${w.context ? ` (Context: ${w.context})` : ''}`)
     .join('\n');
 
+  // Build grade level guidance
+  const gradeLevelGuidance = gradeLevel
+    ? `
+TARGET GRADE LEVEL: ${gradeLevel}
+Adjust question difficulty and language complexity for grade ${gradeLevel} students:
+${gradeLevel <= 3 ? '- Use simple, short sentences (under 10 words)\n- Use very common, everyday vocabulary\n- Avoid complex sentence structures\n- Use concrete examples' : ''}${gradeLevel >= 4 && gradeLevel <= 6 ? '- Use clear, straightforward language\n- Moderate sentence length (10-15 words)\n- Use grade-appropriate vocabulary\n- Include some context clues' : ''}${gradeLevel >= 7 && gradeLevel <= 9 ? '- Use more sophisticated vocabulary\n- Longer, more complex sentences (15-20 words)\n- Include abstract concepts where appropriate\n- Require deeper comprehension' : ''}${gradeLevel >= 10 ? '- Use advanced academic language\n- Complex sentence structures\n- Sophisticated vocabulary and concepts\n- Require critical thinking and nuanced understanding' : ''}
+`
+    : '';
+
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 8192,
@@ -203,7 +217,7 @@ export async function generateTestQuestions(
 
 VOCABULARY WORDS:
 ${wordsText}
-
+${gradeLevelGuidance}
 CRITICAL REQUIREMENTS:
 1. Create EXACTLY 2 multiple choice questions per vocabulary word
 2. Question Type 1: SENTENCE COMPLETION
@@ -277,9 +291,28 @@ Return ONLY valid JSON (no markdown, no explanation):
       );
     }
 
-    // Randomize question order
+    // Randomize question order AND shuffle options for each question
     const shuffledQuestions = result.questions
-      .map((q: any) => ({ ...q, sort: Math.random() }))
+      .map((q: any) => {
+        // Validate that correctAnswer is in options
+        if (!q.options || !Array.isArray(q.options)) {
+          throw new Error(`Question missing options array: ${q.questionText}`);
+        }
+        if (!q.options.includes(q.correctAnswer)) {
+          throw new Error(
+            `Correct answer "${q.correctAnswer}" not found in options for question: ${q.questionText}`
+          );
+        }
+
+        // Shuffle the options array using Fisher-Yates algorithm
+        const shuffledOptions = [...q.options];
+        for (let i = shuffledOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+        }
+
+        return { ...q, options: shuffledOptions, sort: Math.random() };
+      })
       .sort((a: any, b: any) => a.sort - b.sort)
       .map((q: any, index: number) => {
         const { sort, ...question } = q;
