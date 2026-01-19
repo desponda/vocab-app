@@ -11,7 +11,6 @@
       "persistent": true
     },
     "test": {
-      "dependsOn": ["build"],
       "outputs": ["coverage/**"]
     },
     "test:e2e": {
@@ -20,6 +19,10 @@
     },
     "lint": {
       "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
     },
     "clean": {
       "cache": false

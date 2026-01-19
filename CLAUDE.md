@@ -228,42 +228,44 @@ vocab-app/
 
 6. **Pre-Push Checklist (MANDATORY):**
 
-   **⚠️ Run these commands BEFORE every `git commit` and `git push`**
+   **⚠️ Run this BEFORE every `git push`:**
 
    ```bash
-   # 1. If Prisma schema changed, regenerate client
-   cd apps/api && pnpm prisma generate
-
-   # 2. Lint check (catches code style issues)
-   pnpm lint
-
-   # 3. Type check (catches TypeScript errors)
-   cd apps/web && pnpm tsc --noEmit
-   cd apps/api && pnpm tsc --noEmit
-
-   # 4. Run tests (catches logic errors)
-   pnpm test
+   pnpm pre-push
    ```
 
+   This single command runs:
+   - ✅ Lint check (ESLint across all packages)
+   - ✅ Type check (TypeScript compilation without emitting)
+   - ✅ Unit tests (Vitest across all packages)
+
+   These are the EXACT same checks that run in CI. If `pnpm pre-push` passes, CI will pass.
+
+   **Special cases:**
+
+   ```bash
+   # If Prisma schema changed:
+   cd apps/api && pnpm prisma generate
+
+   # If dependencies added/updated:
+   pnpm install
+   git add pnpm-lock.yaml
+   ```
+
+   **📖 Full documentation:** See [Pre-Push Checklist](docs/workflows/pre-push-checklist.md) for detailed troubleshooting and workflow guide.
+
    **Why this is critical:**
-   - Prevents CI failures that waste time
-   - Catches type errors from schema changes
+   - Prevents CI failures that waste time (3-5 min per failure)
+   - Catches issues locally in ~15 seconds
    - Ensures tests pass before code review
    - Validates lockfile is in sync with package.json
 
-   **If ANY command fails:**
-   - ❌ DO NOT commit
+   **If `pnpm pre-push` fails:**
    - ❌ DO NOT push
-   - ✅ Fix the errors first
-   - ✅ Re-run the full checklist
-
-   **Lockfile Issues:**
-   ```bash
-   # If pnpm-lock.yaml is out of sync:
-   pnpm install  # Regenerates lockfile
-   git add pnpm-lock.yaml
-   git commit -m "chore: update pnpm-lock.yaml"
-   ```
+   - ✅ Read the error message
+   - ✅ Fix the issue
+   - ✅ Run `pnpm pre-push` again
+   - ✅ Repeat until it passes
 
 ### Key Commands
 
@@ -297,10 +299,12 @@ pnpm prisma migrate dev    # Create and apply migration
 pnpm prisma studio         # Open Prisma Studio
 pnpm prisma generate       # Generate Prisma client
 
-# Linting & Type Checking
-pnpm lint                  # Lint all packages
-cd apps/web && pnpm tsc --noEmit  # TypeScript check frontend
-cd apps/api && pnpm tsc --noEmit  # TypeScript check backend
+# Pre-Push Validation (RUN BEFORE EVERY PUSH)
+pnpm pre-push              # Run lint + typecheck + test (same as CI)
+pnpm validate              # Alias for pre-push
+pnpm lint                  # Lint only
+pnpm typecheck             # Type check only
+pnpm test                  # Tests only
 
 # Docker
 docker-compose up -d       # Start local services (Postgres, Redis, MinIO)

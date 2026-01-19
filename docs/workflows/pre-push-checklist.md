@@ -1,127 +1,142 @@
 # Pre-Push Checklist
 
-**ALWAYS run these commands locally BEFORE committing and pushing:**
+## TL;DR - Run This Before Every Push
 
-## 1. Lint Check
 ```bash
+pnpm pre-push
+```
+
+That's it! This single command runs all the checks that CI will run, ensuring your push will pass.
+
+---
+
+## What It Does
+
+The `pnpm pre-push` command runs the following checks in parallel:
+
+1. **Lint** - Code style and quality checks (ESLint)
+2. **Type Check** - TypeScript compilation without emitting files
+3. **Unit Tests** - All Vitest unit tests across packages
+
+These are the exact same checks that run in CI, so if `pnpm pre-push` passes, CI will pass.
+
+---
+
+## Full Workflow
+
+### 1. Make Your Changes
+
+Write code, add features, fix bugs, etc.
+
+### 2. Run Pre-Push Validation
+
+```bash
+pnpm pre-push
+```
+
+**Expected output:**
+```bash
+Tasks:    6 successful, 6 total
+Cached:    3 cached, 6 total
+  Time:    15.2s
+```
+
+### 3. If Pre-Push Fails
+
+#### Lint Errors
+
+```bash
+# See detailed lint errors
 pnpm lint
+
+# Common fixes:
+# - Remove unused imports/variables
+# - Fix ESLint rule violations
+# - Escape quotes in JSX ('apostrophes' → &apos;)
 ```
-**What it catches:**
-- Unused variables
-- Type errors in code
-- React hooks dependency issues
-- ESLint violations
 
-**Expected:** Warnings are OK (document them), but no errors.
+#### Type Errors
 
----
-
-## 2. TypeScript Build
 ```bash
-pnpm build
+# Check web types
+cd apps/web && pnpm typecheck
+
+# Check API types
+cd apps/api && pnpm typecheck
+
+# Common fixes:
+# - Fix type mismatches
+# - Add missing imports
+# - Regenerate Prisma client if schema changed:
+cd apps/api && pnpm prisma generate
 ```
-**What it catches:**
-- TypeScript compilation errors
-- Type mismatches
-- Missing imports
-- Invalid configurations
 
-**Expected:** Must complete successfully for both API and Web.
+#### Test Failures
 
----
-
-## 3. Unit Tests (when available)
 ```bash
+# Run tests with details
 pnpm test
+
+# Run tests in watch mode for debugging
+cd apps/web && pnpm test:watch
+cd apps/api && pnpm test:watch
+
+# Common fixes:
+# - Update test assertions
+# - Fix broken logic
+# - Mock external dependencies
 ```
-**What it catches:**
-- Broken business logic
-- Regression bugs
-- Component failures
 
-**Expected:** All tests pass.
-
----
-
-## 4. Helm Template Validation (if K8s changes)
-
-**CRITICAL:** If you modified ANY files in `k8s/helm/vocab-app/`, run this:
+### 4. Commit and Push
 
 ```bash
-cd k8s/helm/vocab-app
-helm template . --debug --namespace vocab-app-staging --name-template vocab-app-staging
-cd ../../..
+git add -A
+git commit -m "Your commit message
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+git push
 ```
 
-**What it catches:**
-- Missing template helpers (e.g., `vocab-app.labels`)
-- YAML indentation issues
-- Invalid Go template syntax
-- Missing required values
-
-**Expected:** Template renders successfully with no errors. You should see valid YAML output.
-
-**Why this matters:** ArgoCD will fail to deploy if Helm templates have errors. Catch them locally first!
-
 ---
 
-## 5. Quick Commit Checklist
+## Individual Commands
 
-Before `git push`:
-
-- [ ] `pnpm lint` - passes (warnings OK if documented)
-- [ ] `pnpm build` - completes successfully
-- [ ] `pnpm test` - all tests pass (when tests exist)
-- [ ] `helm template` - renders successfully (if K8s changes)
-- [ ] No `console.log` debugging left in code (unless intentional)
-- [ ] No secrets or credentials in code
-- [ ] `.env` files are NOT committed
-- [ ] Only source files staged (no test artifacts, build outputs)
-
----
-
-## 6. E2E Tests (After Deployment)
-
-After pushing and ArgoCD deploys to staging:
+If you want to run checks individually:
 
 ```bash
-cd apps/web
-BASE_URL=https://vocab-staging.dresponda.com pnpm test:e2e
+# Lint only
+pnpm lint
+
+# Type check only
+pnpm typecheck
+
+# Tests only
+pnpm test
+
+# All three (same as pre-push)
+pnpm validate
 ```
-
-**What it catches:**
-- Integration issues
-- Deployment configuration problems
-- Real-world user flow bugs
-
----
-
-## Common Mistakes to Avoid
-
-1. **Forgetting to build** - TypeScript errors won't show in lint
-2. **Not checking all workspaces** - Both API and Web must build
-3. **Skipping tests** - Broken tests = broken features
-4. **Not validating Helm templates** - ArgoCD will fail to deploy with template errors
-5. **Pushing test artifacts** - Check `git status` before commit
-6. **Missing environment variables** - Verify `.env.example` is up to date
 
 ---
 
 ## Quick Reference
 
+**Before EVERY push:**
 ```bash
-# Full pre-push check (run this every time)
-pnpm lint && pnpm build && pnpm test
+pnpm pre-push
+```
 
-# If K8s changes, also test Helm templates
-cd k8s/helm/vocab-app && helm template . --debug --namespace vocab-app-staging --name-template vocab-app-staging && cd ../../..
+**If Prisma schema changed:**
+```bash
+cd apps/api && pnpm prisma generate
+```
 
-# If all pass, then:
-git add <files>
-git commit -m "message"
-git push origin main
+**If dependencies added:**
+```bash
+pnpm install
+git add pnpm-lock.yaml
 ```
 
 ---
 
-**Remember:** CI failures cost time waiting for builds. 2 minutes locally saves 10 minutes in CI.
+**Last Updated:** 2026-01-19

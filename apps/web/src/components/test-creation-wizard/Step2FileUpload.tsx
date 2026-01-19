@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { useWizard } from './WizardContext';
 import { TestType } from './types';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,7 @@ export function Step2FileUpload() {
   const { state, updateState } = useWizard();
   const { testType, file } = state;
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: Array<{ file: File; errors: Array<{ code: string; message: string }> }>) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
     if (rejectedFiles.length > 0) {
       const rejection = rejectedFiles[0];
       if (rejection.errors[0]?.code === 'file-too-large') {

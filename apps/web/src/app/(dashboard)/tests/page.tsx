@@ -46,9 +46,6 @@ export default function VocabularyPage() {
     fetchData();
   }, [accessToken]);
 
-  const handleSheetUploaded = (sheet: VocabularySheet) => {
-    setSheets((prev) => [sheet, ...prev]);
-  };
 
   const handleDelete = async (id: string) => {
     if (!accessToken) return;
@@ -166,7 +163,7 @@ export default function VocabularyPage() {
       <TestCreationWizard
         open={isWizardOpen}
         onOpenChange={setIsWizardOpen}
-        onTestCreated={(sheetId) => {
+        onTestCreated={() => {
           // Refresh sheets list after test is created
           if (accessToken) {
             vocabularySheetsApi.list(accessToken).then((data) => {

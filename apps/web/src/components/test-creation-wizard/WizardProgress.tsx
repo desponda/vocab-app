@@ -15,7 +15,6 @@ export function WizardProgress() {
         {WIZARD_STEPS.map((step, index) => {
           const isActive = currentStep === step.id;
           const isCompleted = currentStep > step.id;
-          const isVisited = visitedSteps.has(step.id);
 
           return (
             <li key={step.id} className="flex items-center flex-1">

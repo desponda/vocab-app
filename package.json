@@ -9,6 +9,10 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "validate": "turbo run lint typecheck test",
+    "validate:quick": "turbo run lint typecheck",
+    "pre-push": "pnpm validate:quick",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "clean": "turbo run clean && rm -rf node_modules"
   },
