@@ -1,0 +1,166 @@
+{{- if and .Values.postgres.enabled .Values.postgres.backup.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vocab-app.fullname" . }}-postgres-backup-script
+  labels:
+    app: postgres-backup
+data:
+  backup.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    echo "[$(date)] Starting PostgreSQL backup..."
+
+    # Environment variables (injected by CronJob)
+    BACKUP_DIR="${BACKUP_DIR:-/backups}"
+    BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+    POSTGRES_DB="${POSTGRES_DB:-vocab_app_staging}"
+    POSTGRES_USER="${POSTGRES_USER:-postgres}"
+    POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
+    POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+
+    # Generate backup filename with timestamp
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_FILE="${BACKUP_DIR}/postgres_${POSTGRES_DB}_${TIMESTAMP}.sql.gz"
+    BACKUP_LOG="${BACKUP_DIR}/backup_${TIMESTAMP}.log"
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "${BACKUP_DIR}"
+
+    # Perform backup using pg_dump (compressed with gzip)
+    echo "[$(date)] Dumping database ${POSTGRES_DB} to ${BACKUP_FILE}..." | tee -a "${BACKUP_LOG}"
+    pg_dump \
+      --host="${POSTGRES_HOST}" \
+      --port="${POSTGRES_PORT}" \
+      --username="${POSTGRES_USER}" \
+      --dbname="${POSTGRES_DB}" \
+      --format=plain \
+      --no-owner \
+      --no-acl \
+      --verbose \
+      2>&1 | gzip > "${BACKUP_FILE}"
+
+    # Verify backup was created
+    if [ ! -f "${BACKUP_FILE}" ]; then
+      echo "[$(date)] ERROR: Backup file not created!" | tee -a "${BACKUP_LOG}"
+      exit 1
+    fi
+
+    # Get backup file size
+    BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+    echo "[$(date)] Backup completed successfully: ${BACKUP_FILE} (${BACKUP_SIZE})" | tee -a "${BACKUP_LOG}"
+
+    # Verify backup integrity (test gunzip)
+    echo "[$(date)] Verifying backup integrity..." | tee -a "${BACKUP_LOG}"
+    if gunzip -t "${BACKUP_FILE}"; then
+      echo "[$(date)] Backup integrity check passed" | tee -a "${BACKUP_LOG}"
+    else
+      echo "[$(date)] ERROR: Backup integrity check failed!" | tee -a "${BACKUP_LOG}"
+      exit 1
+    fi
+
+    # Clean up old backups (keep last N days)
+    echo "[$(date)] Cleaning up backups older than ${BACKUP_RETENTION_DAYS} days..." | tee -a "${BACKUP_LOG}"
+    find "${BACKUP_DIR}" -name "postgres_*.sql.gz" -type f -mtime +${BACKUP_RETENTION_DAYS} -delete
+    find "${BACKUP_DIR}" -name "backup_*.log" -type f -mtime +${BACKUP_RETENTION_DAYS} -delete
+
+    # List current backups
+    echo "[$(date)] Current backups:" | tee -a "${BACKUP_LOG}"
+    ls -lh "${BACKUP_DIR}"/postgres_*.sql.gz 2>/dev/null || echo "No backups found"
+
+    echo "[$(date)] Backup process completed" | tee -a "${BACKUP_LOG}"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "vocab-app.fullname" . }}-postgres-backup
+  labels:
+    app: postgres-backup
+spec:
+  # Schedule: Daily at 2:00 AM UTC
+  schedule: "{{ .Values.postgres.backup.schedule }}"
+
+  # Keep last 3 successful jobs for debugging
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  # Prevent concurrent backups
+  concurrencyPolicy: Forbid
+
+  jobTemplate:
+    spec:
+      # Cleanup completed backup jobs after 1 hour
+      ttlSecondsAfterFinished: 3600
+
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+
+          containers:
+          - name: postgres-backup
+            image: {{ .Values.postgres.image }}
+            command: ["/bin/bash", "/scripts/backup.sh"]
+
+            env:
+            - name: POSTGRES_HOST
+              value: {{ include "vocab-app.fullname" . }}-postgres
+            - name: POSTGRES_PORT
+              value: "{{ .Values.postgres.service.port }}"
+            - name: POSTGRES_DB
+              value: "{{ (index .Values.postgres.env 0).value }}"
+            - name: POSTGRES_USER
+              value: "{{ (index .Values.postgres.env 1).value }}"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "vocab-app.databaseSecretName" . }}
+                  key: postgres-password
+            - name: BACKUP_DIR
+              value: "/backups"
+            - name: BACKUP_RETENTION_DAYS
+              value: "{{ .Values.postgres.backup.retentionDays }}"
+
+            volumeMounts:
+            - name: backup-script
+              mountPath: /scripts
+              readOnly: true
+            - name: backup-storage
+              mountPath: /backups
+
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+
+          volumes:
+          - name: backup-script
+            configMap:
+              name: {{ include "vocab-app.fullname" . }}-postgres-backup-script
+              defaultMode: 0755
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: {{ include "vocab-app.fullname" . }}-postgres-backup-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vocab-app.fullname" . }}-postgres-backup-pvc
+  labels:
+    app: postgres-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.backup.storageSize }}
+{{- end }}

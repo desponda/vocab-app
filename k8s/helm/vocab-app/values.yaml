@@ -56,12 +56,21 @@ postgres:
   service:
     port: 5432
   storage:
-    size: 10Gi
+    # 5Gi is plenty for ~1,000 users with room to grow
+    size: 5Gi
   env:
     - name: POSTGRES_DB
       value: "vocab_app_staging"
     - name: POSTGRES_USER
       value: "postgres"
+  backup:
+    enabled: true
+    # Schedule in cron format (daily at 2:00 AM UTC)
+    schedule: "0 2 * * *"
+    # Keep backups for 30 days
+    retentionDays: 30
+    # Storage size for backup PVC (2x database size for 30 days of daily backups)
+    storageSize: 10Gi
 
 redis:
   enabled: true
