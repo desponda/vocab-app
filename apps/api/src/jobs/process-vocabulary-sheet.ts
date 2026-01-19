@@ -68,7 +68,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       `[Job ${job.id}] Extracted ${extractionResult.vocabulary.length} vocab words and ${extractionResult.spelling.length} spelling words`
     );
 
-    // Combine all words (vocab + spelling)
+    // Combine all words (vocab + spelling) for database storage
     const allWords = [
       ...extractionResult.vocabulary.map((v) => ({
         word: v.word,
@@ -86,7 +86,33 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       throw new Error('No words extracted from the vocabulary sheet');
     }
 
-    // Save vocabulary words to database
+    // TODO: Future enhancement - Generate different test types
+    // - Vocabulary words → definition/context-based tests (current implementation)
+    // - Spelling words → spelling/fill-in-the-blank tests (to be implemented)
+    // For now, only vocabulary words with definitions are used for test generation.
+    // Spelling words are saved to database but not used in tests yet.
+
+    // Only use vocabulary words (with definitions) for test generation
+    const vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
+      word: v.word,
+      definition: v.definition,
+      context: v.context,
+    }));
+
+    if (vocabularyWordsForTests.length === 0) {
+      throw new Error(
+        'No vocabulary words with definitions found. Please upload a document with vocabulary words that include definitions or example sentences.'
+      );
+    }
+
+    console.log(
+      `[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test generation` +
+      (extractionResult.spelling.length > 0
+        ? ` (${extractionResult.spelling.length} spelling words saved but not used in tests yet)`
+        : '')
+    );
+
+    // Save all words to database (vocabulary + spelling)
     console.log(`[Job ${job.id}] Saving ${allWords.length} words to database`);
     await job.updateProgress(40);
 
@@ -99,7 +125,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       })),
     });
 
-    // Generate test variants
+    // Generate test variants using only vocabulary words
     const testsToGenerate = Math.min(sheet.testsToGenerate, TEST_VARIANTS.length);
     console.log(`[Job ${job.id}] Generating ${testsToGenerate} test variants`);
 
@@ -112,7 +138,8 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
 
       // Generate questions using Claude (2 questions per word)
       // Pass grade level for age-appropriate difficulty
-      const questions = await generateTestQuestions(allWords, variant, sheet.gradeLevel);
+      // Only use vocabulary words with definitions for test generation
+      const questions = await generateTestQuestions(vocabularyWordsForTests, variant, sheet.gradeLevel);
 
       if (questions.length === 0) {
         console.warn(`[Job ${job.id}] No questions generated for variant ${variant}, skipping`);
