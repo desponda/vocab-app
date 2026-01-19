@@ -1,4 +1,7 @@
+'use client';
+
 import { Upload, Wand2, Send } from 'lucide-react';
+import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 
 const steps = [
   {
@@ -25,6 +28,8 @@ const steps = [
 ];
 
 export function HowItWorksSection() {
+  const { ref, isVisible } = useScrollAnimation();
+
   return (
     <section className="bg-muted/50 py-16 sm:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,12 +44,24 @@ export function HowItWorksSection() {
         </div>
 
         {/* Steps timeline */}
-        <div className="mx-auto max-w-5xl">
+        <div ref={ref} className="mx-auto max-w-5xl">
           <div className="grid gap-8 md:grid-cols-3">
             {steps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <div key={step.number} className="relative">
+                <div
+                  key={step.number}
+                  className={`relative ${
+                    isVisible
+                      ? 'animate-in fade-in slide-in-from-bottom-4'
+                      : 'opacity-0'
+                  }`}
+                  style={{
+                    animationDelay: isVisible ? `${index * 150}ms` : '0ms',
+                    animationDuration: '600ms',
+                    animationFillMode: 'both',
+                  }}
+                >
                   {/* Connector line (hidden on mobile, shown on desktop between steps) */}
                   {index < steps.length - 1 && (
                     <div className="absolute left-1/2 top-12 hidden h-0.5 w-full bg-gradient-to-r from-primary to-primary/30 md:block" />

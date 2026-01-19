@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -59,9 +60,9 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const { register: registerUser } = useAuth();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'TEACHER' | 'STUDENT' | ''>('');
 
   const {
     register,
@@ -77,6 +78,22 @@ export default function RegisterPage() {
   });
 
   const role = watch('role');
+
+  // Pre-fill form from query parameters
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    const codeParam = searchParams.get('code');
+
+    // Pre-select role if provided and valid
+    if (roleParam && (roleParam.toUpperCase() === 'TEACHER' || roleParam.toUpperCase() === 'STUDENT')) {
+      setValue('role', roleParam.toUpperCase() as 'TEACHER' | 'STUDENT', { shouldValidate: true });
+    }
+
+    // Pre-fill classroom code if provided and role is student
+    if (codeParam && roleParam?.toUpperCase() === 'STUDENT') {
+      setValue('classroomCode', codeParam.toUpperCase(), { shouldValidate: true });
+    }
+  }, [searchParams, setValue]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setError('');

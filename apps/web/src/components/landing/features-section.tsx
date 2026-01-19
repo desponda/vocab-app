@@ -1,5 +1,8 @@
+'use client';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Brain, Zap, CheckCircle2, Users, TrendingUp, Smartphone } from 'lucide-react';
+import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 
 const features = [
   {
@@ -41,6 +44,8 @@ const features = [
 ];
 
 export function FeaturesSection() {
+  const { ref, isVisible } = useScrollAnimation();
+
   return (
     <section className="py-16 sm:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,13 +60,22 @@ export function FeaturesSection() {
         </div>
 
         {/* Features grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => {
+        <div ref={ref} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <Card
                 key={feature.title}
-                className="border-2 transition-all hover:border-primary/50 hover:shadow-lg"
+                className={`border-2 transition-all hover:border-primary/50 hover:shadow-lg ${
+                  isVisible
+                    ? 'animate-in fade-in slide-in-from-bottom-4'
+                    : 'opacity-0'
+                }`}
+                style={{
+                  animationDelay: isVisible ? `${index * 100}ms` : '0ms',
+                  animationDuration: '500ms',
+                  animationFillMode: 'both',
+                }}
               >
                 <CardHeader>
                   <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">

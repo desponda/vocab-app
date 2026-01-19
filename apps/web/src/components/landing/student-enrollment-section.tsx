@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 
 export function StudentEnrollmentSection() {
   const [code, setCode] = useState('');
   const router = useRouter();
+  const { ref, isVisible } = useScrollAnimation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +30,18 @@ export function StudentEnrollmentSection() {
   return (
     <section className="py-16 sm:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="mx-auto max-w-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5">
+        <Card
+          ref={ref}
+          className={`mx-auto max-w-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 ${
+            isVisible
+              ? 'animate-in fade-in slide-in-from-bottom-8 zoom-in-95'
+              : 'opacity-0 scale-95'
+          }`}
+          style={{
+            animationDuration: '700ms',
+            animationFillMode: 'both',
+          }}
+        >
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <GraduationCap className="h-8 w-8 text-primary" />
