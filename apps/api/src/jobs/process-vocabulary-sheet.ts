@@ -1,9 +1,25 @@
 import { Worker, Job } from 'bullmq';
+import pino from 'pino';
 import { prisma } from '../lib/prisma';
 import { downloadFile, uploadFile } from '../lib/minio';
 import { extractVocabulary, generateTestQuestions, generateSpellingTestQuestions } from '../lib/claude';
 import { VocabularyProcessingJob } from '../lib/queue';
 import { config } from '../lib/config';
+
+// Create standalone logger matching Fastify configuration
+const logger = pino({
+  level: config.logLevel,
+  transport:
+    config.nodeEnv === 'development'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        }
+      : undefined,
+});
 
 // Parse Redis URL to extract connection details
 // This will only be used if the worker is started (which requires Redis)
@@ -30,7 +46,10 @@ const TEST_VARIANTS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
   const { sheetId, action = 'process' } = job.data;
 
-  console.log(`[Job ${job.id}] ${action === 'regenerate' ? 'Regenerating tests for' : 'Processing'} vocabulary sheet: ${sheetId}`);
+  logger.info(
+    { jobId: job.id, sheetId, action },
+    `${action === 'regenerate' ? 'Regenerating tests for' : 'Processing'} vocabulary sheet`
+  );
 
   try {
     // Get vocabulary sheet from database
@@ -71,7 +90,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
 
     if (action === 'regenerate') {
       // REGENERATE MODE: Use existing words from database
-      console.log(`[Job ${job.id}] Using existing words from database for ${sheet.testType} test type`);
+      logger.info({ jobId: job.id, testType: sheet.testType }, 'Using existing words from database');
       await job.updateProgress(20);
 
       if (!sheet.words || sheet.words.length === 0) {
@@ -100,19 +119,27 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
         }
       }
 
-      console.log(`[Job ${job.id}] Using ${vocabularyWordsForTests.length} words for test regeneration (${sheet.testType})`);
+      logger.info(
+        { jobId: job.id, wordCount: vocabularyWordsForTests.length, testType: sheet.testType },
+        'Using words for test regeneration'
+      );
     } else {
       // PROCESS MODE: Extract vocabulary from uploaded file
-      console.log(`[Job ${job.id}] Downloading file from MinIO: ${sheet.s3Key}`);
+      logger.info({ jobId: job.id, s3Key: sheet.s3Key }, 'Downloading file from MinIO');
       const fileBuffer = await downloadFile(sheet.s3Key);
 
       // Extract vocabulary using Claude Vision API
-      console.log(`[Job ${job.id}] Extracting ${sheet.testType} content with Claude Vision API`);
+      logger.info({ jobId: job.id, testType: sheet.testType }, 'Extracting content with Claude Vision API');
       await job.updateProgress(20);
       const extractionResult = await extractVocabulary(fileBuffer, sheet.mimeType, sheet.testType);
 
-      console.log(
-        `[Job ${job.id}] Extracted ${extractionResult.vocabulary.length} vocab words and ${extractionResult.spelling.length} spelling words`
+      logger.info(
+        {
+          jobId: job.id,
+          vocabWords: extractionResult.vocabulary.length,
+          spellingWords: extractionResult.spelling.length,
+        },
+        'Extracted words from vocabulary sheet'
       );
 
       // Save processed/compressed image to MinIO so teachers can download it
@@ -120,7 +147,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       if (extractionResult.processedImage) {
         const extension = extractionResult.processedImage.mimeType === 'image/png' ? 'png' : 'jpg';
         processedS3Key = sheet.s3Key.replace(/\.[^.]+$/, `_processed.${extension}`);
-        console.log(`[Job ${job.id}] Saving processed image to MinIO: ${processedS3Key}`);
+        logger.info({ jobId: job.id, s3Key: processedS3Key }, 'Saving processed image to MinIO');
 
         await uploadFile(
           processedS3Key,
@@ -128,7 +155,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
           { 'Content-Type': extractionResult.processedImage.mimeType }
         );
 
-        console.log(`[Job ${job.id}] Processed image saved: ${processedS3Key}`);
+        logger.info({ jobId: job.id, s3Key: processedS3Key }, 'Processed image saved');
       }
 
       // Combine all words (vocab + spelling) for database storage
@@ -158,7 +185,10 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
             definition: undefined,
             context: undefined,
           }));
-          console.log(`[Job ${job.id}] Using ${vocabularyWordsForTests.length} spelling words for test generation`);
+          logger.info(
+            { jobId: job.id, wordCount: vocabularyWordsForTests.length },
+            'Using spelling words for test generation'
+          );
         } else if (extractionResult.vocabulary.length > 0) {
           // Fallback: use vocabulary words if no spelling words found
           vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
@@ -166,7 +196,10 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
             definition: v.definition,
             context: v.context,
           }));
-          console.log(`[Job ${job.id}] No spelling words found, using ${vocabularyWordsForTests.length} vocabulary words as fallback`);
+          logger.info(
+            { jobId: job.id, wordCount: vocabularyWordsForTests.length },
+            'No spelling words found, using vocabulary words as fallback'
+          );
         } else {
           throw new Error('No spelling or vocabulary words found. Please upload a document with spelling words.');
         }
@@ -184,16 +217,18 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
           );
         }
 
-        console.log(
-          `[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test generation` +
-          (extractionResult.spelling.length > 0
-            ? ` (${extractionResult.spelling.length} spelling words saved but not used in tests)`
-            : '')
+        logger.info(
+          {
+            jobId: job.id,
+            vocabWords: vocabularyWordsForTests.length,
+            spellingWordsSaved: extractionResult.spelling.length,
+          },
+          'Using vocabulary words for test generation'
         );
       }
 
       // Save all words to database (vocabulary + spelling)
-      console.log(`[Job ${job.id}] Saving ${allWords.length} words to database`);
+      logger.info({ jobId: job.id, wordCount: allWords.length }, 'Saving words to database');
       await job.updateProgress(40);
 
       await prisma.vocabularyWord.createMany({
@@ -216,14 +251,14 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
 
     // Generate test variants using only vocabulary words
     const testsToGenerate = Math.min(sheet.testsToGenerate, TEST_VARIANTS.length);
-    console.log(`[Job ${job.id}] Generating ${testsToGenerate} test variants`);
+    logger.info({ jobId: job.id, variantCount: testsToGenerate }, 'Generating test variants');
 
     for (let i = 0; i < testsToGenerate; i++) {
       const variant = TEST_VARIANTS[i];
       const progressPercent = 40 + ((i + 1) / testsToGenerate) * 50;
       await job.updateProgress(progressPercent);
 
-      console.log(`[Job ${job.id}] Generating test variant ${variant} for ${sheet.testType} test`);
+      logger.info({ jobId: job.id, variant, testType: sheet.testType }, 'Generating test variant');
 
       // Generate questions using Claude - route to correct function based on test type
       let questions;
@@ -246,7 +281,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       }
 
       if (questions.length === 0) {
-        console.warn(`[Job ${job.id}] No questions generated for variant ${variant}, skipping`);
+        logger.warn({ jobId: job.id, variant }, 'No questions generated for variant, skipping');
         continue;
       }
 
@@ -314,7 +349,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
         data: questionsData,
       });
 
-      console.log(`[Job ${job.id}] Created test variant ${variant} with ${questions.length} questions`);
+      logger.info({ jobId: job.id, variant, questionCount: questions.length }, 'Created test variant');
     }
 
     // Update status to COMPLETED (only for initial processing)
@@ -329,7 +364,10 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
     }
 
     await job.updateProgress(100);
-    console.log(`[Job ${job.id}] Successfully ${action === 'regenerate' ? 'regenerated tests for' : 'processed'} vocabulary sheet: ${sheetId}`);
+    logger.info(
+      { jobId: job.id, sheetId, action },
+      `Successfully ${action === 'regenerate' ? 'regenerated tests for' : 'processed'} vocabulary sheet`
+    );
 
     return {
       success: true,
@@ -338,7 +376,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       testsGenerated: testsToGenerate,
     };
   } catch (error) {
-    console.error(`[Job ${job.id}] Error processing vocabulary sheet:`, error);
+    logger.error({ jobId: job.id, err: error }, 'Error processing vocabulary sheet');
 
     // Update status to FAILED
     await prisma.vocabularySheet.update({
@@ -367,18 +405,18 @@ export function createVocabularyWorker() {
   });
 
   worker.on('completed', (job) => {
-    console.log(`✓ Job ${job.id} completed successfully`);
+    logger.info({ jobId: job.id }, 'Job completed successfully');
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`✗ Job ${job?.id} failed:`, err.message);
+    logger.error({ jobId: job?.id, errorMessage: err.message }, 'Job failed');
   });
 
   worker.on('error', (err) => {
-    console.error('Worker error:', err);
+    logger.error({ err }, 'Worker error');
   });
 
-  console.log('Vocabulary processing worker started');
+  logger.info('Vocabulary processing worker started');
 
   return worker;
 }

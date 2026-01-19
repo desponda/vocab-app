@@ -1,5 +1,21 @@
 import { Client } from 'minio';
+import pino from 'pino';
 import { config } from './config';
+
+// Create standalone logger matching Fastify configuration
+const logger = pino({
+  level: config.logLevel,
+  transport:
+    config.nodeEnv === 'development'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        }
+      : undefined,
+});
 
 // MinIO is optional - create client only if credentials are configured
 export const minioClient: Client | null = config.minio?.accessKey && config.minio?.secretKey
@@ -46,7 +62,7 @@ export const BUCKET_NAME = config.minio?.bucket || 'vocab-documents';
  */
 export async function initializeBucket(): Promise<void> {
   if (!minioClient) {
-    console.warn('MinIO not configured. File upload features will be unavailable.');
+    logger.warn('MinIO not configured. File upload features will be unavailable.');
     return;
   }
 
@@ -54,13 +70,16 @@ export async function initializeBucket(): Promise<void> {
     const exists = await minioClient.bucketExists(BUCKET_NAME);
     if (!exists) {
       await minioClient.makeBucket(BUCKET_NAME, 'us-east-1');
-      console.log(`MinIO bucket '${BUCKET_NAME}' created successfully`);
+      logger.info({ bucket: BUCKET_NAME }, 'MinIO bucket created successfully');
     } else {
-      console.log(`MinIO bucket '${BUCKET_NAME}' already exists`);
+      logger.info({ bucket: BUCKET_NAME }, 'MinIO bucket already exists');
     }
   } catch (error) {
     // Log error but don't throw - MinIO might not be available
-    console.warn('Failed to initialize MinIO bucket. File upload features will be unavailable:', error instanceof Error ? error.message : String(error));
+    logger.warn(
+      { err: error, errorMessage: error instanceof Error ? error.message : String(error) },
+      'Failed to initialize MinIO bucket. File upload features will be unavailable'
+    );
   }
 }
 

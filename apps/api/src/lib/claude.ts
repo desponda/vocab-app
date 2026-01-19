@@ -1,9 +1,25 @@
 import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
+import pino from 'pino';
 import { config } from './config';
 
+// Create standalone logger matching Fastify configuration
+const logger = pino({
+  level: config.logLevel,
+  transport:
+    config.nodeEnv === 'development'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        }
+      : undefined,
+});
+
 if (!config.anthropicApiKey) {
-  console.warn('ANTHROPIC_API_KEY not configured. Claude Vision API features will be disabled.');
+  logger.warn('ANTHROPIC_API_KEY not configured. Claude Vision API features will be disabled.');
 }
 
 const anthropic = new Anthropic({
@@ -51,7 +67,7 @@ async function compressImageIfNeeded(
     return { buffer, mimeType };
   }
 
-  console.log(`Image size ${(buffer.length / 1024 / 1024).toFixed(2)}MB exceeds 4MB, compressing...`);
+  logger.info({ sizeMB: (buffer.length / 1024 / 1024).toFixed(2) }, 'Image exceeds 4MB, compressing');
 
   const image = sharp(buffer);
   const metadata = await image.metadata();
@@ -71,11 +87,14 @@ async function compressImageIfNeeded(
       .png({ compressionLevel: 9 })
       .toBuffer();
 
-    console.log(`Resized to ${width}px width (${(resizeScale * 100).toFixed(0)}% scale): ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+    logger.info(
+      { width, scalePercent: (resizeScale * 100).toFixed(0), sizeMB: (compressedBuffer.length / 1024 / 1024).toFixed(2) },
+      'Resized PNG'
+    );
 
     if (compressedBuffer.length <= MAX_SIZE) {
       finalMimeType = 'image/png';
-      console.log(`✓ PNG compression successful at ${width}px`);
+      logger.info({ width }, 'PNG compression successful');
       return { buffer: compressedBuffer, mimeType: finalMimeType };
     }
   }
@@ -92,11 +111,14 @@ async function compressImageIfNeeded(
       .jpeg({ quality })
       .toBuffer();
 
-    console.log(`JPEG quality ${quality}${width ? ` at ${width}px` : ''}: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+    logger.info(
+      { quality, width: width || 'original', sizeMB: (compressedBuffer.length / 1024 / 1024).toFixed(2) },
+      'JPEG compression attempt'
+    );
 
     if (compressedBuffer.length <= MAX_SIZE) {
       finalMimeType = 'image/jpeg';
-      console.log(`✓ JPEG compression successful at quality ${quality}`);
+      logger.info({ quality }, 'JPEG compression successful');
       return { buffer: compressedBuffer, mimeType: finalMimeType };
     }
 
@@ -113,17 +135,17 @@ async function compressImageIfNeeded(
         .jpeg({ quality: MIN_QUALITY })
         .toBuffer();
 
-      console.log(`Aggressive resize to ${width}px: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+      logger.info({ width, sizeMB: (compressedBuffer.length / 1024 / 1024).toFixed(2) }, 'Aggressive resize attempt');
     }
 
     if (compressedBuffer.length <= MAX_SIZE) {
       finalMimeType = 'image/jpeg';
-      console.log(`✓ Aggressive resize successful at ${width}px`);
+      logger.info({ width }, 'Aggressive resize successful');
       return { buffer: compressedBuffer, mimeType: finalMimeType };
     }
   }
 
-  console.warn(`Warning: Could not compress image below 4MB. Final size: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+  logger.warn({ finalSizeMB: (compressedBuffer.length / 1024 / 1024).toFixed(2) }, 'Could not compress image below 4MB');
   return { buffer: compressedBuffer, mimeType: finalMimeType };
 }
 
@@ -182,11 +204,11 @@ export async function extractVocabulary(
 
   // Fix image orientation (auto-rotate based on EXIF metadata)
   // This is critical for text recognition - sideways images confuse the AI
-  console.log('Checking image orientation and applying EXIF corrections...');
+  logger.info('Checking image orientation and applying EXIF corrections');
   processedBuffer = await sharp(processedBuffer)
     .rotate() // Auto-rotate based on EXIF Orientation tag
     .toBuffer();
-  console.log('✓ Image orientation corrected');
+  logger.info('Image orientation corrected');
 
   // Ensure image is in supported format
   const { buffer: formattedBuffer, mimeType: formattedMimeType } = await ensureSupportedFormat(
@@ -315,7 +337,7 @@ Return ONLY valid JSON (no markdown code blocks, no explanation):
       },
     };
   } catch (parseError) {
-    console.error('Failed to parse Claude response:', jsonText);
+    logger.error({ err: parseError, jsonText }, 'Failed to parse Claude response');
     throw new Error(`Failed to parse vocabulary extraction result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
 }
@@ -445,8 +467,9 @@ Return ONLY valid JSON (no markdown, no explanation):
     // Validate we have exactly 2 questions per word
     const expectedQuestionCount = words.length * 2;
     if (result.questions.length !== expectedQuestionCount) {
-      console.warn(
-        `Expected ${expectedQuestionCount} questions (2 per word), got ${result.questions.length}. Proceeding anyway.`
+      logger.warn(
+        { expected: expectedQuestionCount, actual: result.questions.length },
+        'Question count mismatch (expected 2 per word), proceeding anyway'
       );
     }
 
@@ -480,7 +503,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 
     return shuffledQuestions;
   } catch (parseError) {
-    console.error('Failed to parse Claude test generation response:', jsonText);
+    logger.error({ err: parseError, jsonText }, 'Failed to parse Claude test generation response');
     throw new Error(`Failed to parse test generation result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
 }
@@ -589,8 +612,9 @@ Return ONLY valid JSON (no markdown, no explanation):
     // Validate we have exactly 1 question per word
     const expectedQuestionCount = words.length;
     if (result.questions.length !== expectedQuestionCount) {
-      console.warn(
-        `Expected ${expectedQuestionCount} spelling questions (1 per word), got ${result.questions.length}. Proceeding anyway.`
+      logger.warn(
+        { expected: expectedQuestionCount, actual: result.questions.length },
+        'Spelling question count mismatch (expected 1 per word), proceeding anyway'
       );
     }
 
@@ -609,7 +633,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 
         // Validate exactly 4 options
         if (q.options.length !== 4) {
-          console.warn(`Expected 4 options, got ${q.options.length} for: ${q.questionText}`);
+          logger.warn({ optionCount: q.options.length, questionText: q.questionText }, 'Expected 4 options for spelling question');
         }
 
         // Shuffle the options array using Fisher-Yates algorithm
@@ -629,7 +653,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 
     return shuffledQuestions;
   } catch (parseError) {
-    console.error('Failed to parse Claude spelling test generation response:', jsonText);
+    logger.error({ err: parseError, jsonText }, 'Failed to parse Claude spelling test generation response');
     throw new Error(`Failed to parse spelling test generation result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
 }

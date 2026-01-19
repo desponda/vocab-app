@@ -186,10 +186,10 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
       const queue = getVocabularyQueue();
       if (queue) {
         await queue.add('process-sheet', { sheetId: sheet.id });
-        console.log(`Queued vocabulary processing job for sheet: ${sheet.id}`);
+        app.log.info({ sheetId: sheet.id }, 'Queued vocabulary processing job');
       }
     } else {
-      console.warn('ANTHROPIC_API_KEY or REDIS_URL not configured, skipping vocabulary processing');
+      app.log.warn('ANTHROPIC_API_KEY or REDIS_URL not configured, skipping vocabulary processing');
     }
 
     return reply.code(201).send({ sheet });
