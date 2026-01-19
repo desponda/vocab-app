@@ -123,6 +123,17 @@ jobs:
             packages/*/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
 
+      - name: Restore Prisma cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/api/node_modules/.prisma
+            apps/api/prisma/generated
+          key: ${{ runner.os }}-prisma-${{ hashFiles('apps/api/prisma/schema.prisma') }}
+
+      - name: Generate Prisma Client (if cache miss)
+        run: cd apps/api && pnpm prisma generate
+
       - name: Restore Turbo cache
         uses: actions/cache@v4
         with:
