@@ -19,6 +19,7 @@ import { teachersRoutes } from './routes/teachers';
 import { errorHandler } from './middleware/error-handler';
 import { initializeBucket } from './lib/minio';
 import { createVocabularyWorker } from './jobs/process-vocabulary-sheet';
+import { livenessCheck, performHealthCheck } from './lib/health';
 
 const app = Fastify({
   logger: {
@@ -101,13 +102,24 @@ app.register(vocabularySheetRoutes, { prefix: '/api/vocabulary-sheets' });
 app.register(testRoutes, { prefix: '/api/tests' });
 app.register(teachersRoutes, { prefix: '/api/teachers' });
 
-// Health check (under /api for consistency with frontend API_URL)
+// Liveness check (simple check - is the app running?)
+// Used by Kubernetes liveness probe
 app.get('/api/health', async () => {
-  return {
-    status: 'ok',
-    version: config.version,
-    timestamp: new Date().toISOString(),
-  };
+  return livenessCheck();
+});
+
+// Readiness check (comprehensive check - are all dependencies available?)
+// Used by Kubernetes readiness probe
+app.get('/api/health/ready', async (request, reply) => {
+  const health = await performHealthCheck();
+
+  // Return 503 if unhealthy (database down)
+  if (health.status === 'unhealthy') {
+    return reply.code(503).send(health);
+  }
+
+  // Return 200 even if degraded (optional services down, but core functionality works)
+  return reply.code(200).send(health);
 });
 
 // Error handler
