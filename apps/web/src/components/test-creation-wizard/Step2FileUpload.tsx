@@ -278,6 +278,55 @@ export function Step2FileUpload() {
                   Maximum file size is {formatFileSize(MAX_FILE_SIZE)}. Files are automatically compressed before processing, so don&apos;t worry about exact size - just keep it under the limit.
                 </p>
               </div>
+
+              {/* Troubleshooting Section */}
+              <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg space-y-3">
+                <h4 className="font-semibold text-amber-900 dark:text-amber-100">🔧 Troubleshooting Common Issues</h4>
+
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: AI can&apos;t extract any words</p>
+                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
+                      <li>Check if text is readable in the image</li>
+                      <li>Try taking a new photo with better lighting</li>
+                      <li>Avoid shadows, glare, and reflections</li>
+                      <li>Make sure image is not rotated or upside down</li>
+                      <li>For handwriting: use clear, legible writing</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: File is too large</p>
+                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
+                      <li>Take a screenshot instead of uploading the full image</li>
+                      <li>Crop the image to show only the vocabulary content</li>
+                      <li>Reduce image resolution (we&apos;ll compress it anyway)</li>
+                      <li>Convert to JPG format which is smaller than PNG</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: Poor quality results</p>
+                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
+                      <li>Use higher resolution images (but under {formatFileSize(MAX_FILE_SIZE)})</li>
+                      <li>Ensure good contrast between text and background</li>
+                      <li>Avoid blurry or out-of-focus images</li>
+                      <li>Take photo straight-on, not at an angle</li>
+                      <li>For best results: use PDF or high-quality scans</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: Processing takes too long</p>
+                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
+                      <li>Reduce number of test variants (3 is fastest)</li>
+                      <li>Disable preview generation in advanced options</li>
+                      <li>For spelling tests: use &quot;Use all words&quot; mode</li>
+                      <li>Processing typically takes 2-3 minutes for 3 variants</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
