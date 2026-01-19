@@ -69,6 +69,7 @@ import {
 import { StatCard } from '@/components/dashboard/stat-card';
 import { ActivityFeed } from '@/components/classroom/activity-feed';
 import { PerformanceChart } from '@/components/classroom/performance-chart';
+import { TestPreviewDialog } from '@/components/classroom/test-preview-dialog';
 import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
 
 interface ClassroomStats {
@@ -587,6 +588,7 @@ export default function ClassroomDetailPage() {
                         <TableHead className="hidden md:table-cell">Questions</TableHead>
                         <TableHead className="hidden lg:table-cell">Assigned</TableHead>
                         <TableHead className="hidden md:table-cell">Due Date</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -604,6 +606,16 @@ export default function ClassroomDetailPage() {
                             {assignment.dueDate
                               ? formatRelativeDate(assignment.dueDate)
                               : 'No due date'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {assignment.test && (
+                              <TestPreviewDialog
+                                testId={assignment.test.id}
+                                testName={assignment.test.name}
+                                variant={assignment.test.variant}
+                                accessToken={accessToken}
+                              />
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
