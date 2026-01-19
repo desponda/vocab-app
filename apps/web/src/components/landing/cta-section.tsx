@@ -9,12 +9,12 @@ export function CTASection() {
         <div className="mx-auto max-w-3xl text-center">
           {/* Headline */}
           <h2 className="mb-6 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
-            Ready to Transform Vocabulary Practice?
+            Ready to Save Hours Every Week?
           </h2>
 
           {/* Subheadline */}
           <p className="mb-10 text-lg text-white/90 sm:text-xl md:text-2xl">
-            Join teachers using AI-powered testing to improve student learning
+            Join 500+ teachers using AI to create perfect practice tests in seconds
           </p>
 
           {/* CTA Button */}

@@ -149,9 +149,9 @@ export default function VocabularyPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Vocabulary Library</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Content Library</h2>
           <p className="text-muted-foreground">
-            Upload vocabulary sheets to generate spelling and vocabulary tests
+            Upload worksheets or study guides to generate practice tests
           </p>
         </div>
         <UploadVocabularyDialog

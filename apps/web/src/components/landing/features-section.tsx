@@ -7,39 +7,39 @@ import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 const features = [
   {
     icon: Brain,
-    title: 'AI-Powered Extraction',
+    title: 'Multi-Type Test Generation',
     description:
-      'Upload photos of vocabulary lists and our AI automatically extracts words and definitions',
+      'Create vocabulary, spelling, and knowledge tests from any image. One platform, every assessment type.',
   },
   {
     icon: Zap,
-    title: 'Instant Test Generation',
+    title: 'Instant AI Extraction',
     description:
-      'Generate 3-10 test variants automatically with multiple question types',
+      'Upload photos of worksheets or study guides. AI extracts content and generates 3-10 test variants in seconds.',
   },
   {
     icon: CheckCircle2,
-    title: 'Auto-Grading',
+    title: 'Auto-Grading & Feedback',
     description:
-      'Tests are graded instantly with detailed feedback and performance tracking',
+      'Tests grade themselves instantly with detailed performance tracking and insights.',
   },
   {
     icon: Users,
     title: 'Classroom Management',
     description:
-      'Organize students by classroom with unique join codes',
+      'Organize students by classroom with unique join codes and bulk test assignment.',
   },
   {
     icon: TrendingUp,
-    title: 'Progress Analytics',
+    title: 'Performance Analytics',
     description:
-      'Track student progress with detailed analytics and performance charts',
+      'Track progress with charts, identify struggling students, and export detailed reports.',
   },
   {
     icon: Smartphone,
-    title: 'Mobile-Friendly',
+    title: 'Mobile-Optimized',
     description:
-      'Students can take tests on any device, anywhere',
+      'Students test on any device. Teachers manage from anywhere. Works offline.',
   },
 ];
 
@@ -52,10 +52,10 @@ export function FeaturesSection() {
         {/* Section header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Everything you need to teach vocabulary
+            Everything You Need for Practice Testing
           </h2>
           <p className="text-lg text-muted-foreground md:text-xl">
-            Powerful features designed to save time and improve learning outcomes
+            Powerful AI features designed to save time and improve student outcomes
           </p>
         </div>
 
