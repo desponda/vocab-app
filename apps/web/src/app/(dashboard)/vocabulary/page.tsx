@@ -147,6 +147,8 @@ export default function VocabularyPage() {
                   wordCount={sheet._count?.words}
                   testCount={sheet._count?.tests}
                   errorMessage={sheet.errorMessage || undefined}
+                  tests={sheet.tests}
+                  accessToken={accessToken || undefined}
                   onDelete={handleDelete}
                   onDownload={handleDownload}
                   onDownloadProcessed={handleDownloadProcessed}

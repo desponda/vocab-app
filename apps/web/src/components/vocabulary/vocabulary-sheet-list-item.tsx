@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Trash2, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { FileText, Download, Trash2, Loader2, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/utils';
 import { ProcessingStatus } from '@/lib/api';
+import { TestPreviewDialog } from '@/components/classroom/test-preview-dialog';
 
 const STATUS_CONFIG: Record<ProcessingStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType; color: string }> = {
   PENDING: { label: 'Pending', variant: 'secondary', icon: Clock, color: 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/20' },
@@ -25,6 +27,14 @@ interface VocabularySheetListItemProps {
   wordCount?: number;
   testCount?: number;
   errorMessage?: string;
+  tests?: Array<{
+    id: string;
+    name: string;
+    variant: string;
+    createdAt: string;
+    _count: { questions: number };
+  }>;
+  accessToken?: string;
   onDelete: (id: string) => void;
   onDownload: (id: string) => void;
   onDownloadProcessed?: (id: string) => void;
@@ -41,10 +51,13 @@ export function VocabularySheetListItem({
   wordCount,
   testCount,
   errorMessage,
+  tests,
+  accessToken,
   onDelete,
   onDownload,
   onDownloadProcessed,
 }: VocabularySheetListItemProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const statusConfig = STATUS_CONFIG[status];
   const StatusIcon = statusConfig.icon;
 
@@ -53,6 +66,8 @@ export function VocabularySheetListItem({
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  const hasTests = tests && tests.length > 0;
 
   return (
     <Card className="hover:bg-muted/50 transition-colors">
@@ -99,6 +114,17 @@ export function VocabularySheetListItem({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {hasTests && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="gap-2"
+              >
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                {isExpanded ? 'Hide' : 'Show'} Tests
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -131,6 +157,41 @@ export function VocabularySheetListItem({
             </Button>
           </div>
         </div>
+
+        {/* Tests List */}
+        {isExpanded && hasTests && (
+          <div className="mt-4 pt-4 border-t space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Generated Tests ({tests.length})</h4>
+            <div className="grid gap-2">
+              {tests.map((test) => (
+                <div
+                  key={test.id}
+                  className="flex items-center justify-between p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Badge variant="secondary" className="flex-shrink-0">
+                      {test.variant}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{test.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {test._count.questions} {test._count.questions === 1 ? 'question' : 'questions'}
+                      </p>
+                    </div>
+                  </div>
+                  {accessToken && (
+                    <TestPreviewDialog
+                      testId={test.id}
+                      testName={test.name}
+                      variant={test.variant}
+                      accessToken={accessToken}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

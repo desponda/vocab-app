@@ -199,6 +199,20 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
             tests: true,
           },
         },
+        tests: {
+          select: {
+            id: true,
+            name: true,
+            variant: true,
+            createdAt: true,
+            _count: {
+              select: {
+                questions: true,
+              },
+            },
+          },
+          orderBy: { variant: 'asc' },
+        },
       },
     });
 

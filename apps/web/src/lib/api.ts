@@ -676,6 +676,15 @@ export const VocabularySheetSchema = z.object({
     words: z.number(),
     tests: z.number(),
   }).optional(),
+  tests: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    variant: z.string(),
+    createdAt: z.string(),
+    _count: z.object({
+      questions: z.number(),
+    }),
+  })).optional(),
 });
 
 export const VocabularyWordSchema = z.object({
