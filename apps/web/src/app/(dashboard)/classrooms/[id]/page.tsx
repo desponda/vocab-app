@@ -3,8 +3,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { classroomsApi, testsApi, vocabularySheetsApi, type Classroom, type Student, type Test, type VocabularySheet, type TestAssignment, type Enrollment } from '@/lib/api';
+import {
+  classroomsApi,
+  testsApi,
+  vocabularySheetsApi,
+  type Classroom,
+  type VocabularySheet,
+  type TestAssignment,
+  type Enrollment,
+} from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -43,7 +52,48 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Copy, Check, Plus } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  Plus,
+  Users,
+  ClipboardCheck,
+  TrendingUp,
+  Target,
+  ArrowLeft,
+  Loader2,
+  FileCheck,
+  Trash2,
+  Settings as SettingsIcon,
+  Search,
+} from 'lucide-react';
+import { StatCard } from '@/components/dashboard/stat-card';
+import { ActivityFeed } from '@/components/classroom/activity-feed';
+import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
+
+interface ClassroomStats {
+  studentCount: number;
+  testsAssigned: number;
+  avgTestScore: number;
+  completionRate: number;
+}
+
+interface Activity {
+  type: 'enrollment' | 'test_completion' | 'test_assignment';
+  studentName?: string;
+  testName?: string;
+  score?: number;
+  timestamp: string | Date;
+}
+
+interface TestAttempt {
+  id: string;
+  studentName: string;
+  testName: string;
+  variant: string;
+  score: number;
+  completedAt: string | Date;
+}
 
 export default function ClassroomDetailPage() {
   const params = useParams();
@@ -51,10 +101,16 @@ export default function ClassroomDetailPage() {
   const classroomId = params.id as string;
   const { accessToken } = useAuth();
 
+  // Core classroom data
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [vocabularySheets, setVocabularySheets] = useState<VocabularySheet[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
+  const [stats, setStats] = useState<ClassroomStats | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
+
+  // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState(false);
@@ -62,6 +118,9 @@ export default function ClassroomDetailPage() {
   const [selectedSheetId, setSelectedSheetId] = useState<string>('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load classroom details
   useEffect(() => {
@@ -75,9 +134,18 @@ export default function ClassroomDetailPage() {
         // Get classroom details with enrolled students
         const classroomData = await classroomsApi.get(classroomId, accessToken);
         setClassroom(classroomData.classroom);
-
-        // Store enrollments (includes student data and enrollment date)
         setEnrollments(classroomData.classroom.enrollments || []);
+
+        // Load stats, activity, and test attempts in parallel
+        const [statsData, activityData, attemptsData] = await Promise.all([
+          classroomsApi.getStats(classroomId, accessToken),
+          classroomsApi.getActivity(classroomId, accessToken),
+          classroomsApi.getTestAttempts(classroomId, accessToken),
+        ]);
+
+        setStats(statsData);
+        setActivities(activityData.activities);
+        setTestAttempts(attemptsData.attempts);
       } catch (err) {
         console.error('Error loading classroom:', err);
         setError('Failed to load classroom details. Please try again.');
@@ -97,16 +165,11 @@ export default function ClassroomDetailPage() {
       try {
         const { sheets } = await vocabularySheetsApi.list(accessToken);
 
-        // Filter to only completed sheets with tests in new format
-        // Note: Tests processed after 2026-01-18 will have multiple choice format
-        const newFormatCutoff = new Date('2026-01-18T00:00:00Z');
-
+        // Filter to only completed sheets with tests
         const validSheets = sheets.filter((sheet) => {
           const isCompleted = sheet.status === 'COMPLETED';
           const hasTests = sheet._count && sheet._count.tests > 0;
-          const isNewFormat = sheet.processedAt && new Date(sheet.processedAt) >= newFormatCutoff;
-
-          return isCompleted && hasTests && isNewFormat;
+          return isCompleted && hasTests;
         });
 
         setVocabularySheets(validSheets);
@@ -150,7 +213,7 @@ export default function ClassroomDetailPage() {
       await vocabularySheetsApi.assignToClassroom(
         selectedSheetId,
         classroomId,
-        undefined, // no due date for now
+        undefined,
         accessToken
       );
 
@@ -158,10 +221,9 @@ export default function ClassroomDetailPage() {
       setIsAssignDialogOpen(false);
       setSelectedSheetId('');
 
-      // Reload assigned tests to show the new assignments
+      // Reload assigned tests
       await loadAssignedTests();
 
-      // Show success message with variant count
       setTimeout(() => setAssignSuccess(false), 3000);
     } catch (err) {
       console.error('Error assigning vocabulary sheet:', err);
@@ -171,12 +233,28 @@ export default function ClassroomDetailPage() {
     }
   };
 
+  const handleDeleteClassroom = async () => {
+    if (!accessToken) return;
+
+    setIsDeleting(true);
+    try {
+      await classroomsApi.delete(classroomId, accessToken);
+      router.push('/classrooms');
+    } catch (err) {
+      console.error('Error deleting classroom:', err);
+      setError('Failed to delete classroom. Please try again.');
+      setIsDeleting(false);
+    }
+  };
+
+  const filteredEnrollments = enrollments.filter((enrollment) =>
+    enrollment.student?.name?.toLowerCase().includes(studentSearchQuery.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-lg font-semibold">Loading classroom...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -187,7 +265,8 @@ export default function ClassroomDetailPage() {
         <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
           {error || 'Classroom not found'}
         </div>
-        <Button onClick={() => router.push('/dashboard/classrooms')} variant="outline">
+        <Button onClick={() => router.push('/classrooms')} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Classrooms
         </Button>
       </div>
@@ -199,64 +278,195 @@ export default function ClassroomDetailPage() {
       {/* Classroom Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{classroom.name}</h2>
-          <div className="flex items-center gap-4 mt-2 text-muted-foreground">
-            <p>Classroom Code: {classroom.code}</p>
-            <p>•</p>
-            <p>Grade {classroom.gradeLevel}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            {classroom.code}
-          </Badge>
           <Button
-            onClick={handleCopyCode}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="gap-2"
+            onClick={() => router.push('/classrooms')}
+            className="mb-2 -ml-2"
           >
-            {copiedCode ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy Code
-              </>
-            )}
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Classrooms
           </Button>
+          <h2 className="text-3xl font-bold tracking-tight">{classroom.name}</h2>
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="secondary">Grade {classroom.gradeLevel}</Badge>
+            <span className="text-sm text-muted-foreground">
+              Code: <span className="font-mono font-semibold">{classroom.code}</span>
+            </span>
+            <Button
+              onClick={handleCopyCode}
+              variant="ghost"
+              size="sm"
+              className="gap-1 h-7 px-2"
+            >
+              {copiedCode ? (
+                <>
+                  <Check className="h-3 w-3" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  Copy
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="students" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="students">
-            Students ({enrollments.length})
-          </TabsTrigger>
-          <TabsTrigger value="tests">Assigned Tests</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="students">Students ({enrollments.length})</TabsTrigger>
+          <TabsTrigger value="tests">Tests ({assignedTests.length})</TabsTrigger>
           <TabsTrigger value="results">Results</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Stats Grid */}
+          {stats && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Students Enrolled"
+                value={stats.studentCount}
+                icon={Users}
+                color="green"
+              />
+              <StatCard
+                title="Tests Assigned"
+                value={stats.testsAssigned}
+                icon={FileCheck}
+                color="purple"
+              />
+              <StatCard
+                title="Avg Test Score"
+                value={`${stats.avgTestScore}%`}
+                icon={Target}
+                color={stats.avgTestScore >= 80 ? 'green' : stats.avgTestScore >= 60 ? 'orange' : 'default'}
+              />
+              <StatCard
+                title="Completion Rate"
+                value={`${stats.completionRate}%`}
+                icon={TrendingUp}
+                color="blue"
+              />
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Assign Test
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Assign Test to {classroom.name}</DialogTitle>
+                    <DialogDescription>
+                      Select a vocabulary set to assign all its test variants to this classroom
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="vocab-sheet">Select Vocabulary Set</Label>
+                      {vocabularySheets.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No tests available. Upload vocabulary sheets to generate tests.
+                        </p>
+                      ) : (
+                        <Select value={selectedSheetId} onValueChange={setSelectedSheetId}>
+                          <SelectTrigger id="vocab-sheet">
+                            <SelectValue placeholder="Choose a vocabulary set" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vocabularySheets.map((sheet) => (
+                              <SelectItem key={sheet.id} value={sheet.id}>
+                                {sheet.name} ({sheet._count?.tests || 0} variants)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsAssignDialogOpen(false);
+                          setSelectedSheetId('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleBulkAssignVocabSheet}
+                        disabled={!selectedSheetId || isAssigning}
+                      >
+                        {isAssigning ? 'Assigning...' : 'Assign All Variants'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button variant="outline" onClick={() => router.push(`/classrooms/${classroomId}`)}>
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                View Results
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Activity Feed */}
+          <ActivityFeed activities={activities} maxItems={15} />
+        </TabsContent>
 
         {/* Students Tab */}
         <TabsContent value="students">
           <Card>
             <CardHeader>
-              <CardTitle>Enrolled Students</CardTitle>
-              <CardDescription>
-                Students who have signed up with classroom code {classroom.code}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Enrolled Students</CardTitle>
+                  <CardDescription>
+                    Students who have joined using code {classroom.code}
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {enrollments.length > 0 && (
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search students..."
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              )}
+
               {enrollments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
+                  <Users className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
                   <p className="mb-2">No students enrolled yet</p>
                   <p className="text-sm">
                     Share the classroom code <strong>{classroom.code}</strong> with your students
                   </p>
+                </div>
+              ) : filteredEnrollments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No students found matching &quot;{studentSearchQuery}&quot;</p>
                 </div>
               ) : (
                 <Table>
@@ -268,13 +478,13 @@ export default function ClassroomDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {enrollments.map((enrollment) => (
+                    {filteredEnrollments.map((enrollment) => (
                       <TableRow key={enrollment.id}>
-                        <TableCell className="font-medium">{enrollment.student?.name || 'Unknown'}</TableCell>
-                        <TableCell>{enrollment.student?.gradeLevel || 'N/A'}</TableCell>
-                        <TableCell>
-                          {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                        <TableCell className="font-medium">
+                          {enrollment.student?.name || 'Unknown'}
                         </TableCell>
+                        <TableCell>{enrollment.student?.gradeLevel || 'N/A'}</TableCell>
+                        <TableCell>{formatRelativeDate(enrollment.enrolledAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -284,16 +494,14 @@ export default function ClassroomDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* Assigned Tests Tab */}
+        {/* Tests Tab */}
         <TabsContent value="tests">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Assigned Tests</CardTitle>
-                  <CardDescription>
-                    Tests assigned to this classroom
-                  </CardDescription>
+                  <CardDescription>Tests assigned to this classroom</CardDescription>
                 </div>
                 <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
                   <DialogTrigger asChild>
@@ -304,7 +512,7 @@ export default function ClassroomDetailPage() {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Assign Test to {classroom?.name}</DialogTitle>
+                      <DialogTitle>Assign Test to {classroom.name}</DialogTitle>
                       <DialogDescription>
                         Select a vocabulary set to assign all its test variants to this classroom
                       </DialogDescription>
@@ -329,11 +537,6 @@ export default function ClassroomDetailPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        )}
-                        {selectedSheetId && (
-                          <p className="text-sm text-muted-foreground">
-                            All test variants will be assigned to this classroom
-                          </p>
                         )}
                       </div>
                       <div className="flex justify-end gap-2">
@@ -361,13 +564,16 @@ export default function ClassroomDetailPage() {
             <CardContent>
               {assignSuccess && (
                 <div className="mb-4 rounded-md bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-600 dark:text-green-400">
-                  Test assigned successfully!
+                  Tests assigned successfully!
                 </div>
               )}
               {assignedTests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
+                  <FileCheck className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
                   <p>No tests assigned yet</p>
-                  <p className="text-sm mt-2">Click &quot;Assign Test&quot; to assign vocabulary tests to this classroom</p>
+                  <p className="text-sm mt-2">
+                    Click &quot;Assign Test&quot; to assign vocabulary tests to this classroom
+                  </p>
                 </div>
               ) : (
                 <Table>
@@ -390,12 +596,10 @@ export default function ClassroomDetailPage() {
                           <Badge variant="outline">{assignment.test?.variant}</Badge>
                         </TableCell>
                         <TableCell>{assignment.test?._count?.questions || 0}</TableCell>
-                        <TableCell>
-                          {new Date(assignment.assignedAt).toLocaleDateString()}
-                        </TableCell>
+                        <TableCell>{formatRelativeDate(assignment.assignedAt)}</TableCell>
                         <TableCell>
                           {assignment.dueDate
-                            ? new Date(assignment.dueDate).toLocaleDateString()
+                            ? formatRelativeDate(assignment.dueDate)
                             : 'No due date'}
                         </TableCell>
                       </TableRow>
@@ -411,15 +615,149 @@ export default function ClassroomDetailPage() {
         <TabsContent value="results">
           <Card>
             <CardHeader>
-              <CardTitle>Student Results</CardTitle>
-              <CardDescription>
-                Test results for students in this classroom
-              </CardDescription>
+              <CardTitle>Test Results</CardTitle>
+              <CardDescription>Student performance on assigned tests</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Results dashboard coming soon</p>
+              {testAttempts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ClipboardCheck className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
+                  <p>No test results yet</p>
+                  <p className="text-sm mt-2">
+                    Results will appear here when students complete assigned tests
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Test</TableHead>
+                      <TableHead>Variant</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {testAttempts.map((attempt) => (
+                      <TableRow key={attempt.id}>
+                        <TableCell className="font-medium">{attempt.studentName}</TableCell>
+                        <TableCell>{attempt.testName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{attempt.variant}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getScoreBadgeVariant(attempt.score)}>
+                            {attempt.score}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatRelativeDate(attempt.completedAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Classroom Settings</CardTitle>
+              <CardDescription>Manage classroom configuration</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Classroom Name</Label>
+                <Input value={classroom.name} disabled />
+                <p className="text-sm text-muted-foreground">
+                  Classroom name editing coming soon
+                </p>
               </div>
+
+              <div className="space-y-2">
+                <Label>Grade Level</Label>
+                <Input value={`Grade ${classroom.gradeLevel}`} disabled />
+                <p className="text-sm text-muted-foreground">
+                  Grade level editing coming soon
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Classroom Code</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={classroom.code}
+                    disabled
+                    className="font-mono font-semibold"
+                  />
+                  <Button
+                    onClick={handleCopyCode}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {copiedCode ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Code regeneration coming soon
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone */}
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>Irreversible actions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" className="gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Delete Classroom
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Are you absolutely sure?</DialogTitle>
+                    <DialogDescription>
+                      This action cannot be undone. This will permanently delete the classroom{' '}
+                      <strong>{classroom.name}</strong> and remove all student enrollments.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDeleteDialogOpen(false)}
+                      disabled={isDeleting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteClassroom}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? 'Deleting...' : 'Delete Classroom'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </TabsContent>

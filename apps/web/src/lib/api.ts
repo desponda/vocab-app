@@ -161,6 +161,46 @@ export const classroomsApi = {
   // Get all students (needed for classroom detail page)
   listStudents: (token: string): Promise<{ students: Student[] }> =>
     request('/api/students', { token }),
+
+  // Get classroom stats
+  getStats: (
+    id: string,
+    token: string
+  ): Promise<{
+    studentCount: number;
+    testsAssigned: number;
+    avgTestScore: number;
+    completionRate: number;
+  }> => request(`/api/classrooms/${id}/stats`, { token }),
+
+  // Get classroom activity
+  getActivity: (
+    id: string,
+    token: string
+  ): Promise<{
+    activities: Array<{
+      type: 'enrollment' | 'test_completion' | 'test_assignment';
+      studentName?: string;
+      testName?: string;
+      score?: number;
+      timestamp: Date;
+    }>;
+  }> => request(`/api/classrooms/${id}/activity`, { token }),
+
+  // Get test attempts for classroom
+  getTestAttempts: (
+    id: string,
+    token: string
+  ): Promise<{
+    attempts: Array<{
+      id: string;
+      studentName: string;
+      testName: string;
+      variant: string;
+      score: number;
+      completedAt: Date;
+    }>;
+  }> => request(`/api/classrooms/${id}/test-attempts`, { token }),
 };
 
 // Vocabulary Sheets API
