@@ -114,6 +114,10 @@ vocab-app/
 - ✅ Vocabulary-based statistics for students
 - ✅ Score-based color coding (green/yellow/red badges)
 - ✅ Activity feed on classroom overview
+- ✅ Student detail page with individual test results
+- ✅ Clickable student rows for drill-down navigation
+- ✅ Classroom editing (inline editing of name and grade level)
+- ✅ Grade level selection for vocabulary uploads (affects test difficulty)
 
 ### Tech Highlights
 
@@ -299,9 +303,10 @@ helm upgrade --install vocab-app . -f values-staging.yaml
 
 **Pages:**
 - `apps/web/src/app/(dashboard)/dashboard/page.tsx` - Teacher dashboard
-- `apps/web/src/app/(dashboard)/classrooms/[id]/page.tsx` - 5-tab classroom command center
+- `apps/web/src/app/(dashboard)/classrooms/[id]/page.tsx` - 5-tab classroom command center with inline editing
 - `apps/web/src/app/(dashboard)/vocabulary/page.tsx` - Vocabulary library
-- `apps/web/src/app/(dashboard)/students/page.tsx` - All students view
+- `apps/web/src/app/(dashboard)/students/page.tsx` - All students view with clickable rows
+- `apps/web/src/app/(dashboard)/students/[studentId]/page.tsx` - Individual student detail page with test results
 - `apps/web/src/app/student-dashboard/page.tsx` - Student dashboard with test grouping
 - `apps/web/src/app/student-dashboard/tests/[testId]/page.tsx` - Test-taking interface
 
@@ -444,6 +449,11 @@ See `docs/testing-strategy.md` for comprehensive testing guidelines.
 - 9 pre-existing warnings (unused vars in old code)
 - No errors, safe to ignore
 - Fix when touching those files
+
+**Recent Fixes:**
+- ✅ Performance chart visibility in dark mode (CSS variables don't work in SVG - use explicit hex colors)
+- ✅ Student data showing zero tests (status filter was checking 'GRADED' instead of 'SUBMITTED')
+- ✅ Test attempts authorization (now checks classroom enrollment instead of user ID match)
 
 ## Troubleshooting
 
@@ -644,4 +654,4 @@ If you're switching environments or onboarding a new developer:
 **Status:** ✅ Production Ready
 **CI Status:** ✅ Passing
 **Staging:** ✅ Deployed (auto-deploys on `main` push)
-**Version:** Phase 5 Complete - Full UI Redesign + Test Preview + Image Compression
+**Version:** Phase 6 Enhanced - Student Detail Pages + Classroom Editing + Grade Level Selection + Critical Bug Fixes
