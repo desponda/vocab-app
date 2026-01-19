@@ -68,6 +68,7 @@ import {
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { ActivityFeed } from '@/components/classroom/activity-feed';
+import { PerformanceChart } from '@/components/classroom/performance-chart';
 import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
 
 interface ClassroomStats {
@@ -615,53 +616,96 @@ export default function ClassroomDetailPage() {
         </TabsContent>
 
         {/* Results Tab */}
-        <TabsContent value="results">
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Results</CardTitle>
-              <CardDescription>Student performance on assigned tests</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {testAttempts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+        <TabsContent value="results" className="space-y-6">
+          {testAttempts.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center text-muted-foreground">
                   <ClipboardCheck className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
                   <p>No test results yet</p>
                   <p className="text-sm mt-2">
                     Results will appear here when students complete assigned tests
                   </p>
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Test</TableHead>
-                      <TableHead>Variant</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Completed</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {testAttempts.map((attempt) => (
-                      <TableRow key={attempt.id}>
-                        <TableCell className="font-medium">{attempt.studentName}</TableCell>
-                        <TableCell>{attempt.testName}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{attempt.variant}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getScoreBadgeVariant(attempt.score)}>
-                            {attempt.score}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatRelativeDate(attempt.completedAt)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Performance Chart */}
+              <PerformanceChart
+                data={(() => {
+                  // Group attempts by test and calculate average scores
+                  const testGroups = new Map<string, { scores: number[]; name: string }>();
+
+                  testAttempts.forEach((attempt) => {
+                    const key = `${attempt.testName}-${attempt.variant}`;
+                    if (!testGroups.has(key)) {
+                      testGroups.set(key, { scores: [], name: `${attempt.testName} (${attempt.variant})` });
+                    }
+                    testGroups.get(key)!.scores.push(attempt.score);
+                  });
+
+                  return Array.from(testGroups.entries())
+                    .map(([_, data]) => ({
+                      testName: data.name,
+                      avgScore: Math.round(data.scores.reduce((sum, s) => sum + s, 0) / data.scores.length),
+                      attempts: data.scores.length,
+                    }))
+                    .sort((a, b) => a.testName.localeCompare(b.testName));
+                })()}
+              />
+
+              {/* Results Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Test Results</CardTitle>
+                  <CardDescription>Click on a result to view detailed answers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Student</TableHead>
+                          <TableHead>Test</TableHead>
+                          <TableHead className="hidden md:table-cell">Variant</TableHead>
+                          <TableHead>Score</TableHead>
+                          <TableHead className="hidden lg:table-cell">Completed</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {testAttempts.map((attempt) => (
+                          <TableRow key={attempt.id} className="cursor-pointer hover:bg-muted/50">
+                            <TableCell className="font-medium">{attempt.studentName}</TableCell>
+                            <TableCell>{attempt.testName}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Badge variant="outline">{attempt.variant}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={getScoreBadgeVariant(attempt.score)}>
+                                {attempt.score}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">{formatRelativeDate(attempt.completedAt)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => router.push(`/student-dashboard/results/${attempt.id}`)}
+                              >
+                                View Details
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
 
         {/* Settings Tab */}

@@ -465,7 +465,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
       return reply.code(404).send({ error: 'Classroom not found' });
     }
 
-    // Get all graded test attempts for this classroom
+    // Get all completed test attempts for this classroom
     const attempts = await prisma.testAttempt.findMany({
       where: {
         test: {
@@ -475,7 +475,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
             },
           },
         },
-        status: 'GRADED',
+        status: 'SUBMITTED', // Students submit tests, they're auto-graded
       },
       select: {
         id: true,
