@@ -666,4 +666,140 @@ export const testRoutes = async (app: FastifyInstance) => {
 
     return reply.send({ attempts });
   });
+
+  // Get detailed test review (for student to review completed test)
+  app.get('/attempts/:attemptId/review', async (request: FastifyRequest, reply) => {
+    const attemptId = (request.params as any).attemptId;
+
+    if (!attemptId) {
+      return reply.code(400).send({ error: 'Attempt ID required' });
+    }
+
+    // Get attempt with all details
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      select: {
+        id: true,
+        testId: true,
+        studentId: true,
+        totalQuestions: true,
+        correctAnswers: true,
+        score: true,
+        status: true,
+        startedAt: true,
+        completedAt: true,
+        student: {
+          select: {
+            id: true,
+            name: true,
+            userId: true,
+          },
+        },
+        test: {
+          select: {
+            id: true,
+            name: true,
+            variant: true,
+            sheet: {
+              select: {
+                id: true,
+                name: true,
+                originalName: true,
+              },
+            },
+          },
+        },
+        answers: {
+          select: {
+            id: true,
+            questionId: true,
+            answer: true,
+            isCorrect: true,
+            answeredAt: true,
+          },
+        },
+      },
+    });
+
+    if (!attempt) {
+      return reply.code(404).send({ error: 'Attempt not found' });
+    }
+
+    // Verify student ownership (check if the logged-in user owns this student)
+    if (attempt.student.userId !== request.userId) {
+      return reply.code(403).send({ error: 'Unauthorized' });
+    }
+
+    // Only allow reviewing submitted attempts
+    if (attempt.status !== 'SUBMITTED' && attempt.status !== 'GRADED') {
+      return reply.code(400).send({ error: 'Attempt not completed yet' });
+    }
+
+    // Get all questions for this test with correct answers
+    const questions = await prisma.testQuestion.findMany({
+      where: { testId: attempt.testId },
+      select: {
+        id: true,
+        questionText: true,
+        questionType: true,
+        correctAnswer: true,
+        options: true,
+        orderIndex: true,
+        word: {
+          select: {
+            id: true,
+            word: true,
+            definition: true,
+          },
+        },
+      },
+      orderBy: { orderIndex: 'asc' },
+    });
+
+    // Create a map of student answers for quick lookup
+    const answerMap = new Map(
+      attempt.answers.map((ans) => [ans.questionId, ans])
+    );
+
+    // Combine questions with student answers
+    const questionsWithAnswers = questions.map((question) => {
+      const studentAnswer = answerMap.get(question.id);
+
+      // Parse options if they exist
+      let parsedOptions: string[] | null = null;
+      if (question.options) {
+        try {
+          parsedOptions = JSON.parse(question.options);
+        } catch (e) {
+          // If parsing fails, leave as null
+          parsedOptions = null;
+        }
+      }
+
+      return {
+        id: question.id,
+        questionText: question.questionText,
+        questionType: question.questionType,
+        orderIndex: question.orderIndex,
+        options: parsedOptions,
+        correctAnswer: question.correctAnswer,
+        studentAnswer: studentAnswer?.answer || null,
+        isCorrect: studentAnswer?.isCorrect ?? false,
+        word: question.word,
+      };
+    });
+
+    // Return review data
+    return reply.send({
+      attempt: {
+        id: attempt.id,
+        score: attempt.score,
+        correctAnswers: attempt.correctAnswers,
+        totalQuestions: attempt.totalQuestions,
+        completedAt: attempt.completedAt,
+        test: attempt.test,
+      },
+      questions: questionsWithAnswers,
+    });
+  });
 };

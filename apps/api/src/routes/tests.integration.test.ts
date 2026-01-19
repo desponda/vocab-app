@@ -138,6 +138,7 @@ describe('Tests Routes', () => {
       data: {
         name: 'Test Classroom',
         code: `TST${Date.now().toString().slice(-6)}`,
+        gradeLevel: 5,
         teacherId,
       },
     });

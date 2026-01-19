@@ -111,10 +111,10 @@ export const studentsApi = {
 
 // Classrooms API
 export const classroomsApi = {
-  create: (name: string, token: string): Promise<{ classroom: Classroom }> =>
+  create: (name: string, gradeLevel: number, token: string): Promise<{ classroom: Classroom }> =>
     request('/api/classrooms', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, gradeLevel }),
       token,
     }),
 
@@ -126,7 +126,7 @@ export const classroomsApi = {
 
   update: (
     id: string,
-    data: { name?: string; isActive?: boolean },
+    data: { name?: string; gradeLevel?: number; isActive?: boolean },
     token: string
   ): Promise<{ classroom: Classroom }> =>
     request(`/api/classrooms/${id}`, {
@@ -169,6 +169,7 @@ export const vocabularySheetsApi = {
     file: File,
     name: string,
     testsToGenerate: number = 3,
+    gradeLevel: number | undefined,
     token: string,
     onProgress?: (progress: number) => void
   ): Promise<{ sheet: VocabularySheet }> => {
@@ -201,7 +202,8 @@ export const vocabularySheetsApi = {
       });
 
       const encodedName = encodeURIComponent(name);
-      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}`);
+      const gradeLevelParam = gradeLevel ? `&gradeLevel=${gradeLevel}` : '';
+      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}${gradeLevelParam}`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.send(formData);
     });
@@ -396,6 +398,43 @@ export const testsApi = {
   // List all tests (teacher view)
   list: (token: string): Promise<{ tests: Test[] }> =>
     request('/api/tests', { token }),
+
+  // Get attempt review (detailed results for student)
+  getAttemptReview: (attemptId: string, token: string): Promise<{
+    attempt: {
+      id: string;
+      score: number | null;
+      correctAnswers: number | null;
+      totalQuestions: number;
+      completedAt: string | null;
+      test: {
+        id: string;
+        name: string;
+        variant: string;
+        sheet?: {
+          id: string;
+          name: string;
+          originalName: string;
+        };
+      };
+    };
+    questions: Array<{
+      id: string;
+      questionText: string;
+      questionType: string;
+      orderIndex: number;
+      options: string[] | null;
+      correctAnswer: string;
+      studentAnswer: string | null;
+      isCorrect: boolean;
+      word?: {
+        id: string;
+        word: string;
+        definition: string | null;
+      };
+    }>;
+  }> =>
+    request(`/api/tests/attempts/${attemptId}/review`, { token }),
 };
 
 // Documents API (Deprecated - use vocabularySheetsApi instead)
@@ -473,7 +512,7 @@ export const UserSchema = z.object({
 export const StudentSchema = z.object({
   id: z.string(),
   name: z.string(),
-  gradeLevel: z.number().int().min(1).max(12),
+  gradeLevel: z.number().int().min(1).max(12).nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   enrollments: z.array(z.object({
@@ -513,6 +552,7 @@ export const ClassroomSchema = z.object({
   id: z.string(),
   name: z.string(),
   code: z.string(),
+  gradeLevel: z.number(),
   isActive: z.boolean(),
   createdAt: z.string(),
   _count: z.object({
@@ -523,7 +563,7 @@ export const ClassroomSchema = z.object({
 export const EnrolledStudentSchema = z.object({
   id: z.string(),
   name: z.string(),
-  gradeLevel: z.number(),
+  gradeLevel: z.number().nullable().optional(),
 });
 
 export const EnrollmentSchema = z.object({
@@ -567,6 +607,7 @@ export const VocabularySheetSchema = z.object({
   fileType: DocumentTypeSchema,
   mimeType: z.string(),
   fileSize: z.number(),
+  gradeLevel: z.number().nullable().optional(),
   status: ProcessingStatusSchema,
   errorMessage: z.string().nullable().optional(),
   testsToGenerate: z.number(),

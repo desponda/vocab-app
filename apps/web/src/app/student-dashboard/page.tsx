@@ -221,16 +221,11 @@ export default function StudentDashboardPage() {
                       </div>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      // For now, just show an alert. In the future, we can add a detailed review page
-                      alert(`Score: ${attempt.score}%\n${attempt.correctAnswers}/${attempt.totalQuestions} correct`);
-                    }}
-                  >
-                    View Details
-                  </Button>
+                  <Link href={`/student-dashboard/results/${attempt.id}`}>
+                    <Button variant="outline" className="w-full">
+                      View Details
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             ))}
