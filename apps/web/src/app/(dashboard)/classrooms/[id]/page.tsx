@@ -65,6 +65,7 @@ import {
   FileCheck,
   Trash2,
   Search,
+  Pencil,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { ActivityFeed } from '@/components/classroom/activity-feed';
@@ -123,6 +124,16 @@ export default function ClassroomDetailPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Settings editing state
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    gradeLevel: 6,
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
+
   // Load classroom details
   useEffect(() => {
     if (!accessToken) return;
@@ -136,6 +147,12 @@ export default function ClassroomDetailPage() {
         const classroomData = await classroomsApi.get(classroomId, accessToken);
         setClassroom(classroomData.classroom);
         setEnrollments(classroomData.classroom.enrollments || []);
+
+        // Initialize edit form data
+        setEditFormData({
+          name: classroomData.classroom.name,
+          gradeLevel: classroomData.classroom.gradeLevel,
+        });
 
         // Load stats, activity, and test attempts in parallel
         const [statsData, activityData, attemptsData] = await Promise.all([
@@ -246,6 +263,67 @@ export default function ClassroomDetailPage() {
       setError('Failed to delete classroom. Please try again.');
       setIsDeleting(false);
     }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken || !classroom) return;
+
+    // Validation
+    const hasChanges =
+      editFormData.name.trim() !== classroom.name ||
+      editFormData.gradeLevel !== classroom.gradeLevel;
+
+    if (!hasChanges) {
+      setSettingsError('No changes detected');
+      return;
+    }
+
+    if (!editFormData.name.trim()) {
+      setSettingsError('Classroom name cannot be empty');
+      return;
+    }
+
+    setIsSavingSettings(true);
+    setSettingsError('');
+
+    try {
+      const { classroom: updatedClassroom } = await classroomsApi.update(
+        classroomId,
+        {
+          name: editFormData.name.trim(),
+          gradeLevel: editFormData.gradeLevel,
+        },
+        accessToken
+      );
+
+      // Optimistic update
+      setClassroom(updatedClassroom);
+      setEditFormData({
+        name: updatedClassroom.name,
+        gradeLevel: updatedClassroom.gradeLevel,
+      });
+
+      // Success feedback
+      setSettingsSuccess(true);
+      setIsEditingSettings(false);
+      setTimeout(() => setSettingsSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error updating classroom:', err);
+      setSettingsError('Failed to update classroom. Please try again.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleCancelEditSettings = () => {
+    if (!classroom) return;
+    setEditFormData({
+      name: classroom.name,
+      gradeLevel: classroom.gradeLevel,
+    });
+    setSettingsError('');
+    setIsEditingSettings(false);
   };
 
   const filteredEnrollments = enrollments.filter((enrollment) =>
@@ -722,58 +800,139 @@ export default function ClassroomDetailPage() {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6">
+          {/* Success Message */}
+          {settingsSuccess && (
+            <div className="rounded-md bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-600 dark:text-green-400">
+              Classroom updated successfully!
+            </div>
+          )}
+
           <Card>
             <CardHeader>
-              <CardTitle>Classroom Settings</CardTitle>
-              <CardDescription>Manage classroom configuration</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Classroom Name</Label>
-                <Input value={classroom.name} disabled />
-                <p className="text-sm text-muted-foreground">
-                  Classroom name editing coming soon
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Grade Level</Label>
-                <Input value={`Grade ${classroom.gradeLevel}`} disabled />
-                <p className="text-sm text-muted-foreground">
-                  Grade level editing coming soon
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Classroom Code</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={classroom.code}
-                    disabled
-                    className="font-mono font-semibold"
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Classroom Settings</CardTitle>
+                  <CardDescription>Manage classroom configuration</CardDescription>
+                </div>
+                {!isEditingSettings && (
                   <Button
-                    onClick={handleCopyCode}
                     variant="outline"
+                    onClick={() => setIsEditingSettings(true)}
                     className="gap-2"
                   >
-                    {copiedCode ? (
-                      <>
-                        <Check className="h-4 w-4" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4" />
-                        Copy
-                      </>
-                    )}
+                    <Pencil className="h-4 w-4" />
+                    Edit Settings
                   </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Code regeneration coming soon
-                </p>
+                )}
               </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveSettings} className="space-y-6">
+                {/* Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="classroom-name">Classroom Name</Label>
+                  <Input
+                    id="classroom-name"
+                    value={isEditingSettings ? editFormData.name : classroom.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    disabled={!isEditingSettings || isSavingSettings}
+                    maxLength={100}
+                    required
+                  />
+                  {!isEditingSettings && (
+                    <p className="text-sm text-muted-foreground">
+                      The name displayed for this classroom
+                    </p>
+                  )}
+                </div>
+
+                {/* Grade Level Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="grade-level">Grade Level</Label>
+                  <Select
+                    value={isEditingSettings ? editFormData.gradeLevel.toString() : classroom.gradeLevel.toString()}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, gradeLevel: parseInt(value, 10) })}
+                    disabled={!isEditingSettings || isSavingSettings}
+                  >
+                    <SelectTrigger id="grade-level">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                        <SelectItem key={grade} value={grade.toString()}>
+                          Grade {grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!isEditingSettings && (
+                    <p className="text-sm text-muted-foreground">
+                      The grade level for this classroom
+                    </p>
+                  )}
+                </div>
+
+                {/* Classroom Code (Read-Only) */}
+                <div className="space-y-2">
+                  <Label>Classroom Code</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={classroom.code}
+                      disabled
+                      className="font-mono font-semibold"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleCopyCode}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      {copiedCode ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Students use this code to join the classroom
+                  </p>
+                </div>
+
+                {/* Error Message */}
+                {settingsError && (
+                  <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                    {settingsError}
+                  </div>
+                )}
+
+                {/* Action Buttons (Edit Mode Only) */}
+                {isEditingSettings && (
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancelEditSettings}
+                      disabled={isSavingSettings}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSavingSettings}
+                    >
+                      {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
+              </form>
             </CardContent>
           </Card>
 
