@@ -33,14 +33,8 @@ export function StudentEnrollmentSection() {
         <Card
           ref={ref}
           className={`mx-auto max-w-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 ${
-            isVisible
-              ? 'animate-in fade-in slide-in-from-bottom-8 zoom-in-95'
-              : 'opacity-0 scale-95'
+            isVisible ? 'animate-zoom-in' : 'opacity-0'
           }`}
-          style={{
-            animationDuration: '700ms',
-            animationFillMode: 'both',
-          }}
         >
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">

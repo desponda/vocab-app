@@ -67,14 +67,10 @@ export function FeaturesSection() {
               <Card
                 key={feature.title}
                 className={`border-2 transition-all hover:border-primary/50 hover:shadow-lg ${
-                  isVisible
-                    ? 'animate-in fade-in slide-in-from-bottom-4'
-                    : 'opacity-0'
+                  isVisible ? 'animate-slide-in' : 'opacity-0'
                 }`}
                 style={{
                   animationDelay: isVisible ? `${index * 100}ms` : '0ms',
-                  animationDuration: '500ms',
-                  animationFillMode: 'both',
                 }}
               >
                 <CardHeader>

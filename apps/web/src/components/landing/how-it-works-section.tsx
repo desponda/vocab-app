@@ -52,14 +52,10 @@ export function HowItWorksSection() {
                 <div
                   key={step.number}
                   className={`relative ${
-                    isVisible
-                      ? 'animate-in fade-in slide-in-from-bottom-4'
-                      : 'opacity-0'
+                    isVisible ? 'animate-slide-in' : 'opacity-0'
                   }`}
                   style={{
                     animationDelay: isVisible ? `${index * 150}ms` : '0ms',
-                    animationDuration: '600ms',
-                    animationFillMode: 'both',
                   }}
                 >
                   {/* Connector line (hidden on mobile, shown on desktop between steps) */}
