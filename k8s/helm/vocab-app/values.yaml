@@ -6,7 +6,7 @@ api:
   replicaCount: 2
   image:
     repository: ghcr.io/desponda/vocab-app-api
-    tag: sha-b673f1e
+    tag: sha-f7b2130
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -32,7 +32,7 @@ web:
   replicaCount: 2
   image:
     repository: ghcr.io/desponda/vocab-app-web
-    tag: sha-52d95a9
+    tag: sha-f7b2130
     pullPolicy: Always
   service:
     type: ClusterIP
