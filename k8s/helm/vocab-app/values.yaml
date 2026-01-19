@@ -133,6 +133,21 @@ secrets:
   # Each secret is created automatically by its generator job (idempotent)
   # Provides independent rotation schedules and principle of least privilege
 
+  # Secret Rotation Configuration
+  # Recommended rotation intervals (customize based on compliance requirements)
+  rotation:
+    # Rotation schedule in days (set to 0 to disable automated reminders)
+    database:
+      intervalDays: 90  # Rotate database password every 90 days
+      lastRotated: ""   # Track last rotation date (YYYY-MM-DD)
+    jwt:
+      intervalDays: 90  # Rotate JWT secrets every 90 days (logs out all users)
+      lastRotated: ""   # Track last rotation date (YYYY-MM-DD)
+    minio:
+      intervalDays: 90  # Rotate MinIO credentials every 90 days
+      lastRotated: ""   # Track last rotation date (YYYY-MM-DD)
+    # Note: Anthropic API key rotation is manual only (when key is regenerated in console)
+
   database:
     # Secret containing postgres-password and database-url
     secretName: "vocab-app-database-secret"

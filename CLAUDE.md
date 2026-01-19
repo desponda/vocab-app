@@ -611,10 +611,18 @@ helm upgrade --install vocab-app . -f values-dev.yaml
 
 ## Resources
 
-**Project Documentation:**
-- [Testing Strategy](docs/testing-strategy.md) - Comprehensive testing guide
-- [Testing Guide](docs/testing-guide.md) - K8s and staging testing procedures
-- [Pre-Push Checklist](docs/workflows/pre-push-checklist.md) - Must follow before commits
+**📚 Project Documentation:**
+- [Documentation Index](docs/README.md) - **Start here** for all documentation
+- [Development Guides](docs/development/) - Testing, workflows, pre-push checklist
+- [Operations Guides](docs/operations/) - Monitoring, backups, DR, secrets, security
+- [Architecture Docs](docs/architecture/) - Design decisions and technical specs
+- [User Guides](docs/user-guides/) - End-user documentation
+
+**🔑 Critical Docs (Must Read):**
+- [Pre-Push Checklist](docs/development/workflows/pre-push-checklist.md) - **REQUIRED** before commits
+- [Testing Strategy](docs/development/testing-strategy.md) - Testing philosophy
+- [Disaster Recovery Plan](docs/operations/disaster-recovery-plan.md) - Emergency procedures
+- [Secrets Management](docs/operations/secrets-management-guide.md) - Security procedures
 - [Prisma Schema](apps/api/prisma/schema.prisma) - Database schema
 
 **CI/CD:**
