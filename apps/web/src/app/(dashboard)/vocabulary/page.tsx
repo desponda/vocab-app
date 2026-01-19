@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { vocabularySheetsApi, VocabularySheet, ProcessingStatus } from '@/lib/api';
+import { vocabularySheetsApi, classroomsApi, VocabularySheet, Classroom, ProcessingStatus } from '@/lib/api';
 import {
   Select,
   SelectContent,
@@ -18,24 +18,29 @@ import { FileText, Loader2 } from 'lucide-react';
 export default function VocabularyPage() {
   const { accessToken } = useAuth();
   const [sheets, setSheets] = useState<VocabularySheet[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | 'ALL'>('ALL');
 
   useEffect(() => {
     if (!accessToken) return;
 
-    const fetchSheets = async () => {
+    const fetchData = async () => {
       try {
-        const data = await vocabularySheetsApi.list(accessToken);
-        setSheets(data.sheets);
+        const [sheetsData, classroomsData] = await Promise.all([
+          vocabularySheetsApi.list(accessToken),
+          classroomsApi.list(accessToken),
+        ]);
+        setSheets(sheetsData.sheets);
+        setClassrooms(classroomsData.classrooms);
       } catch (error) {
-        console.error('Failed to fetch vocabulary sheets:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchSheets();
+    fetchData();
   }, [accessToken]);
 
   const handleSheetUploaded = (sheet: VocabularySheet) => {
@@ -65,6 +70,52 @@ export default function VocabularyPage() {
     if (!accessToken) return;
     const url = vocabularySheetsApi.downloadProcessed(id, accessToken);
     window.open(url, '_blank');
+  };
+
+  const handleWordUpdated = async (sheetId: string) => {
+    if (!accessToken) return;
+    // Refresh the sheet to get updated word count
+    try {
+      const { sheet } = await vocabularySheetsApi.get(sheetId, accessToken);
+      setSheets((prev) =>
+        prev.map((s) =>
+          s.id === sheetId
+            ? {
+                ...s,
+                _count: {
+                  words: sheet.words?.length || 0,
+                  tests: s._count?.tests || 0
+                }
+              }
+            : s
+        )
+      );
+    } catch (error) {
+      console.error('Failed to refresh sheet after word update:', error);
+    }
+  };
+
+  const handleTestsRegenerated = async (sheetId: string) => {
+    if (!accessToken) return;
+    // Update status to PROCESSING immediately
+    setSheets((prev) =>
+      prev.map((s) => (s.id === sheetId ? { ...s, status: 'PROCESSING' as ProcessingStatus } : s))
+    );
+
+    // Optionally refresh after a delay to check if processing is complete
+    setTimeout(async () => {
+      try {
+        const data = await vocabularySheetsApi.list(accessToken);
+        setSheets(data.sheets);
+      } catch (error) {
+        console.error('Failed to refresh sheets after regeneration:', error);
+      }
+    }, 3000);
+  };
+
+  const handleAssigned = () => {
+    // Assignment doesn't change sheet data, just show success feedback
+    // The toast in AssignSheetDialog already handles user feedback
   };
 
   // Filter sheets based on status
@@ -146,12 +197,17 @@ export default function VocabularyPage() {
                   fileType={sheet.fileType}
                   wordCount={sheet._count?.words}
                   testCount={sheet._count?.tests}
+                  testsToGenerate={sheet.testsToGenerate}
                   errorMessage={sheet.errorMessage || undefined}
                   tests={sheet.tests}
                   accessToken={accessToken || undefined}
+                  classrooms={classrooms}
                   onDelete={handleDelete}
                   onDownload={handleDownload}
                   onDownloadProcessed={handleDownloadProcessed}
+                  onWordUpdated={handleWordUpdated}
+                  onTestsRegenerated={handleTestsRegenerated}
+                  onAssigned={handleAssigned}
                 />
               ))}
             </div>

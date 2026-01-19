@@ -4,10 +4,14 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Trash2, Loader2, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, Download, Trash2, Loader2, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, RefreshCw, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/utils';
-import { ProcessingStatus } from '@/lib/api';
+import { ProcessingStatus, VocabularyWord, Classroom, vocabularySheetsApi } from '@/lib/api';
 import { TestPreviewDialog } from '@/components/classroom/test-preview-dialog';
+import { ViewWordsSection } from './view-words-section';
+import { EditWordDialog } from './edit-word-dialog';
+import { RegenerateTestsDialog } from './regenerate-tests-dialog';
+import { AssignSheetDialog } from './assign-sheet-dialog';
 
 const STATUS_CONFIG: Record<ProcessingStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType; color: string }> = {
   PENDING: { label: 'Pending', variant: 'secondary', icon: Clock, color: 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/20' },
@@ -26,6 +30,7 @@ interface VocabularySheetListItemProps {
   fileType: string;
   wordCount?: number;
   testCount?: number;
+  testsToGenerate?: number;
   errorMessage?: string;
   tests?: Array<{
     id: string;
@@ -35,9 +40,13 @@ interface VocabularySheetListItemProps {
     _count: { questions: number };
   }>;
   accessToken?: string;
+  classrooms?: Classroom[];
   onDelete: (id: string) => void;
   onDownload: (id: string) => void;
   onDownloadProcessed?: (id: string) => void;
+  onWordUpdated?: (sheetId: string) => void;
+  onTestsRegenerated?: (sheetId: string) => void;
+  onAssigned?: (sheetId: string) => void;
 }
 
 export function VocabularySheetListItem({
@@ -50,14 +59,26 @@ export function VocabularySheetListItem({
   fileType,
   wordCount,
   testCount,
+  testsToGenerate = 5,
   errorMessage,
   tests,
   accessToken,
+  classrooms = [],
   onDelete,
   onDownload,
   onDownloadProcessed,
+  onWordUpdated,
+  onTestsRegenerated,
+  onAssigned,
 }: VocabularySheetListItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isWordsExpanded, setIsWordsExpanded] = useState(false);
+  const [words, setWords] = useState<VocabularyWord[]>([]);
+  const [isLoadingWords, setIsLoadingWords] = useState(false);
+  const [editingWord, setEditingWord] = useState<VocabularyWord | null>(null);
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+
   const statusConfig = STATUS_CONFIG[status];
   const StatusIcon = statusConfig.icon;
 
@@ -68,6 +89,43 @@ export function VocabularySheetListItem({
   };
 
   const hasTests = tests && tests.length > 0;
+
+  const handleToggleWords = async () => {
+    if (!isWordsExpanded && !words.length && accessToken) {
+      // First time expanding - fetch words
+      setIsLoadingWords(true);
+      try {
+        const { sheet } = await vocabularySheetsApi.get(id, accessToken);
+        setWords(sheet.words || []);
+      } catch (error) {
+        console.error('Failed to load words:', error);
+      } finally {
+        setIsLoadingWords(false);
+      }
+    }
+    setIsWordsExpanded(!isWordsExpanded);
+  };
+
+  const handleWordUpdated = (wordId: string, updatedWord: VocabularyWord) => {
+    setWords((prevWords) =>
+      prevWords.map((w) => (w.id === wordId ? updatedWord : w))
+    );
+    if (onWordUpdated) {
+      onWordUpdated(id);
+    }
+  };
+
+  const handleRegenerationStarted = () => {
+    if (onTestsRegenerated) {
+      onTestsRegenerated(id);
+    }
+  };
+
+  const handleAssigned = () => {
+    if (onAssigned) {
+      onAssigned(id);
+    }
+  };
 
   return (
     <Card className="hover:bg-muted/50 transition-colors">
@@ -113,7 +171,50 @@ export function VocabularySheetListItem({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            {/* View Words Button */}
+            {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleWords}
+                className="gap-2"
+                aria-label="View extracted vocabulary words"
+              >
+                {isWordsExpanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {isWordsExpanded ? 'Hide' : 'View'} Words
+              </Button>
+            )}
+
+            {/* Assign to Classroom Button */}
+            {status === 'COMPLETED' && testCount && testCount > 0 && accessToken && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAssignDialog(true)}
+                className="gap-2"
+                aria-label="Assign all test variants to classroom"
+              >
+                <UserPlus className="h-4 w-4" />
+                Assign
+              </Button>
+            )}
+
+            {/* Regenerate Tests Button */}
+            {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRegenerateDialog(true)}
+                className="gap-2"
+                aria-label="Regenerate tests from current words"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Regenerate
+              </Button>
+            )}
+
+            {/* Show Tests Button */}
             {hasTests && (
               <Button
                 variant="ghost"
@@ -125,6 +226,8 @@ export function VocabularySheetListItem({
                 {isExpanded ? 'Hide' : 'Show'} Tests
               </Button>
             )}
+
+            {/* Download Buttons */}
             <Button
               variant="outline"
               size="sm"
@@ -157,6 +260,17 @@ export function VocabularySheetListItem({
             </Button>
           </div>
         </div>
+
+        {/* Words Section */}
+        {isWordsExpanded && (
+          <div className="mt-4 pt-4 border-t">
+            <ViewWordsSection
+              words={words}
+              isLoading={isLoadingWords}
+              onEditWord={(word) => setEditingWord(word)}
+            />
+          </div>
+        )}
 
         {/* Tests List */}
         {isExpanded && hasTests && (
@@ -191,6 +305,44 @@ export function VocabularySheetListItem({
               ))}
             </div>
           </div>
+        )}
+
+        {/* Dialogs */}
+        {editingWord && accessToken && (
+          <EditWordDialog
+            open={!!editingWord}
+            onOpenChange={(open) => !open && setEditingWord(null)}
+            word={editingWord}
+            sheetId={id}
+            accessToken={accessToken}
+            onWordUpdated={handleWordUpdated}
+          />
+        )}
+
+        {accessToken && (
+          <>
+            <RegenerateTestsDialog
+              open={showRegenerateDialog}
+              onOpenChange={setShowRegenerateDialog}
+              sheetId={id}
+              sheetName={name || originalName || 'Vocabulary Sheet'}
+              wordCount={wordCount || 0}
+              testsToGenerate={testsToGenerate}
+              accessToken={accessToken}
+              onRegenerationStarted={handleRegenerationStarted}
+            />
+
+            <AssignSheetDialog
+              open={showAssignDialog}
+              onOpenChange={setShowAssignDialog}
+              sheetId={id}
+              sheetName={name || originalName || 'Vocabulary Sheet'}
+              testCount={testCount || 0}
+              classrooms={classrooms}
+              accessToken={accessToken}
+              onAssigned={handleAssigned}
+            />
+          </>
         )}
       </CardContent>
     </Card>

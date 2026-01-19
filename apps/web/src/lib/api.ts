@@ -301,6 +301,31 @@ export const vocabularySheetsApi = {
       body: JSON.stringify({ classroomId, dueDate }),
       token,
     }),
+
+  updateWord: (
+    sheetId: string,
+    wordId: string,
+    data: { word?: string; definition?: string; context?: string },
+    token: string
+  ): Promise<{ word: VocabularyWord }> =>
+    request(`/api/vocabulary-sheets/${sheetId}/words/${wordId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      token,
+    }),
+
+  regenerateTests: (
+    sheetId: string,
+    token: string
+  ): Promise<{
+    message: string;
+    vocabularyCount: number;
+    testsToGenerate: number;
+  }> =>
+    request(`/api/vocabulary-sheets/${sheetId}/regenerate-tests`, {
+      method: 'POST',
+      token,
+    }),
 };
 
 // Tests API
