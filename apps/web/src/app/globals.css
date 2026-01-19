@@ -127,7 +127,7 @@ button, a, [role="button"] {
 
 @keyframes slide-in-from-bottom {
   from {
-    transform: translateY(1rem);
+    transform: translateY(3rem);
     opacity: 0;
   }
   to {
@@ -138,7 +138,7 @@ button, a, [role="button"] {
 
 @keyframes zoom-in {
   from {
-    transform: scale(0.95);
+    transform: scale(0.9);
     opacity: 0;
   }
   to {
@@ -148,13 +148,13 @@ button, a, [role="button"] {
 }
 
 .animate-fade-in {
-  animation: fade-in 500ms ease-out forwards;
+  animation: fade-in 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-in {
-  animation: slide-in-from-bottom 500ms ease-out forwards;
+  animation: slide-in-from-bottom 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-zoom-in {
-  animation: zoom-in 700ms ease-out forwards;
+  animation: zoom-in 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
