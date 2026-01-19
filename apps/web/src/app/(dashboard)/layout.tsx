@@ -21,6 +21,7 @@ export default function DashboardLayout({
   // Redirect students to student dashboard
   useEffect(() => {
     if (!isLoading && user && user.role !== 'TEACHER') {
+      console.log('[Dashboard Layout] Non-teacher detected, redirecting to student dashboard:', { email: user.email, role: user.role });
       router.push('/student-dashboard');
     }
   }, [user, isLoading, router]);

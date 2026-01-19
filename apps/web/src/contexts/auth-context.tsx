@@ -96,7 +96,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('user', JSON.stringify(loggedInUser));
 
     // Route based on role
+    console.log('[Auth] Login successful:', { email: loggedInUser.email, role: loggedInUser.role });
     const redirectPath = loggedInUser.role === 'TEACHER' ? '/dashboard' : '/student-dashboard';
+    console.log('[Auth] Redirecting to:', redirectPath);
     router.push(redirectPath);
   };
 

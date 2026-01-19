@@ -158,9 +158,8 @@ export default function TakeTestPage() {
 
   // Show results after submission
   if (results) {
-    const percentage = results.totalQuestions
-      ? Math.round((results.score! / results.totalQuestions) * 100)
-      : 0;
+    // Score is already a percentage (0-100), no need to recalculate
+    const percentage = results.score ?? 0;
 
     return (
       <div className="space-y-6">
@@ -177,7 +176,7 @@ export default function TakeTestPage() {
                 {percentage}%
               </p>
               <p className="text-lg text-muted-foreground">
-                {results.score} out of {results.totalQuestions} correct
+                {results.correctAnswers ?? 0} out of {results.totalQuestions} correct
               </p>
             </div>
 

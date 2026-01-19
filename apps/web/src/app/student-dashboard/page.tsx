@@ -14,13 +14,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TestAssignment, Student } from '@/lib/api';
+import { TestAssignment, Student, TestAttempt } from '@/lib/api';
 
 export default function StudentDashboardPage() {
   const router = useRouter();
   const { user, accessToken, isLoading } = useAuth();
   const [student, setStudent] = useState<Student | null>(null);
   const [assignments, setAssignments] = useState<TestAssignment[]>([]);
+  const [pastAttempts, setPastAttempts] = useState<TestAttempt[]>([]);
   const [error, setError] = useState<string>('');
   const [isLoadingTests, setIsLoadingTests] = useState(true);
 
@@ -72,6 +73,19 @@ export default function StudentDashboardPage() {
         });
 
         setAssignments(validAssignments);
+
+        // Also load past attempts
+        const attemptsResponse = await testsApi.getAttemptHistory(
+          userStudent.id,
+          accessToken
+        );
+
+        // Filter to only show SUBMITTED attempts (completed tests)
+        const completedAttempts = attemptsResponse.attempts.filter(
+          (attempt) => attempt.status === 'SUBMITTED'
+        );
+
+        setPastAttempts(completedAttempts);
       } catch (err) {
         if (err instanceof ApiError) {
           setError(err.message);
@@ -150,6 +164,79 @@ export default function StudentDashboardPage() {
           ))}
         </div>
       )}
+
+      {/* Past Attempts Section */}
+      <div className="mt-12">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">Past Attempts</h2>
+          <p className="text-muted-foreground">
+            Review your completed tests and scores
+          </p>
+        </div>
+
+        {isLoadingTests ? (
+          <div className="text-center text-muted-foreground">Loading...</div>
+        ) : pastAttempts.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                No completed tests yet
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {pastAttempts.map((attempt) => (
+              <Card key={attempt.id} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{attempt.test?.name}</CardTitle>
+                      <CardDescription>
+                        {attempt.test?.sheet?.originalName || 'Vocabulary Test'}
+                      </CardDescription>
+                    </div>
+                    <Badge
+                      variant={
+                        (attempt.score ?? 0) >= 80
+                          ? "default"
+                          : (attempt.score ?? 0) >= 60
+                          ? "secondary"
+                          : "outline"
+                      }
+                    >
+                      {attempt.score ?? 0}%
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col justify-between">
+                  <div className="space-y-2 mb-4">
+                    <div className="text-sm">
+                      <span className="font-medium">{attempt.correctAnswers ?? 0}</span> out of{' '}
+                      <span className="font-medium">{attempt.totalQuestions}</span> correct
+                    </div>
+                    {attempt.completedAt && (
+                      <div className="text-xs text-muted-foreground">
+                        Completed: {new Date(attempt.completedAt).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      // For now, just show an alert. In the future, we can add a detailed review page
+                      alert(`Score: ${attempt.score}%\n${attempt.correctAnswers}/${attempt.totalQuestions} correct`);
+                    }}
+                  >
+                    View Details
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -653,6 +653,7 @@ export const TestQuestionSchema = z.object({
 export const TestDetailSchema = TestSchema.extend({
   sheet: z.object({
     id: z.string(),
+    name: z.string(),
     originalName: z.string(),
     teacherId: z.string(),
   }).optional(),
@@ -714,6 +715,11 @@ export const TestAttemptSchema = z.object({
     id: z.string(),
     name: z.string(),
     variant: z.string(),
+    sheet: z.object({
+      id: z.string(),
+      name: z.string(),
+      originalName: z.string(),
+    }).optional(),
   }).optional(),
 });
 
