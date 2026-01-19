@@ -32,6 +32,71 @@ async function ensureSupportedFormat(
 }
 
 /**
+ * Compress image to stay under Claude API's 5MB limit
+ * Target 4MB to leave buffer for base64 encoding overhead
+ */
+async function compressImageIfNeeded(
+  buffer: Buffer,
+  mimeType: string
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  const MAX_SIZE = 4 * 1024 * 1024; // 4MB target (Claude limit is 5MB)
+
+  if (buffer.length <= MAX_SIZE) {
+    return { buffer, mimeType };
+  }
+
+  console.log(`Image size ${(buffer.length / 1024 / 1024).toFixed(2)}MB exceeds 4MB, compressing...`);
+
+  // Start with original image metadata
+  const image = sharp(buffer);
+  const metadata = await image.metadata();
+
+  let quality = 85;
+  let width = metadata.width;
+  let compressedBuffer = buffer;
+
+  // Iteratively compress until under limit
+  while (compressedBuffer.length > MAX_SIZE && quality > 20) {
+    // Try reducing quality first
+    if (quality > 50) {
+      quality -= 15;
+    } else if (quality > 30) {
+      quality -= 10;
+    } else {
+      quality -= 5;
+    }
+
+    // If still too large and quality is getting low, also resize
+    if (compressedBuffer.length > MAX_SIZE && quality < 60 && width && width > 1920) {
+      width = Math.floor(width * 0.8);
+    }
+
+    // Apply compression
+    const compressor = sharp(buffer);
+
+    if (width && width !== metadata.width) {
+      compressor.resize(width, null, { withoutEnlargement: true });
+    }
+
+    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+      compressedBuffer = await compressor.jpeg({ quality }).toBuffer();
+    } else {
+      // Convert to JPEG for better compression
+      compressedBuffer = await compressor.jpeg({ quality }).toBuffer();
+      mimeType = 'image/jpeg';
+    }
+
+    console.log(`Compressed to ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB (quality: ${quality}${width !== metadata.width ? `, width: ${width}px` : ''})`);
+  }
+
+  if (compressedBuffer.length > MAX_SIZE) {
+    console.warn(`Warning: Could not compress image below 4MB. Final size: ${(compressedBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+  }
+
+  return { buffer: compressedBuffer, mimeType };
+}
+
+/**
  * Convert PDF to image (first page only)
  * For now, we'll use sharp to handle PDFs if possible
  * In production, consider using pdf-poppler or similar
@@ -79,9 +144,15 @@ export async function extractVocabulary(
   }
 
   // Ensure image is in supported format
-  const { buffer: finalBuffer, mimeType: finalMimeType } = await ensureSupportedFormat(
+  const { buffer: formattedBuffer, mimeType: formattedMimeType } = await ensureSupportedFormat(
     processedBuffer,
     processedMimeType
+  );
+
+  // Compress if needed to stay under Claude API's 5MB limit
+  const { buffer: finalBuffer, mimeType: finalMimeType } = await compressImageIfNeeded(
+    formattedBuffer,
+    formattedMimeType
   );
 
   const base64Image = finalBuffer.toString('base64');
