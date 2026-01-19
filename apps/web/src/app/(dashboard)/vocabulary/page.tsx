@@ -198,6 +198,7 @@ export default function VocabularyPage() {
                   wordCount={sheet._count?.words}
                   testCount={sheet._count?.tests}
                   testsToGenerate={sheet.testsToGenerate}
+                  gradeLevel={sheet.gradeLevel}
                   errorMessage={sheet.errorMessage || undefined}
                   tests={sheet.tests}
                   accessToken={accessToken || undefined}

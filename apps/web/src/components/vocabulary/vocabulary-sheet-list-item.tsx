@@ -31,6 +31,7 @@ interface VocabularySheetListItemProps {
   wordCount?: number;
   testCount?: number;
   testsToGenerate?: number;
+  gradeLevel?: number | null;
   errorMessage?: string;
   tests?: Array<{
     id: string;
@@ -60,6 +61,7 @@ export function VocabularySheetListItem({
   wordCount,
   testCount,
   testsToGenerate = 5,
+  gradeLevel,
   errorMessage,
   tests,
   accessToken,
@@ -143,6 +145,11 @@ export function VocabularySheetListItem({
                   <StatusIcon className={`h-3 w-3 ${status === 'PROCESSING' ? 'animate-spin' : ''}`} />
                   {statusConfig.label}
                 </Badge>
+                {gradeLevel && (
+                  <Badge variant="outline" className="flex-shrink-0">
+                    Grade {gradeLevel}
+                  </Badge>
+                )}
               </div>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">

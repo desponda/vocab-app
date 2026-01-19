@@ -14,6 +14,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Upload, FileText, Plus } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { vocabularySheetsApi, VocabularySheet } from '@/lib/api';
@@ -37,6 +44,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [vocabularyName, setVocabularyName] = useState('');
+  const [gradeLevel, setGradeLevel] = useState<string | undefined>(undefined);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const testsToGenerate = 3; // Default: 3 test variants
 
@@ -100,7 +108,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
         selectedFile,
         vocabularyName.trim(),
         testsToGenerate,
-        undefined, // gradeLevel (optional)
+        gradeLevel && gradeLevel !== 'unspecified' ? parseInt(gradeLevel, 10) : undefined,
         accessToken,
         (progress) => {
           setUploadProgress(progress);
@@ -114,6 +122,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
       setTimeout(() => {
         setSelectedFile(null);
         setVocabularyName('');
+        setGradeLevel(undefined);
         setUploadProgress(null);
       }, 200);
     } catch (error) {
@@ -129,6 +138,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
       setTimeout(() => {
         setSelectedFile(null);
         setVocabularyName('');
+        setGradeLevel(undefined);
       }, 200);
     }
   };
@@ -197,6 +207,33 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
                 />
                 <p className="text-sm text-muted-foreground">
                   This name will help you identify the vocabulary set and its tests later.
+                </p>
+              </div>
+
+              {/* Grade Level Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="grade-level">
+                  Grade Level <span className="text-muted-foreground">(Optional)</span>
+                </Label>
+                <Select
+                  value={gradeLevel}
+                  onValueChange={setGradeLevel}
+                  disabled={uploadProgress !== null}
+                >
+                  <SelectTrigger id="grade-level" aria-label="Select target grade level for test difficulty">
+                    <SelectValue placeholder="Not specified - general difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unspecified">Not Specified</SelectItem>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
+                      <SelectItem key={grade} value={grade.toString()}>
+                        Grade {grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Tests will be generated with age-appropriate vocabulary and question complexity.
                 </p>
               </div>
 
