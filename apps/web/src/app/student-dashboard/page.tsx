@@ -44,6 +44,7 @@ export default function StudentDashboardPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [assignments, setAssignments] = useState<TestAssignment[]>([]);
   const [pastAttempts, setPastAttempts] = useState<TestAttempt[]>([]);
+  const [inProgressAttempts, setInProgressAttempts] = useState<TestAttempt[]>([]);
   const [stats, setStats] = useState<StudentStats | null>(null);
   const [error, setError] = useState<string>('');
   const [isLoadingTests, setIsLoadingTests] = useState(true);
@@ -159,12 +160,16 @@ export default function StudentDashboardPage() {
 
         setAssignments(validAssignments);
 
-        // Filter to completed attempts only
+        // Separate in-progress and completed attempts
         const completedAttempts = attemptsResponse.attempts.filter(
           (attempt) => attempt.status === 'SUBMITTED'
         );
+        const inProgress = attemptsResponse.attempts.filter(
+          (attempt) => attempt.status === 'IN_PROGRESS'
+        );
 
         setPastAttempts(completedAttempts);
+        setInProgressAttempts(inProgress);
 
         // Calculate stats
         const testsAssigned = validAssignments.length;
@@ -237,6 +242,81 @@ export default function StudentDashboardPage() {
             icon={Target}
             color={stats.avgScore >= 80 ? 'green' : stats.avgScore >= 60 ? 'orange' : 'default'}
           />
+        </div>
+      )}
+
+      {/* In Progress Tests Section */}
+      {!isLoadingTests && inProgressAttempts.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-2xl font-bold tracking-tight">Continue Tests</h3>
+            <p className="text-muted-foreground">
+              Resume tests you started earlier
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {inProgressAttempts.map((attempt) => {
+              const currentQuestion = (attempt.currentQuestionIndex ?? 0) + 1;
+              const totalQuestions = attempt.totalQuestions;
+              const progressPercent = (currentQuestion / totalQuestions) * 100;
+
+              return (
+                <Card key={attempt.id} className="hover:bg-muted/50 transition-colors">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg truncate">
+                          {attempt.test?.name || 'Vocabulary Test'}
+                        </CardTitle>
+                        <CardDescription className="truncate">
+                          {attempt.test?.sheet?.originalName || 'Practice Test'}
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="flex-shrink-0">
+                        In Progress
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-medium">
+                          Question {currentQuestion} of {totalQuestions}
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary rounded-full h-2 transition-all"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Last Activity */}
+                    {attempt.lastActivityAt && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Last Active</span>
+                        <span className="font-medium">
+                          {formatRelativeDate(attempt.lastActivityAt)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Resume Button */}
+                    <Link href={`/student-dashboard/tests/${attempt.testId}`}>
+                      <Button className="w-full gap-2">
+                        <ClipboardCheck className="h-4 w-4" />
+                        Resume Test
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
 

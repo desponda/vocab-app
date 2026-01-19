@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import debounce from 'lodash.debounce';
 
 interface TestAttemptWithQuestions extends TestAttempt {
   test: TestDetail;
@@ -41,6 +42,31 @@ export default function TakeTestPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [results, setResults] = useState<TestAttempt | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isResumed, setIsResumed] = useState(false);
+
+  // Debounced auto-save function
+  const saveAnswerDebounced = useRef(
+    debounce(async (attemptId: string, questionId: string, answer: string, token: string) => {
+      try {
+        setIsSaving(true);
+        await testsApi.submitAnswer(attemptId, questionId, answer, token);
+        setLastSaved(new Date());
+      } catch (err) {
+        console.error('Error auto-saving answer:', err);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 500)
+  ).current;
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      saveAnswerDebounced.cancel?.();
+    };
+  }, [saveAnswerDebounced]);
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
@@ -69,7 +95,7 @@ export default function TakeTestPage() {
         const userStudent = students[0];
         setStudent(userStudent);
 
-        // Create test attempt
+        // Create test attempt (or resume existing)
         const attemptData = await testsApi.createAttempt(
           testId,
           userStudent.id,
@@ -78,6 +104,22 @@ export default function TakeTestPage() {
 
         setAttempt(attemptData.attempt as TestAttemptWithQuestions);
         setQuestions(attemptData.attempt.test.questions || []);
+
+        // Resume detection and state restoration
+        if (attemptData.resumed) {
+          setIsResumed(true);
+
+          // Restore saved answers
+          const answerMap: Record<string, string> = {};
+          attemptData.attempt.answers?.forEach((ans) => {
+            answerMap[ans.questionId] = ans.answer;
+          });
+          setAnswers(answerMap);
+
+          // Restore question position
+          const savedIndex = attemptData.attempt.currentQuestionIndex ?? 0;
+          setCurrentQuestionIndex(savedIndex);
+        }
       } catch (err) {
         console.error('Error starting test:', err);
         setError('Failed to start test. Please try again.');
@@ -90,18 +132,44 @@ export default function TakeTestPage() {
   }, [testId, accessToken, user]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
+    // Update local state immediately (optimistic update)
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
-  };
 
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+    // Trigger debounced auto-save
+    if (attempt && accessToken) {
+      saveAnswerDebounced(attempt.id, questionId, answer, accessToken);
     }
   };
 
-  const handlePrevious = () => {
+  const handleNext = async () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+
+      // Save progress immediately on navigation
+      if (attempt && accessToken) {
+        try {
+          await testsApi.updateProgress(attempt.id, nextIndex, accessToken);
+        } catch (err) {
+          console.error('Error saving progress:', err);
+        }
+      }
+    }
+  };
+
+  const handlePrevious = async () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
+      const prevIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(prevIndex);
+
+      // Save progress immediately on navigation
+      if (attempt && accessToken) {
+        try {
+          await testsApi.updateProgress(attempt.id, prevIndex, accessToken);
+        } catch (err) {
+          console.error('Error saving progress:', err);
+        }
+      }
     }
   };
 
@@ -211,8 +279,27 @@ export default function TakeTestPage() {
     ? JSON.parse(currentQuestion.options) as string[]
     : [];
 
+  // Calculate time since last save for UI
+  const getTimeSinceLastSave = () => {
+    if (!lastSaved) return null;
+    const seconds = Math.floor((Date.now() - lastSaved.getTime()) / 1000);
+    if (seconds < 5) return 'just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}m ago`;
+  };
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Resume Banner */}
+      {isResumed && (
+        <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-4 text-blue-800 dark:text-blue-200">
+          <p className="text-sm font-medium">
+            Test resumed - Your previous answers and progress have been restored.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -221,9 +308,17 @@ export default function TakeTestPage() {
             Variant {attempt.test.variant}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right space-y-1">
           <p className="text-sm font-medium">
             Question {currentQuestionIndex + 1} of {questions.length}
+          </p>
+          {/* Auto-save indicator */}
+          <p className="text-xs text-muted-foreground">
+            {isSaving ? (
+              <span>Saving...</span>
+            ) : lastSaved ? (
+              <span>Saved {getTimeSinceLastSave()}</span>
+            ) : null}
           </p>
         </div>
       </div>

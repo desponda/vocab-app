@@ -35,6 +35,10 @@ const completeAttemptSchema = z.object({
   // No body required
 });
 
+const updateProgressSchema = z.object({
+  currentQuestionIndex: z.number().int().min(0),
+});
+
 export const testRoutes = async (app: FastifyInstance) => {
   // All test routes require authentication
   app.addHook('onRequest', requireAuth);
@@ -258,10 +262,25 @@ export const testRoutes = async (app: FastifyInstance) => {
         studentId: body.studentId,
         status: 'IN_PROGRESS',
       },
+      include: {
+        answers: {
+          select: {
+            id: true,
+            questionId: true,
+            answer: true,
+            isCorrect: true,
+            answeredAt: true,
+          },
+        },
+      },
     });
 
     if (existingAttempt) {
-      return reply.code(409).send({ error: 'Attempt already in progress' });
+      // Return existing attempt for resume (instead of 409 error)
+      return reply.send({
+        attempt: existingAttempt,
+        resumed: true, // Flag to indicate this is a resume
+      });
     }
 
     // Get test to count questions
@@ -298,6 +317,8 @@ export const testRoutes = async (app: FastifyInstance) => {
         totalQuestions: true,
         status: true,
         startedAt: true,
+        currentQuestionIndex: true,
+        lastActivityAt: true,
       },
     });
 
@@ -330,6 +351,8 @@ export const testRoutes = async (app: FastifyInstance) => {
         status: true,
         startedAt: true,
         completedAt: true,
+        currentQuestionIndex: true,
+        lastActivityAt: true,
         answers: {
           select: {
             id: true,
@@ -460,7 +483,59 @@ export const testRoutes = async (app: FastifyInstance) => {
       },
     });
 
+    // Update last activity timestamp
+    await prisma.testAttempt.update({
+      where: { id: params.attemptId },
+      data: { lastActivityAt: new Date() },
+    });
+
     return reply.code(201).send({ answer });
+  });
+
+  // Update test progress (current question index)
+  app.put('/attempts/:attemptId/progress', async (request: FastifyRequest, reply) => {
+    const params = { attemptId: (request.params as any).attemptId };
+    const body = updateProgressSchema.parse(request.body);
+
+    // Verify attempt exists and belongs to user's student
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: params.attemptId },
+      select: {
+        id: true,
+        status: true,
+        student: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!attempt) {
+      return reply.code(404).send({ error: 'Attempt not found' });
+    }
+
+    if (attempt.student.userId !== request.userId) {
+      return reply.code(403).send({ error: 'Not authorized to update this attempt' });
+    }
+
+    if (attempt.status !== 'IN_PROGRESS') {
+      return reply.code(400).send({ error: 'Attempt not in progress' });
+    }
+
+    // Update progress
+    const updated = await prisma.testAttempt.update({
+      where: { id: params.attemptId },
+      data: {
+        currentQuestionIndex: body.currentQuestionIndex,
+        lastActivityAt: new Date(),
+      },
+      select: {
+        id: true,
+        currentQuestionIndex: true,
+        lastActivityAt: true,
+      },
+    });
+
+    return reply.send({ attempt: updated });
   });
 
   // Complete test attempt (calculate final score)

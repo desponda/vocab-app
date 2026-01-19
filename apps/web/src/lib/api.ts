@@ -399,6 +399,18 @@ export const testsApi = {
       token,
     }),
 
+  // Update test progress (current question index)
+  updateProgress: (
+    attemptId: string,
+    currentQuestionIndex: number,
+    token: string
+  ): Promise<{ attempt: { id: string; currentQuestionIndex: number; lastActivityAt: string } }> =>
+    request(`/api/tests/attempts/${attemptId}/progress`, {
+      method: 'PUT',
+      body: JSON.stringify({ currentQuestionIndex }),
+      token,
+    }),
+
   // List assigned tests for classroom (teacher view)
   listAssignedToClassroom: (
     classroomId: string,
@@ -425,9 +437,9 @@ export const testsApi = {
     testId: string,
     studentId: string,
     token: string
-  ): Promise<{ attempt: TestAttempt & { test: TestDetail } }> => {
-    // Start the attempt
-    const { attempt } = await request<{ attempt: TestAttempt }>('/api/tests/attempts/start', {
+  ): Promise<{ attempt: TestAttempt & { test: TestDetail }; resumed?: boolean }> => {
+    // Start the attempt (will return existing if IN_PROGRESS)
+    const startResponse = await request<{ attempt: TestAttempt; resumed?: boolean }>('/api/tests/attempts/start', {
       method: 'POST',
       body: JSON.stringify({ testId, studentId }),
       token,
@@ -439,12 +451,13 @@ export const testsApi = {
     // Return attempt with test questions
     return {
       attempt: {
-        ...attempt,
+        ...startResponse.attempt,
         test: {
           ...test,
           questions: test.questions || [],
         },
       },
+      resumed: startResponse.resumed, // Pass through resume flag
     };
   },
 
@@ -811,6 +824,8 @@ export const TestAttemptSchema = z.object({
   status: AttemptStatusSchema,
   startedAt: z.string(),
   completedAt: z.string().nullable().optional(),
+  currentQuestionIndex: z.number().optional(),
+  lastActivityAt: z.string().optional(),
   answers: z.array(TestAnswerSchema).optional(),
   student: z.object({
     id: z.string(),
