@@ -9,6 +9,7 @@ import { studentRoutes } from './routes/students';
 import { classroomRoutes } from './routes/classrooms';
 import { vocabularySheetRoutes } from './routes/vocabulary-sheets';
 import { testRoutes } from './routes/tests';
+import { teachersRoutes } from './routes/teachers';
 import { errorHandler } from './middleware/error-handler';
 import { initializeBucket } from './lib/minio';
 import { createVocabularyWorker } from './jobs/process-vocabulary-sheet';
@@ -60,6 +61,7 @@ app.register(studentRoutes, { prefix: '/api/students' });
 app.register(classroomRoutes, { prefix: '/api/classrooms' });
 app.register(vocabularySheetRoutes, { prefix: '/api/vocabulary-sheets' });
 app.register(testRoutes, { prefix: '/api/tests' });
+app.register(teachersRoutes, { prefix: '/api/teachers' });
 
 // Health check (under /api for consistency with frontend API_URL)
 app.get('/api/health', async () => {
