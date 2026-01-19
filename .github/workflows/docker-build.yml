@@ -164,6 +164,8 @@ jobs:
           # Extract short SHA for image tag
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
 
+          echo "Updating Helm values.yaml with image tags for commit ${SHORT_SHA}"
+
           # Track which images were actually built (not just skipped)
           BUILD_WEB="${{ needs.build-web.result }}"
           BUILD_API="${{ needs.build-api.result }}"
@@ -199,13 +201,53 @@ jobs:
           # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
-          else
-            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-            git commit -m "chore: update image tags to sha-${SHORT_SHA}
-
-            Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
-            git push
+            exit 0
           fi
+
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          git commit -m "chore: update image tags to sha-${SHORT_SHA}
+
+          Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+
+          # Retry logic with rebase to handle concurrent pushes
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempting to push (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)..."
+
+            # Try to push
+            if git push origin main; then
+              echo "Successfully pushed GitOps update"
+              exit 0
+            fi
+
+            # Push failed, likely due to concurrent changes
+            echo "Push failed, pulling latest changes and rebasing..."
+
+            # Fetch latest changes
+            git fetch origin main
+
+            # Rebase our commit on top of latest main
+            # This preserves our image tag update while incorporating any new commits
+            if git rebase origin/main; then
+              echo "Rebase successful, retrying push..."
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            else
+              # Rebase conflict - this shouldn't happen for values.yaml image tags
+              # but if it does, abort and fail
+              echo "ERROR: Rebase conflict detected. This likely means values.yaml was modified concurrently."
+              echo "Manual intervention required."
+              git rebase --abort
+              exit 1
+            fi
+
+            # Wait briefly before retry to avoid tight loop
+            sleep 2
+          done
+
+          echo "ERROR: Failed to push after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Make packages public
         run: |
