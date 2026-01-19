@@ -99,6 +99,7 @@ export default function VocabularyPage() {
         selectedFile,
         vocabularyName.trim(),
         testsToGenerate,
+        undefined, // gradeLevel (optional, can be set later)
         accessToken,
         (progress) => {
           setUploadProgress(progress);

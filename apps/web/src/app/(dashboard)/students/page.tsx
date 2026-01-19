@@ -22,7 +22,7 @@ import {
 interface StudentWithClassroom {
   id: string;
   name: string;
-  gradeLevel: number;
+  gradeLevel: number | null | undefined;
   classroomName: string;
   enrolledAt: string;
 }
@@ -146,7 +146,9 @@ export default function StudentsPage() {
                   <TableRow key={`${student.id}-${student.classroomName}`}>
                     <TableCell className="font-medium">{student.name}</TableCell>
                     <TableCell>{student.classroomName}</TableCell>
-                    <TableCell>Grade {student.gradeLevel}</TableCell>
+                    <TableCell>
+                      {student.gradeLevel ? `Grade ${student.gradeLevel}` : 'N/A'}
+                    </TableCell>
                     <TableCell>
                       {new Date(student.enrolledAt).toLocaleDateString()}
                     </TableCell>

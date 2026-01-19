@@ -6,6 +6,7 @@ import { generateClassroomCode } from '../lib/classroom-code';
 
 const createClassroomSchema = z.object({
   name: z.string().min(1).max(100),
+  gradeLevel: z.number().int().min(1).max(12),
 });
 
 const classroomIdSchema = z.object({
@@ -14,6 +15,7 @@ const classroomIdSchema = z.object({
 
 const updateClassroomSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  gradeLevel: z.number().int().min(1).max(12).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -41,12 +43,14 @@ export const classroomRoutes = async (app: FastifyInstance) => {
       data: {
         name: body.name,
         code,
+        gradeLevel: body.gradeLevel,
         teacherId: request.userId,
       },
       select: {
         id: true,
         name: true,
         code: true,
+        gradeLevel: true,
         isActive: true,
         createdAt: true,
         _count: {
@@ -67,6 +71,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
         id: true,
         name: true,
         code: true,
+        gradeLevel: true,
         isActive: true,
         createdAt: true,
         _count: {
@@ -91,6 +96,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
         id: true,
         name: true,
         code: true,
+        gradeLevel: true,
         isActive: true,
         createdAt: true,
         enrollments: {
@@ -141,6 +147,7 @@ export const classroomRoutes = async (app: FastifyInstance) => {
         id: true,
         name: true,
         code: true,
+        gradeLevel: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

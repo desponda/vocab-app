@@ -53,7 +53,7 @@ model RefreshToken {
 model Student {
   id         String   @id @default(cuid())
   name       String
-  gradeLevel Int      // 1-12 for age-appropriate difficulty
+  gradeLevel Int?     // Optional (deprecated - use Classroom.gradeLevel instead)
   userId     String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -75,6 +75,7 @@ model Classroom {
   id          String   @id @default(cuid())
   name        String   // e.g., "Grade 3A", "Advanced English"
   code        String   @unique // Unique 6-char code (ABC123)
+  gradeLevel  Int      // 1-12 for age-appropriate test difficulty
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -125,6 +126,7 @@ model VocabularySheet {
   fileType        DocumentType
   mimeType        String
   fileSize        Int
+  gradeLevel      Int?             // Optional: Target grade level (1-12) for test difficulty
   status          ProcessingStatus @default(PENDING)
   errorMessage    String?          @db.Text
   extractedText   String?          @db.Text

@@ -40,6 +40,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
         name: true,
         s3Key: true,
         mimeType: true,
+        gradeLevel: true,
         testsToGenerate: true,
       },
     });
@@ -110,7 +111,8 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       console.log(`[Job ${job.id}] Generating test variant ${variant}`);
 
       // Generate questions using Claude (2 questions per word)
-      const questions = await generateTestQuestions(allWords, variant);
+      // Pass grade level for age-appropriate difficulty
+      const questions = await generateTestQuestions(allWords, variant, sheet.gradeLevel);
 
       if (questions.length === 0) {
         console.warn(`[Job ${job.id}] No questions generated for variant ${variant}, skipping`);

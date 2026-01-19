@@ -13,6 +13,7 @@ const sheetIdSchema = z.object({
 const uploadQuerySchema = z.object({
   name: z.string().min(1).max(100).trim(),
   testsToGenerate: z.coerce.number().min(3).max(10).default(3),
+  gradeLevel: z.coerce.number().int().min(1).max(12).optional(),
 });
 
 const assignBulkSchema = z.object({
@@ -136,6 +137,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         fileType: getDocumentType(mimeType),
         mimeType,
         fileSize: buffer.length,
+        gradeLevel: query.gradeLevel,
         status: 'PENDING',
         testsToGenerate: query.testsToGenerate,
         teacherId: request.userId,
@@ -148,6 +150,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         fileType: true,
         mimeType: true,
         fileSize: true,
+        gradeLevel: true,
         status: true,
         testsToGenerate: true,
         uploadedAt: true,
@@ -184,6 +187,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         fileType: true,
         mimeType: true,
         fileSize: true,
+        gradeLevel: true,
         status: true,
         errorMessage: true,
         testsToGenerate: true,
@@ -221,6 +225,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         fileType: true,
         mimeType: true,
         fileSize: true,
+        gradeLevel: true,
         status: true,
         errorMessage: true,
         extractedText: true,

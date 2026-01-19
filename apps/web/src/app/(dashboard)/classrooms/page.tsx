@@ -6,6 +6,14 @@ import { classroomsApi, Classroom } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Plus, Users, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,6 +22,7 @@ export default function ClassroomsPage() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newClassroomName, setNewClassroomName] = useState('');
+  const [newClassroomGrade, setNewClassroomGrade] = useState('6');
   const [isCreating, setIsCreating] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -40,9 +49,11 @@ export default function ClassroomsPage() {
 
     setIsCreating(true);
     try {
-      const { classroom } = await classroomsApi.create(newClassroomName, accessToken);
+      const gradeLevel = parseInt(newClassroomGrade, 10);
+      const { classroom } = await classroomsApi.create(newClassroomName, gradeLevel, accessToken);
       setClassrooms((prev) => [classroom, ...prev]);
       setNewClassroomName('');
+      setNewClassroomGrade('6');
     } catch (error) {
       console.error('Failed to create classroom:', error);
     } finally {
@@ -78,17 +89,41 @@ export default function ClassroomsPage() {
           <CardTitle>Create New Classroom</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleCreateClassroom} className="flex gap-2">
-            <Input
-              placeholder="Classroom name (e.g., Grade 3A)"
-              value={newClassroomName}
-              onChange={(e) => setNewClassroomName(e.target.value)}
-              className="flex-1"
-              disabled={isCreating}
-            />
+          <form onSubmit={handleCreateClassroom} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="classroom-name">Classroom Name</Label>
+                <Input
+                  id="classroom-name"
+                  placeholder="e.g., Grade 3A or Advanced English"
+                  value={newClassroomName}
+                  onChange={(e) => setNewClassroomName(e.target.value)}
+                  disabled={isCreating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="grade-level">Grade Level</Label>
+                <Select
+                  value={newClassroomGrade}
+                  onValueChange={setNewClassroomGrade}
+                  disabled={isCreating}
+                >
+                  <SelectTrigger id="grade-level">
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                      <SelectItem key={grade} value={grade.toString()}>
+                        Grade {grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Button type="submit" disabled={!newClassroomName.trim() || isCreating}>
               <Plus className="mr-2 h-4 w-4" />
-              Create
+              Create Classroom
             </Button>
           </form>
         </CardContent>
@@ -109,7 +144,14 @@ export default function ClassroomsPage() {
             <Card key={classroom.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>{classroom.name}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span>{classroom.name}</span>
+                    </div>
+                    <p className="text-sm font-normal text-muted-foreground mt-1">
+                      Grade {classroom.gradeLevel}
+                    </p>
+                  </div>
                   <Users className="h-5 w-5 text-muted-foreground" />
                 </CardTitle>
               </CardHeader>

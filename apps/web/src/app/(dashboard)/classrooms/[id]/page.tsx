@@ -200,9 +200,11 @@ export default function ClassroomDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">{classroom.name}</h2>
-          <p className="text-muted-foreground">
-            Classroom Code: {classroom.code}
-          </p>
+          <div className="flex items-center gap-4 mt-2 text-muted-foreground">
+            <p>Classroom Code: {classroom.code}</p>
+            <p>•</p>
+            <p>Grade {classroom.gradeLevel}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-lg px-4 py-2">
