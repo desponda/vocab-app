@@ -29,6 +29,11 @@
   --color-input: oklch(90.3% 0.003 286.32);
   --color-ring: oklch(47.08% 0.237 262.02);
 
+  /* Chart colors - Light Mode */
+  --color-chart-success: oklch(65% 0.20 145);
+  --color-chart-warning: oklch(72% 0.15 75);
+  --color-chart-danger: oklch(62% 0.22 27);
+
   --radius: 0.5rem;
 }
 
@@ -61,6 +66,11 @@
     --color-border: oklch(20.51% 0.014 285.82);
     --color-input: oklch(20.51% 0.014 285.82);
     --color-ring: oklch(70.89% 0.196 264.54);
+
+    /* Chart colors - Dark Mode (brighter, more saturated) */
+    --color-chart-success: oklch(70% 0.25 145);
+    --color-chart-warning: oklch(75% 0.20 75);
+    --color-chart-danger: oklch(68% 0.28 27);
   }
 }
 
