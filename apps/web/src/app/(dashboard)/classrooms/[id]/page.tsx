@@ -64,7 +64,6 @@ import {
   Loader2,
   FileCheck,
   Trash2,
-  Settings as SettingsIcon,
   Search,
 } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/stat-card';

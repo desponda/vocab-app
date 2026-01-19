@@ -20,11 +20,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Check, Copy } from 'lucide-react';
-import { classroomsApi } from '@/lib/api';
+import { classroomsApi, Classroom } from '@/lib/api';
 
 interface CreateClassroomDialogProps {
   accessToken: string | null;
-  onClassroomCreated: (classroom: any) => void;
+  onClassroomCreated: (classroom: Classroom) => void;
 }
 
 export function CreateClassroomDialog({ accessToken, onClassroomCreated }: CreateClassroomDialogProps) {
@@ -32,7 +32,7 @@ export function CreateClassroomDialog({ accessToken, onClassroomCreated }: Creat
   const [name, setName] = useState('');
   const [gradeLevel, setGradeLevel] = useState('6');
   const [isCreating, setIsCreating] = useState(false);
-  const [createdClassroom, setCreatedClassroom] = useState<any>(null);
+  const [createdClassroom, setCreatedClassroom] = useState<Classroom | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
