@@ -11,9 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { VocabularySheetListItem } from '@/components/tests/vocabulary-sheet-list-item';
-import { UploadVocabularyDialog } from '@/components/tests/upload-vocabulary-dialog';
+import { TestCreationWizard } from '@/components/test-creation-wizard';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import { FileText, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, Loader2, Plus } from 'lucide-react';
 
 export default function VocabularyPage() {
   const { accessToken } = useAuth();
@@ -22,6 +23,7 @@ export default function VocabularyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | 'ALL'>('ALL');
   const [testTypeFilter, setTestTypeFilter] = useState<'ALL' | 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE'>('ALL');
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -154,11 +156,26 @@ export default function VocabularyPage() {
             Upload worksheets or study guides to generate practice tests
           </p>
         </div>
-        <UploadVocabularyDialog
-          accessToken={accessToken}
-          onSheetUploaded={handleSheetUploaded}
-        />
+        <Button onClick={() => setIsWizardOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Create Test
+        </Button>
       </div>
+
+      {/* Test Creation Wizard */}
+      <TestCreationWizard
+        open={isWizardOpen}
+        onOpenChange={setIsWizardOpen}
+        onTestCreated={(sheetId) => {
+          // Refresh sheets list after test is created
+          if (accessToken) {
+            vocabularySheetsApi.list(accessToken).then((data) => {
+              setSheets(data.sheets);
+            });
+          }
+          setIsWizardOpen(false);
+        }}
+      />
 
       {sheets.length === 0 ? (
         <EmptyState
