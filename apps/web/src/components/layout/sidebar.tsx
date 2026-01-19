@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, BookOpen, Sparkles, Menu } from 'lucide-react';
+import { Home, Users, BookOpen, Sparkles, Menu, School } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -17,7 +17,7 @@ interface NavItem {
 
 const teacherNavItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: Home },
-  { label: 'Classrooms', href: '/classrooms', icon: GraduationCap },
+  { label: 'Classrooms', href: '/classrooms', icon: School },
   { label: 'Vocabulary', href: '/vocabulary', icon: BookOpen },
   { label: 'Students', href: '/students', icon: Users },
 ];
