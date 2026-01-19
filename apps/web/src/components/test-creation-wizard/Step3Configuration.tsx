@@ -22,7 +22,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -30,6 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const configSchema = z.object({
   name: z.string().min(1, 'Test name is required').max(100, 'Test name must be 100 characters or less'),
@@ -208,6 +209,25 @@ export function Step3Configuration() {
           </p>
         </div>
 
+        {/* Validation Warnings */}
+        {watchedValues.variants >= 8 && (
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Higher processing time:</strong> Generating {watchedValues.variants} test variants will take approximately {Math.ceil(watchedValues.variants * 0.5)}-{Math.ceil(watchedValues.variants * 1)} minutes.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {watchedValues.generatePreview && watchedValues.variants >= 5 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Extended processing:</strong> Preview generation with {watchedValues.variants} variants will add significant time. Consider disabling preview or reducing variants if you need results quickly.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Advanced Options */}
         <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
           <CollapsibleTrigger asChild>
@@ -223,24 +243,35 @@ export function Step3Configuration() {
           <CollapsibleContent className="space-y-4 pt-4 px-4 pb-2">
             {/* Use All Words - Only for SPELLING */}
             {testType === 'SPELLING' && (
-              <div className="flex items-start space-x-3 rounded-lg border p-4">
-                <Checkbox
-                  id="useAllWords"
-                  checked={watchedValues.useAllWords}
-                  onCheckedChange={(checked) => setValue('useAllWords', checked as boolean)}
-                />
-                <div className="space-y-1 flex-1">
-                  <label
-                    htmlFor="useAllWords"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Use all words from file
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    Skip AI extraction and use every line as a spelling word. Best for simple word lists without definitions.
-                  </p>
+              <>
+                <div className="flex items-start space-x-3 rounded-lg border p-4">
+                  <Checkbox
+                    id="useAllWords"
+                    checked={watchedValues.useAllWords}
+                    onCheckedChange={(checked) => setValue('useAllWords', checked as boolean)}
+                  />
+                  <div className="space-y-1 flex-1">
+                    <label
+                      htmlFor="useAllWords"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Use all words from file
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Skip AI extraction and use every line as a spelling word. Best for simple word lists without definitions.
+                    </p>
+                  </div>
                 </div>
-              </div>
+
+                {watchedValues.useAllWords && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Fast processing mode:</strong> AI will not analyze the content. Each line in your file will be treated as a word. Make sure your file contains one word per line.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </>
             )}
 
             {/* Generate Preview */}

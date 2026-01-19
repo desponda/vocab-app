@@ -140,24 +140,24 @@ export function VocabularySheetListItem({
               <FileText className="h-6 w-6" />
             </div>
 
-            <div className="flex-1 min-w-0 space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-lg truncate">{name || originalName}</h3>
-                <Badge variant={statusConfig.variant} className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex-1 min-w-0 space-y-2">
+              <h3 className="font-semibold text-lg leading-tight line-clamp-2">{name || originalName}</h3>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={statusConfig.variant} className="flex items-center gap-1">
                   <StatusIcon className={`h-3 w-3 ${status === 'PROCESSING' ? 'animate-spin' : ''}`} />
                   {statusConfig.label}
                 </Badge>
-                {gradeLevel && (
-                  <Badge variant="outline" className="flex-shrink-0">
-                    Grade {gradeLevel}
-                  </Badge>
-                )}
                 <Badge
                   variant={testType === 'SPELLING' ? 'secondary' : testType === 'GENERAL_KNOWLEDGE' ? 'default' : 'outline'}
-                  className="flex-shrink-0"
                 >
                   {testType === 'VOCABULARY' ? '📚 Vocab' : testType === 'SPELLING' ? '✏️ Spelling' : '🧠 Knowledge'}
                 </Badge>
+                {gradeLevel && (
+                  <Badge variant="outline">
+                    Grade {gradeLevel}
+                  </Badge>
+                )}
               </div>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
