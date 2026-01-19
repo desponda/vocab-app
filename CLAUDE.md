@@ -93,6 +93,9 @@ vocab-app/
 - ✅ PDF to image conversion support (using sharp)
 - ✅ Job triggering on vocabulary upload
 - ✅ Error handling and status updates (PENDING → PROCESSING → COMPLETED/FAILED)
+- ✅ Grade level tracking (1-12) for classrooms and vocabulary sheets
+- ✅ Age-appropriate test generation based on grade level
+- ✅ Test question option randomization (Fisher-Yates shuffle)
 
 **Phase 2 - Next Steps:**
 - **Week 4:** E2E tests for vocabulary upload and processing flow
@@ -534,7 +537,7 @@ If you're switching environments or onboarding a new developer:
 
 ---
 
-**Last Updated:** 2026-01-18
+**Last Updated:** 2026-01-19
 **Current Phase:** Phase 2 Week 3 - Claude Vision Integration (✅ COMPLETE)
 **CI Status:** ✅ Passing
 **Staging:** ✅ Deployed (auto-deploys on `main` push)
