@@ -142,6 +142,7 @@ export function useTestUpload(): UseTestUploadReturn {
         options.gradeLevel,
         options.testType,
         accessToken,
+        options.useAllWords || false,
         (uploadProgress) => {
           // Upload is 0-20% of total progress
           const scaledProgress = Math.floor(uploadProgress * 0.2);

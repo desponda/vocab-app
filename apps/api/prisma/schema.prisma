@@ -135,6 +135,7 @@ model VocabularySheet {
   fileSize        Int
   gradeLevel      Int?             // Optional: Target grade level (1-12) for test difficulty
   testType        TestType         @default(VOCABULARY) // Type of test to generate
+  useAllWords     Boolean          @default(false) // Skip AI extraction, use every line as a word (spelling tests)
   status          ProcessingStatus @default(PENDING)
   errorMessage    String?          @db.Text
   extractedText   String?          @db.Text

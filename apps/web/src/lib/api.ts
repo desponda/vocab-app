@@ -228,6 +228,7 @@ export const vocabularySheetsApi = {
     gradeLevel: number | undefined,
     testType: 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE' = 'VOCABULARY',
     token: string,
+    useAllWords: boolean = false,
     onProgress?: (progress: number) => void
   ): Promise<{ sheet: VocabularySheet }> => {
     const formData = new FormData();
@@ -260,7 +261,8 @@ export const vocabularySheetsApi = {
 
       const encodedName = encodeURIComponent(name);
       const gradeLevelParam = gradeLevel ? `&gradeLevel=${gradeLevel}` : '';
-      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}${gradeLevelParam}&testType=${testType}`);
+      const useAllWordsParam = useAllWords ? `&useAllWords=true` : '';
+      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}${gradeLevelParam}&testType=${testType}${useAllWordsParam}`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.send(formData);
     });

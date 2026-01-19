@@ -15,6 +15,7 @@ const uploadQuerySchema = z.object({
   testsToGenerate: z.coerce.number().min(3).max(10).default(3),
   gradeLevel: z.coerce.number().int().min(1).max(12).optional(),
   testType: z.enum(['VOCABULARY', 'SPELLING', 'GENERAL_KNOWLEDGE']).default('VOCABULARY'),
+  useAllWords: z.coerce.boolean().optional().default(false),
 });
 
 const assignBulkSchema = z.object({
@@ -151,6 +152,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         fileSize: buffer.length,
         gradeLevel: query.gradeLevel,
         testType: query.testType,
+        useAllWords: query.useAllWords,
         status: 'PENDING',
         testsToGenerate: query.testsToGenerate,
         teacherId: request.userId,
@@ -165,6 +167,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
         fileSize: true,
         gradeLevel: true,
         testType: true,
+        useAllWords: true,
         status: true,
         testsToGenerate: true,
         uploadedAt: true,

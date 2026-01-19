@@ -112,7 +112,8 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
         gradeLevel && gradeLevel !== 'unspecified' ? parseInt(gradeLevel, 10) : undefined,
         testType,
         accessToken,
-        (progress) => {
+        false, // useAllWords - not used in old dialog
+        (progress: number) => {
           setUploadProgress(progress);
         }
       );
