@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
 import {
@@ -25,13 +26,51 @@ interface PerformanceChartProps {
 }
 
 // Helper function to determine bar color based on score
-const getColorByScore = (score: number): string => {
-  if (score >= 80) return 'url(#gradientSuccess)';
-  if (score >= 60) return 'url(#gradientWarning)';
-  return 'url(#gradientDanger)';
+// Using explicit color values to ensure visibility in both light and dark modes
+const getColorByScore = (score: number, isDark: boolean): string => {
+  if (score >= 80) {
+    // Green - Excellent
+    return isDark ? '#4ade80' : '#22c55e'; // green-400 / green-500
+  }
+  if (score >= 60) {
+    // Orange - Good
+    return isDark ? '#fb923c' : '#f97316'; // orange-400 / orange-500
+  }
+  // Red - Needs Work
+  return isDark ? '#f87171' : '#ef4444'; // red-400 / red-500
 };
 
 export function PerformanceChart({ data }: PerformanceChartProps) {
+  // Detect dark mode
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Check initial theme
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark') ||
+                window.matchMedia('(prefers-color-scheme: dark)').matches);
+    };
+
+    checkTheme();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    // Watch for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => checkTheme();
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      observer.disconnect();
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
+
   // Improved empty state
   if (data.length === 0) {
     return (
@@ -62,22 +101,6 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
-            {/* Gradient definitions for bars */}
-            <defs>
-              <linearGradient id="gradientSuccess" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--color-chart-success))" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="hsl(var(--color-chart-success))" stopOpacity={0.6} />
-              </linearGradient>
-              <linearGradient id="gradientWarning" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--color-chart-warning))" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="hsl(var(--color-chart-warning))" stopOpacity={0.6} />
-              </linearGradient>
-              <linearGradient id="gradientDanger" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--color-chart-danger))" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="hsl(var(--color-chart-danger))" stopOpacity={0.6} />
-              </linearGradient>
-            </defs>
-
             {/* Updated grid with reduced opacity and no vertical lines */}
             <CartesianGrid
               strokeDasharray="3 3"
@@ -131,15 +154,15 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
               content={() => (
                 <div className="flex justify-center gap-6 text-xs mt-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded" style={{ background: 'hsl(var(--color-chart-success))' }} />
+                    <div className="w-3 h-3 rounded bg-green-500" />
                     <span className="text-muted-foreground">Excellent (80-100%)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded" style={{ background: 'hsl(var(--color-chart-warning))' }} />
+                    <div className="w-3 h-3 rounded bg-orange-500" />
                     <span className="text-muted-foreground">Good (60-79%)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded" style={{ background: 'hsl(var(--color-chart-danger))' }} />
+                    <div className="w-3 h-3 rounded bg-red-500" />
                     <span className="text-muted-foreground">Needs Work (&lt;60%)</span>
                   </div>
                 </div>
@@ -156,7 +179,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={getColorByScore(entry.avgScore)}
+                  fill={getColorByScore(entry.avgScore, isDark)}
                 />
               ))}
             </Bar>
