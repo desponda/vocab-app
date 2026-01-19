@@ -215,19 +215,19 @@ export default function DashboardPage() {
                 {recentClassrooms.map((classroom) => (
                   <div
                     key={classroom.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 hover:shadow-sm transition-all cursor-pointer group"
                     onClick={() => router.push(`/classrooms/${classroom.id}`)}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{classroom.name}</p>
-                        <Badge variant="secondary">Grade {classroom.gradeLevel}</Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold truncate group-hover:text-primary transition-colors">{classroom.name}</p>
+                        <Badge variant="secondary" className="flex-shrink-0">Grade {classroom.gradeLevel}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {classroom._count.enrollments} {classroom._count.enrollments === 1 ? 'student' : 'students'}
                       </p>
                     </div>
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    <Button variant="ghost" size="sm" className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Eye className="h-4 w-4" />
                       View
                     </Button>
@@ -264,27 +264,27 @@ export default function DashboardPage() {
                 {recentSheets.map((sheet) => (
                   <div
                     key={sheet.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 hover:shadow-sm transition-all cursor-pointer group"
                     onClick={() => router.push(`/vocabulary/${sheet.id}`)}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium">{sheet.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <p className="font-semibold truncate group-hover:text-primary transition-colors">{sheet.name}</p>
                         {sheet.status === 'PROCESSING' && (
-                          <Badge variant="secondary" className="gap-1">
+                          <Badge variant="secondary" className="gap-1 flex-shrink-0">
                             <Loader2 className="h-3 w-3 animate-spin" />
                             Processing
                           </Badge>
                         )}
                         {sheet.status === 'COMPLETED' && (
-                          <Badge variant="default">Completed</Badge>
+                          <Badge variant="default" className="flex-shrink-0">Completed</Badge>
                         )}
                         {sheet.status === 'FAILED' && (
-                          <Badge variant="destructive">Failed</Badge>
+                          <Badge variant="destructive" className="flex-shrink-0">Failed</Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground truncate">
                         {formatRelativeDate(sheet.uploadedAt)}
                         {sheet._count && ` • ${sheet._count.words} words • ${sheet._count.tests} tests`}
                       </p>
