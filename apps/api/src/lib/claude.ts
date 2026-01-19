@@ -447,3 +447,152 @@ Return ONLY valid JSON (no markdown, no explanation):
     throw new Error(`Failed to parse test generation result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
 }
+
+/**
+ * Generate spelling test questions from a list of spelling words
+ * Creates multiple choice questions with plausible misspellings
+ *
+ * @param words - Array of spelling words
+ * @param testVariant - Test variant identifier (A, B, C, etc.)
+ * @param gradeLevel - Optional grade level (1-12) for age-appropriate difficulty
+ */
+export async function generateSpellingTestQuestions(
+  words: string[],
+  testVariant: string,
+  gradeLevel?: number | null
+): Promise<TestQuestion[]> {
+  if (!config.anthropicApiKey) {
+    throw new Error('ANTHROPIC_API_KEY not configured');
+  }
+
+  if (words.length === 0) {
+    return [];
+  }
+
+  // Format words for Claude
+  const wordsText = words.map((w, i) => `${i + 1}. ${w}`).join('\n');
+
+  // Build grade level guidance for spelling difficulty
+  const gradeLevelGuidance = gradeLevel
+    ? `
+TARGET GRADE LEVEL: ${gradeLevel}
+Adjust misspelling difficulty for grade ${gradeLevel} students:
+${gradeLevel <= 3 ? '- Use very simple phonetic errors (e.g., "cat" → "kat")\n- Single letter substitutions\n- Common beginner mistakes\n- Keep words short (under 6 letters when possible)' : ''}${gradeLevel >= 4 && gradeLevel <= 6 ? '- Use phonetic errors and common confusions\n- Double letter mistakes (e.g., "accommodate" → "acommodate")\n- Silent letter confusion\n- Moderate difficulty distractors' : ''}${gradeLevel >= 7 && gradeLevel <= 9 ? '- More sophisticated errors (e.g., "receive" → "recieve")\n- Prefix/suffix confusion\n- Homophone-based errors\n- Complex phonetic mistakes' : ''}${gradeLevel >= 10 ? '- Advanced spelling patterns\n- Latin/Greek root confusion\n- Subtle orthographic errors\n- Academic vocabulary spelling challenges' : ''}
+`
+    : '';
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 8192,
+    messages: [
+      {
+        role: 'user',
+        content: `Generate spelling test questions from these words for Test Variant ${testVariant}.
+
+SPELLING WORDS:
+${wordsText}
+${gradeLevelGuidance}
+CRITICAL REQUIREMENTS:
+1. For EACH word: create EXACTLY 1 multiple choice question
+2. Question format: "Which is the correct spelling?"
+3. Provide exactly 4 options:
+   - 1 correct spelling (the actual word)
+   - 3 plausible misspellings (distractors)
+
+4. Misspelling strategies (make them believable but clearly wrong):
+   - Phonetic errors: spelling based on sound (e.g., "receive" → "recieve")
+   - Double letter confusion: adding/removing double letters (e.g., "accommodate" → "acommodate")
+   - Common letter swaps: common mistakes (e.g., "separate" → "seperate", "definitely" → "definately")
+   - Homophone confusion: using similar sounding combinations (e.g., "their/there/they're")
+   - Silent letter errors: removing silent letters (e.g., "knight" → "nite")
+
+5. Make distractors grade-appropriate:
+   - Lower grades: simpler, more obvious errors
+   - Higher grades: subtle, sophisticated errors that require careful study
+
+6. Ensure variety in your misspellings - don't use the same pattern for all words
+7. Each test variant should have different misspellings
+8. DO NOT include orderIndex - we'll randomize after generation
+
+Return ONLY valid JSON (no markdown, no explanation):
+{
+  "questions": [
+    {
+      "questionText": "Which is the correct spelling?",
+      "questionType": "SPELLING",
+      "correctAnswer": "receive",
+      "options": ["receive", "recieve", "recive", "receeve"]
+    }
+  ]
+}`,
+      },
+    ],
+  });
+
+  const textContent = response.content.find((c) => c.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    throw new Error('No text response from Claude');
+  }
+
+  // Parse JSON response
+  let jsonText = textContent.text.trim();
+
+  // Remove markdown code blocks if present
+  if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  try {
+    const result = JSON.parse(jsonText);
+
+    if (!result.questions || !Array.isArray(result.questions)) {
+      throw new Error('Invalid response format: missing questions array');
+    }
+
+    // Validate we have exactly 1 question per word
+    const expectedQuestionCount = words.length;
+    if (result.questions.length !== expectedQuestionCount) {
+      console.warn(
+        `Expected ${expectedQuestionCount} spelling questions (1 per word), got ${result.questions.length}. Proceeding anyway.`
+      );
+    }
+
+    // Randomize question order AND shuffle options for each question
+    const shuffledQuestions = result.questions
+      .map((q: any) => {
+        // Validate that correctAnswer is in options
+        if (!q.options || !Array.isArray(q.options)) {
+          throw new Error(`Question missing options array: ${q.questionText}`);
+        }
+        if (!q.options.includes(q.correctAnswer)) {
+          throw new Error(
+            `Correct answer "${q.correctAnswer}" not found in options for question: ${q.questionText}`
+          );
+        }
+
+        // Validate exactly 4 options
+        if (q.options.length !== 4) {
+          console.warn(`Expected 4 options, got ${q.options.length} for: ${q.questionText}`);
+        }
+
+        // Shuffle the options array using Fisher-Yates algorithm
+        const shuffledOptions = [...q.options];
+        for (let i = shuffledOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+        }
+
+        return { ...q, options: shuffledOptions, sort: Math.random() };
+      })
+      .sort((a: any, b: any) => a.sort - b.sort)
+      .map((q: any, index: number) => {
+        const { sort, ...question } = q;
+        return { ...question, orderIndex: index };
+      });
+
+    return shuffledQuestions;
+  } catch (parseError) {
+    console.error('Failed to parse Claude spelling test generation response:', jsonText);
+    throw new Error(`Failed to parse spelling test generation result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+  }
+}

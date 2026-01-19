@@ -96,7 +96,7 @@ export const testRoutes = async (app: FastifyInstance) => {
       return reply.code(404).send({ error: 'Test not found' });
     }
 
-    if (test.sheet.teacherId !== request.userId) {
+    if (!test.sheet || test.sheet.teacherId !== request.userId) {
       return reply.code(403).send({ error: 'Unauthorized' });
     }
 

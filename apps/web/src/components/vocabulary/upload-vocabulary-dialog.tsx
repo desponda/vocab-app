@@ -45,6 +45,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [vocabularyName, setVocabularyName] = useState('');
   const [gradeLevel, setGradeLevel] = useState<string | undefined>(undefined);
+  const [testType, setTestType] = useState<'VOCABULARY' | 'SPELLING'>('VOCABULARY');
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const testsToGenerate = 3; // Default: 3 test variants
 
@@ -109,6 +110,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
         vocabularyName.trim(),
         testsToGenerate,
         gradeLevel && gradeLevel !== 'unspecified' ? parseInt(gradeLevel, 10) : undefined,
+        testType,
         accessToken,
         (progress) => {
           setUploadProgress(progress);
@@ -123,6 +125,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
         setSelectedFile(null);
         setVocabularyName('');
         setGradeLevel(undefined);
+        setTestType('VOCABULARY');
         setUploadProgress(null);
       }, 200);
     } catch (error) {
@@ -139,6 +142,7 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
         setSelectedFile(null);
         setVocabularyName('');
         setGradeLevel(undefined);
+        setTestType('VOCABULARY');
       }, 200);
     }
   };
@@ -234,6 +238,35 @@ export function UploadVocabularyDialog({ accessToken, onSheetUploaded }: UploadV
                 </Select>
                 <p className="text-sm text-muted-foreground">
                   All words from your upload will be used. Grade level only affects how test questions are phrased and sentence complexity.
+                </p>
+              </div>
+
+              {/* Test Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="test-type">
+                  Test Type <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={testType}
+                  onValueChange={(value) => setTestType(value as 'VOCABULARY' | 'SPELLING')}
+                  disabled={uploadProgress !== null}
+                >
+                  <SelectTrigger id="test-type" aria-label="Select test type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VOCABULARY">
+                      Vocabulary - Definition & Fill-in-Blank
+                    </SelectItem>
+                    <SelectItem value="SPELLING">
+                      Spelling - Multiple Choice
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {testType === 'VOCABULARY'
+                    ? 'Tests will ask for definitions and sentence completion.'
+                    : 'Tests will ask students to identify correct spellings from multiple choices.'}
                 </p>
               </div>
 

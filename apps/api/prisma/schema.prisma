@@ -117,6 +117,12 @@ enum ProcessingStatus {
   FAILED
 }
 
+enum TestType {
+  VOCABULARY
+  SPELLING
+  GENERAL_KNOWLEDGE
+}
+
 model VocabularySheet {
   id              String           @id @default(cuid())
   name            String           // User-provided name for vocabulary set
@@ -128,6 +134,7 @@ model VocabularySheet {
   mimeType        String
   fileSize        Int
   gradeLevel      Int?             // Optional: Target grade level (1-12) for test difficulty
+  testType        TestType         @default(VOCABULARY) // Type of test to generate
   status          ProcessingStatus @default(PENDING)
   errorMessage    String?          @db.Text
   extractedText   String?          @db.Text
@@ -142,6 +149,7 @@ model VocabularySheet {
 
   @@index([teacherId])
   @@index([status])
+  @@index([testType])
 }
 
 model VocabularyWord {
@@ -165,8 +173,8 @@ model Test {
   variant   String   // "A", "B", "C"...
   createdAt DateTime @default(now())
 
-  sheetId     String
-  sheet       VocabularySheet  @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  sheetId     String?
+  sheet       VocabularySheet?  @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   questions   TestQuestion[]
   assignments TestAssignment[]
   attempts    TestAttempt[]
@@ -191,8 +199,8 @@ model TestQuestion {
 
   testId  String
   test    Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
-  wordId  String
-  word    VocabularyWord @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  wordId  String?
+  word    VocabularyWord? @relation(fields: [wordId], references: [id], onDelete: SetNull)
   answers TestAnswer[]
 
   @@index([testId])

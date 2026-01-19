@@ -32,6 +32,7 @@ interface VocabularySheetListItemProps {
   testCount?: number;
   testsToGenerate?: number;
   gradeLevel?: number | null;
+  testType?: 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE';
   errorMessage?: string;
   tests?: Array<{
     id: string;
@@ -62,6 +63,7 @@ export function VocabularySheetListItem({
   testCount,
   testsToGenerate = 5,
   gradeLevel,
+  testType = 'VOCABULARY',
   errorMessage,
   tests,
   accessToken,
@@ -150,6 +152,12 @@ export function VocabularySheetListItem({
                     Grade {gradeLevel}
                   </Badge>
                 )}
+                <Badge
+                  variant={testType === 'SPELLING' ? 'secondary' : testType === 'GENERAL_KNOWLEDGE' ? 'default' : 'outline'}
+                  className="flex-shrink-0"
+                >
+                  {testType === 'VOCABULARY' ? '📚 Vocab' : testType === 'SPELLING' ? '✏️ Spelling' : '🧠 Knowledge'}
+                </Badge>
               </div>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">

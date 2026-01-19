@@ -1,7 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { prisma } from '../lib/prisma';
 import { downloadFile, uploadFile } from '../lib/minio';
-import { extractVocabulary, generateTestQuestions } from '../lib/claude';
+import { extractVocabulary, generateTestQuestions, generateSpellingTestQuestions } from '../lib/claude';
 import { VocabularyProcessingJob } from '../lib/queue';
 import { config } from '../lib/config';
 
@@ -42,6 +42,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
         s3Key: true,
         mimeType: true,
         gradeLevel: true,
+        testType: true,
         testsToGenerate: true,
         words: action === 'regenerate' ? {
           select: {
@@ -66,30 +67,40 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       });
     }
 
-    let vocabularyWordsForTests: Array<{ word: string; definition: string; context?: string }>;
+    let vocabularyWordsForTests: Array<{ word: string; definition?: string; context?: string }>;
 
     if (action === 'regenerate') {
       // REGENERATE MODE: Use existing words from database
-      console.log(`[Job ${job.id}] Using existing vocabulary words from database`);
+      console.log(`[Job ${job.id}] Using existing words from database for ${sheet.testType} test type`);
       await job.updateProgress(20);
 
       if (!sheet.words || sheet.words.length === 0) {
-        throw new Error('No vocabulary words found in database');
+        throw new Error('No words found in database');
       }
 
-      vocabularyWordsForTests = sheet.words
-        .filter(w => w.definition) // Only words with definitions
-        .map(w => ({
+      if (sheet.testType === 'SPELLING') {
+        // For spelling tests, use all words (don't require definitions)
+        vocabularyWordsForTests = sheet.words.map(w => ({
           word: w.word,
-          definition: w.definition!,
+          definition: w.definition || undefined,
           context: w.context || undefined,
         }));
+      } else {
+        // For vocabulary tests, only use words with definitions
+        vocabularyWordsForTests = sheet.words
+          .filter(w => w.definition) // Only words with definitions
+          .map(w => ({
+            word: w.word,
+            definition: w.definition!,
+            context: w.context || undefined,
+          }));
 
-      if (vocabularyWordsForTests.length === 0) {
-        throw new Error('No vocabulary words with definitions found');
+        if (vocabularyWordsForTests.length === 0) {
+          throw new Error('No vocabulary words with definitions found');
+        }
       }
 
-      console.log(`[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test regeneration`);
+      console.log(`[Job ${job.id}] Using ${vocabularyWordsForTests.length} words for test regeneration (${sheet.testType})`);
     } else {
       // PROCESS MODE: Extract vocabulary from uploaded file
       console.log(`[Job ${job.id}] Downloading file from MinIO: ${sheet.s3Key}`);
@@ -138,24 +149,48 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
         throw new Error('No words extracted from the vocabulary sheet');
       }
 
-      vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
-        word: v.word,
-        definition: v.definition,
-        context: v.context,
-      }));
+      // Choose words based on test type
+      if (sheet.testType === 'SPELLING') {
+        // For spelling tests, prefer spelling words, fallback to vocabulary words
+        if (extractionResult.spelling.length > 0) {
+          vocabularyWordsForTests = extractionResult.spelling.map((word) => ({
+            word,
+            definition: undefined,
+            context: undefined,
+          }));
+          console.log(`[Job ${job.id}] Using ${vocabularyWordsForTests.length} spelling words for test generation`);
+        } else if (extractionResult.vocabulary.length > 0) {
+          // Fallback: use vocabulary words if no spelling words found
+          vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
+            word: v.word,
+            definition: v.definition,
+            context: v.context,
+          }));
+          console.log(`[Job ${job.id}] No spelling words found, using ${vocabularyWordsForTests.length} vocabulary words as fallback`);
+        } else {
+          throw new Error('No spelling or vocabulary words found. Please upload a document with spelling words.');
+        }
+      } else {
+        // For vocabulary tests, use vocabulary words with definitions
+        vocabularyWordsForTests = extractionResult.vocabulary.map((v) => ({
+          word: v.word,
+          definition: v.definition,
+          context: v.context,
+        }));
 
-      if (vocabularyWordsForTests.length === 0) {
-        throw new Error(
-          'No vocabulary words with definitions found. Please upload a document with vocabulary words that include definitions or example sentences.'
+        if (vocabularyWordsForTests.length === 0) {
+          throw new Error(
+            'No vocabulary words with definitions found. Please upload a document with vocabulary words that include definitions or example sentences.'
+          );
+        }
+
+        console.log(
+          `[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test generation` +
+          (extractionResult.spelling.length > 0
+            ? ` (${extractionResult.spelling.length} spelling words saved but not used in tests)`
+            : '')
         );
       }
-
-      console.log(
-        `[Job ${job.id}] Using ${vocabularyWordsForTests.length} vocabulary words for test generation` +
-        (extractionResult.spelling.length > 0
-          ? ` (${extractionResult.spelling.length} spelling words saved but not used in tests yet)`
-          : '')
-      );
 
       // Save all words to database (vocabulary + spelling)
       console.log(`[Job ${job.id}] Saving ${allWords.length} words to database`);
@@ -188,12 +223,27 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
       const progressPercent = 40 + ((i + 1) / testsToGenerate) * 50;
       await job.updateProgress(progressPercent);
 
-      console.log(`[Job ${job.id}] Generating test variant ${variant}`);
+      console.log(`[Job ${job.id}] Generating test variant ${variant} for ${sheet.testType} test`);
 
-      // Generate questions using Claude (2 questions per word)
-      // Pass grade level for age-appropriate difficulty
-      // Only use vocabulary words with definitions for test generation
-      const questions = await generateTestQuestions(vocabularyWordsForTests, variant, sheet.gradeLevel);
+      // Generate questions using Claude - route to correct function based on test type
+      let questions;
+      if (sheet.testType === 'SPELLING') {
+        // Spelling tests: 1 question per word with plausible misspellings
+        questions = await generateSpellingTestQuestions(
+          vocabularyWordsForTests.map(w => w.word),
+          variant,
+          sheet.gradeLevel
+        );
+      } else {
+        // Vocabulary tests: 2 questions per word (sentence completion + definition matching)
+        // Filter to only words with definitions
+        const wordsWithDefinitions = vocabularyWordsForTests.filter(w => w.definition);
+        questions = await generateTestQuestions(
+          wordsWithDefinitions as Array<{ word: string; definition: string; context?: string }>,
+          variant,
+          sheet.gradeLevel
+        );
+      }
 
       if (questions.length === 0) {
         console.warn(`[Job ${job.id}] No questions generated for variant ${variant}, skipping`);
@@ -219,22 +269,34 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
 
       // Save questions to database
       const questionsData = questions.map((q, index) => {
-        // Find word ID by matching:
-        // 1. For sentence completion: correctAnswer is the word
-        // 2. For definition matching: extract word from question text
-        let wordId = wordMap.get(q.correctAnswer.toLowerCase());
+        let wordId: string | null = null;
 
-        if (!wordId) {
-          // Try to extract word from question text for definition matching questions
-          const match = q.questionText.match(/word ['"](.+?)['"]/i);
-          if (match && match[1]) {
-            wordId = wordMap.get(match[1].toLowerCase());
+        if (sheet.testType === 'SPELLING') {
+          // For spelling tests: correctAnswer is the word itself
+          wordId = wordMap.get(q.correctAnswer.toLowerCase()) || null;
+        } else {
+          // For vocabulary tests: Find word ID by matching
+          // 1. For sentence completion: correctAnswer is the word
+          // 2. For definition matching: extract word from question text
+          wordId = wordMap.get(q.correctAnswer.toLowerCase()) || null;
+
+          if (!wordId) {
+            // Try to extract word from question text for definition matching questions
+            const match = q.questionText.match(/word ['"](.+?)['"]/i);
+            if (match && match[1]) {
+              wordId = wordMap.get(match[1].toLowerCase()) || null;
+            }
           }
-        }
 
-        // Fallback: use round-robin assignment
-        if (!wordId) {
-          wordId = vocabularyWords[Math.floor(index / 2) % vocabularyWords.length]?.id;
+          // Fallback for vocabulary tests: use round-robin assignment
+          if (!wordId) {
+            wordId = vocabularyWords[Math.floor(index / 2) % vocabularyWords.length]?.id || null;
+          }
+
+          // Final fallback for vocabulary tests: first word
+          if (!wordId && vocabularyWords.length > 0) {
+            wordId = vocabularyWords[0]!.id;
+          }
         }
 
         return {
@@ -244,7 +306,7 @@ async function processVocabularySheet(job: Job<VocabularyProcessingJob>) {
           options: JSON.stringify(q.options), // Always has options now
           orderIndex: q.orderIndex || index,
           testId: test.id,
-          wordId: wordId || vocabularyWords[0]!.id, // Final fallback to first word
+          wordId: wordId, // Can be null for spelling tests if no match found
         };
       });
 

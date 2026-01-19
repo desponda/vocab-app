@@ -21,6 +21,7 @@ export default function VocabularyPage() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | 'ALL'>('ALL');
+  const [testTypeFilter, setTestTypeFilter] = useState<'ALL' | 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE'>('ALL');
 
   useEffect(() => {
     if (!accessToken) return;
@@ -118,11 +119,22 @@ export default function VocabularyPage() {
     // The toast in AssignSheetDialog already handles user feedback
   };
 
-  // Filter sheets based on status
+  // Filter sheets based on status and test type
   const filteredSheets = useMemo(() => {
-    if (statusFilter === 'ALL') return sheets;
-    return sheets.filter((sheet) => sheet.status === statusFilter);
-  }, [sheets, statusFilter]);
+    let filtered = sheets;
+
+    // Filter by status
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter((sheet) => sheet.status === statusFilter);
+    }
+
+    // Filter by test type
+    if (testTypeFilter !== 'ALL') {
+      filtered = filtered.filter((sheet) => sheet.testType === testTypeFilter);
+    }
+
+    return filtered;
+  }, [sheets, statusFilter, testTypeFilter]);
 
   if (isLoading) {
     return (
@@ -156,21 +168,39 @@ export default function VocabularyPage() {
         />
       ) : (
         <>
-          {/* Filter Dropdown */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium">Filter by status:</label>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProcessingStatus | 'ALL')}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All sheets" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Sheets</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="PROCESSING">Processing</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Filter Dropdowns */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Status:</label>
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProcessingStatus | 'ALL')}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="PROCESSING">Processing</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Test Type:</label>
+              <Select value={testTypeFilter} onValueChange={(value) => setTestTypeFilter(value as 'ALL' | 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE')}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Types</SelectItem>
+                  <SelectItem value="VOCABULARY">📚 Vocabulary</SelectItem>
+                  <SelectItem value="SPELLING">✏️ Spelling</SelectItem>
+                  <SelectItem value="GENERAL_KNOWLEDGE">🧠 General Knowledge</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <span className="text-sm text-muted-foreground">
               {filteredSheets.length} {filteredSheets.length === 1 ? 'sheet' : 'sheets'}
             </span>
@@ -199,6 +229,7 @@ export default function VocabularyPage() {
                   testCount={sheet._count?.tests}
                   testsToGenerate={sheet.testsToGenerate}
                   gradeLevel={sheet.gradeLevel}
+                  testType={sheet.testType}
                   errorMessage={sheet.errorMessage || undefined}
                   tests={sheet.tests}
                   accessToken={accessToken || undefined}

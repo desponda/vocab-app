@@ -119,10 +119,24 @@ vocab-app/
 - ✅ Classroom editing (inline editing of name and grade level)
 - ✅ Grade level selection for vocabulary uploads (affects test difficulty)
 
+**Phase 7 - Multi-Type Test Generator (Phase 1 - Spelling Tests):**
+- ✅ TestType enum (VOCABULARY, SPELLING, GENERAL_KNOWLEDGE)
+- ✅ Database schema updates (nullable Test.sheetId and TestQuestion.wordId)
+- ✅ Spelling test question generator with grade-level appropriate misspellings
+- ✅ Test type selector in upload dialog
+- ✅ Test type routing in background job processor
+- ✅ Test type badges and filters in vocabulary library
+- ✅ Backend API support for testType parameter
+- ✅ Frontend API client integration
+- ✅ Backward compatibility with existing vocabulary tests
+- ✅ Multiple choice spelling format (4 options: 1 correct, 3 plausible misspellings)
+
 ### Tech Highlights
 
 **AI & Image Processing:**
 - Claude 3.5 Sonnet 4 Vision API for vocabulary extraction
+- Multi-type test generation (Vocabulary, Spelling, General Knowledge)
+- Grade-level appropriate spelling question generation with plausible misspellings
 - Automatic image compression (quality reduction + resizing)
 - Handles images up to 25MB+ (compresses to <4MB)
 - PDF to image conversion with sharp
@@ -654,4 +668,4 @@ If you're switching environments or onboarding a new developer:
 **Status:** ✅ Production Ready
 **CI Status:** ✅ Passing
 **Staging:** ✅ Deployed (auto-deploys on `main` push)
-**Version:** Phase 6 Enhanced - Student Detail Pages + Classroom Editing + Grade Level Selection + Critical Bug Fixes
+**Version:** Phase 7 (Multi-Type Test Generator) - Spelling Tests Support + Test Type Selection + Backward Compatible

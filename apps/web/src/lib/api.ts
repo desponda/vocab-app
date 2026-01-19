@@ -226,6 +226,7 @@ export const vocabularySheetsApi = {
     name: string,
     testsToGenerate: number = 3,
     gradeLevel: number | undefined,
+    testType: 'VOCABULARY' | 'SPELLING' = 'VOCABULARY',
     token: string,
     onProgress?: (progress: number) => void
   ): Promise<{ sheet: VocabularySheet }> => {
@@ -259,7 +260,7 @@ export const vocabularySheetsApi = {
 
       const encodedName = encodeURIComponent(name);
       const gradeLevelParam = gradeLevel ? `&gradeLevel=${gradeLevel}` : '';
-      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}${gradeLevelParam}`);
+      xhr.open('POST', `${API_URL}/api/vocabulary-sheets?name=${encodedName}&testsToGenerate=${testsToGenerate}${gradeLevelParam}&testType=${testType}`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.send(formData);
     });
@@ -696,6 +697,12 @@ export const ProcessingStatusSchema = z.enum([
   'FAILED',
 ]);
 
+export const TestTypeSchema = z.enum([
+  'VOCABULARY',
+  'SPELLING',
+  'GENERAL_KNOWLEDGE',
+]);
+
 export const VocabularySheetSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -705,6 +712,7 @@ export const VocabularySheetSchema = z.object({
   mimeType: z.string(),
   fileSize: z.number(),
   gradeLevel: z.number().nullable().optional(),
+  testType: TestTypeSchema,
   status: ProcessingStatusSchema,
   errorMessage: z.string().nullable().optional(),
   testsToGenerate: z.number(),
