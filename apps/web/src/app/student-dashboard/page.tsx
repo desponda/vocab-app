@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
@@ -17,13 +17,25 @@ import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { TestAssignment, Student, TestAttempt } from '@/lib/api';
-import { ClipboardCheck, Target, TrendingUp, FileText, Loader2, CheckCircle2 } from 'lucide-react';
+import { ClipboardCheck, Target, TrendingUp, FileText, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
 
 interface StudentStats {
   testsAssigned: number;
   testsCompleted: number;
   avgScore: number;
+}
+
+interface VocabularyGroup {
+  sheetId: string;
+  sheetName: string;
+  originalName: string;
+  assignments: TestAssignment[];
+  completed: number;
+  total: number;
+  bestScore: number | null;
+  avgScore: number | null;
+  attempts: TestAttempt[];
 }
 
 export default function StudentDashboardPage() {
@@ -35,6 +47,72 @@ export default function StudentDashboardPage() {
   const [stats, setStats] = useState<StudentStats | null>(null);
   const [error, setError] = useState<string>('');
   const [isLoadingTests, setIsLoadingTests] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Group assignments by vocabulary sheet
+  const vocabularyGroups = useMemo(() => {
+    const groupsMap = new Map<string, VocabularyGroup>();
+
+    assignments.forEach((assignment) => {
+      const sheetId = assignment.test?.sheet?.id;
+      if (!sheetId) return;
+
+      if (!groupsMap.has(sheetId)) {
+        groupsMap.set(sheetId, {
+          sheetId,
+          sheetName: assignment.test?.sheet?.name || 'Unknown',
+          originalName: assignment.test?.sheet?.originalName || 'Unknown',
+          assignments: [],
+          completed: 0,
+          total: 0,
+          bestScore: null,
+          avgScore: null,
+          attempts: [],
+        });
+      }
+
+      const group = groupsMap.get(sheetId)!;
+      group.assignments.push(assignment);
+      group.total++;
+    });
+
+    // Add attempt statistics to each group
+    pastAttempts.forEach((attempt) => {
+      const sheetId = attempt.test?.sheet?.id;
+      if (!sheetId || !groupsMap.has(sheetId)) return;
+
+      const group = groupsMap.get(sheetId)!;
+      group.attempts.push(attempt);
+    });
+
+    // Calculate statistics for each group
+    groupsMap.forEach((group) => {
+      const scores = group.attempts.map((a) => a.score || 0);
+      if (scores.length > 0) {
+        group.bestScore = Math.max(...scores);
+        group.avgScore = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+        // Count unique test variants completed
+        const uniqueTests = new Set(group.attempts.map((a) => a.testId));
+        group.completed = uniqueTests.size;
+      }
+    });
+
+    return Array.from(groupsMap.values()).sort((a, b) =>
+      a.sheetName.localeCompare(b.sheetName)
+    );
+  }, [assignments, pastAttempts]);
+
+  const toggleGroup = (sheetId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(sheetId)) {
+        next.delete(sheetId);
+      } else {
+        next.add(sheetId);
+      }
+      return next;
+    });
+  };
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
@@ -175,7 +253,7 @@ export default function StudentDashboardPage() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : assignments.length === 0 ? (
+        ) : vocabularyGroups.length === 0 ? (
           <EmptyState
             icon={FileText}
             title="No tests assigned yet"
@@ -183,47 +261,116 @@ export default function StudentDashboardPage() {
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {assignments.map((assignment) => (
-              <Card key={assignment.id} className="hover:bg-muted/50 transition-colors">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">
-                        {assignment.test?.name}
-                      </CardTitle>
-                      <CardDescription className="truncate">
-                        {assignment.test?.sheet?.originalName || 'Vocabulary Test'}
-                      </CardDescription>
+            {vocabularyGroups.map((group) => {
+              const isExpanded = expandedGroups.has(group.sheetId);
+              const nextTest = group.assignments.find((assignment) =>
+                !group.attempts.some((attempt) => attempt.testId === assignment.testId)
+              );
+
+              return (
+                <Card key={group.sheetId} className="hover:bg-muted/50 transition-colors">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg truncate">
+                          {group.sheetName}
+                        </CardTitle>
+                        <CardDescription className="truncate">
+                          {group.originalName}
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="flex-shrink-0">
+                        {group.total} variant{group.total !== 1 ? 's' : ''}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="flex-shrink-0">
-                      {assignment.test?.variant}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Questions</span>
-                    <span className="font-medium">
-                      {assignment.test?._count?.questions || 0}
-                    </span>
-                  </div>
-                  {assignment.dueDate && (
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Progress */}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Due Date</span>
+                      <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium">
-                        {formatRelativeDate(assignment.dueDate)}
+                        {group.completed} / {group.total} completed
                       </span>
                     </div>
-                  )}
-                  <Link href={`/student-dashboard/tests/${assignment.testId}`}>
-                    <Button className="w-full gap-2">
-                      <ClipboardCheck className="h-4 w-4" />
-                      Start Test
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+
+                    {/* Statistics */}
+                    {group.bestScore !== null && (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Best Score</span>
+                          <Badge variant={getScoreBadgeVariant(group.bestScore)}>
+                            {group.bestScore}%
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Avg Score</span>
+                          <Badge variant={getScoreBadgeVariant(group.avgScore || 0)}>
+                            {group.avgScore}%
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="space-y-2">
+                      {nextTest ? (
+                        <Link href={`/student-dashboard/tests/${nextTest.testId}`}>
+                          <Button className="w-full gap-2">
+                            <ClipboardCheck className="h-4 w-4" />
+                            {group.completed > 0 ? 'Continue Practice' : 'Start First Test'}
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button className="w-full" disabled>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          All Variants Completed
+                        </Button>
+                      )}
+
+                      {group.total > 1 && (
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2"
+                          onClick={() => toggleGroup(group.sheetId)}
+                        >
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          {isExpanded ? 'Hide' : 'Show'} All Variants
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Expanded Variant List */}
+                    {isExpanded && (
+                      <div className="pt-2 border-t space-y-2">
+                        {group.assignments.map((assignment) => {
+                          const attempt = group.attempts.find((a) => a.testId === assignment.testId);
+                          return (
+                            <div
+                              key={assignment.id}
+                              className="flex items-center justify-between text-sm p-2 rounded border"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{assignment.test?.variant}</span>
+                                {attempt && (
+                                  <Badge variant={getScoreBadgeVariant(attempt.score || 0)} className="text-xs">
+                                    {attempt.score}%
+                                  </Badge>
+                                )}
+                              </div>
+                              <Link href={`/student-dashboard/tests/${assignment.testId}`}>
+                                <Button size="sm" variant="ghost">
+                                  {attempt ? 'Retake' : 'Start'}
+                                </Button>
+                              </Link>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
