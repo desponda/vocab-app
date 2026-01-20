@@ -3,6 +3,7 @@ import sharp from 'sharp';
 import pino from 'pino';
 import { z } from 'zod';
 import { config } from './config';
+import convert from 'heic-convert';
 
 // Create standalone logger matching Fastify configuration
 const logger = pino({
@@ -126,7 +127,25 @@ async function ensureSupportedFormat(
     return { buffer, mimeType };
   }
 
-  // Convert to PNG if not in supported format (includes HEIC/HEIF)
+  // Special handling for HEIC/HEIF - convert to JPEG first using heic-convert
+  // (Sharp doesn't support HEIC due to patent licensing)
+  if (mimeType === 'image/heic' || mimeType === 'image/heif') {
+    try {
+      logger.info('Converting HEIC/HEIF to JPEG');
+      const outputBuffer = await convert({
+        buffer,
+        format: 'JPEG',
+        quality: 0.9, // High quality to preserve text clarity
+      });
+      return { buffer: outputBuffer as Buffer, mimeType: 'image/jpeg' };
+    } catch (error) {
+      throw new Error(
+        `Failed to convert HEIC/HEIF image. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // Convert other unsupported formats to PNG
   try {
     const convertedBuffer = await sharp(buffer).png().toBuffer();
     return { buffer: convertedBuffer, mimeType: 'image/png' };
