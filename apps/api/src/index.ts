@@ -59,6 +59,10 @@ app.register(helmet, {
 app.register(rateLimit, {
   max: 100, // Maximum 100 requests
   timeWindow: '15 minutes', // Per 15 minute window
+  // Exempt health check endpoints from rate limiting (Kubernetes probes check frequently)
+  allowList: (request) => {
+    return request.url.startsWith('/api/health');
+  },
   errorResponseBuilder: (request, context) => {
     const retryAfter = typeof context.after === 'string' ? context.after : Math.ceil((context.after as number) / 1000);
     return {
