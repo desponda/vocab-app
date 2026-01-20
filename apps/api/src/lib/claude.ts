@@ -137,7 +137,9 @@ async function ensureSupportedFormat(
         format: 'JPEG',
         quality: 0.9, // High quality to preserve text clarity
       });
-      return { buffer: outputBuffer as Buffer, mimeType: 'image/jpeg' };
+      const jpegBuffer = Buffer.from(outputBuffer as ArrayBuffer);
+      logger.info({ sizeMB: (jpegBuffer.length / 1024 / 1024).toFixed(2) }, 'HEIC converted to JPEG');
+      return { buffer: jpegBuffer, mimeType: 'image/jpeg' };
     } catch (error) {
       throw new Error(
         `Failed to convert HEIC/HEIF image. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -321,6 +323,15 @@ export async function extractVocabulary(
     processedMimeType = 'image/png';
   }
 
+  // Convert HEIC/HEIF FIRST (before Sharp operations)
+  // Sharp can't read HEIC files, so we must convert them before rotation/compression
+  if (processedMimeType === 'image/heic' || processedMimeType === 'image/heif') {
+    logger.info('Converting HEIC/HEIF to JPEG before processing');
+    const converted = await ensureSupportedFormat(processedBuffer, processedMimeType);
+    processedBuffer = converted.buffer;
+    processedMimeType = converted.mimeType;
+  }
+
   // Fix image orientation (auto-rotate based on EXIF metadata)
   // This is critical for text recognition - sideways images confuse the AI
   logger.info('Checking image orientation and applying EXIF corrections');
@@ -329,7 +340,7 @@ export async function extractVocabulary(
     .toBuffer();
   logger.info('Image orientation corrected');
 
-  // Ensure image is in supported format
+  // Ensure image is in supported format (for non-HEIC files)
   const { buffer: formattedBuffer, mimeType: formattedMimeType } = await ensureSupportedFormat(
     processedBuffer,
     processedMimeType

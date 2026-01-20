@@ -42,12 +42,23 @@ RUN cd apps/api && pnpm prisma generate
 RUN pnpm --filter=@vocab-app/api build
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 
-# Install pnpm (needed for Prisma)
-RUN corepack enable && corepack prepare pnpm@8.15.1 --activate
+# Install pnpm and HEIC dependencies
+RUN corepack enable && corepack prepare pnpm@8.15.1 --activate && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      libheif1 \
+      libheif-dev \
+      libde265-0 \
+      libde265-dev \
+      libaom3 \
+      libaom-dev \
+      x265 \
+      libx265-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
