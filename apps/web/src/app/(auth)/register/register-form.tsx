@@ -235,6 +235,26 @@ export default function RegisterForm() {
             {isLoading ? 'Creating account...' : 'Create account'}
           </Button>
 
+          <p className="text-center text-xs text-muted-foreground">
+            By creating an account, you agree to our{' '}
+            <Link
+              href="/terms"
+              className="underline underline-offset-4 hover:text-foreground"
+              target="_blank"
+            >
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link
+              href="/privacy"
+              className="underline underline-offset-4 hover:text-foreground"
+              target="_blank"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
+
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link
