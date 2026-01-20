@@ -161,7 +161,7 @@ export function Step1TypeSelection() {
                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                   <li>• Clear photos with good lighting work best</li>
                   <li>• Include definitions for vocabulary tests</li>
-                  <li>• Use "Use all words" for fastest spelling tests</li>
+                  <li>• Use &quot;Use all words&quot; for fastest spelling tests</li>
                 </ul>
               </div>
             </div>
