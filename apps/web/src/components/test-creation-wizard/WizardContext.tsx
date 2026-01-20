@@ -21,21 +21,62 @@ export function WizardProvider({ children, onComplete }: WizardProviderProps) {
   const [state, setState] = useState<WizardState>(INITIAL_WIZARD_STATE);
 
   const updateState = useCallback((updates: Partial<WizardState>) => {
-    setState(prev => ({ ...prev, ...updates }));
+    setState(prev => {
+      // Only update if values actually changed
+      const hasChanges = Object.keys(updates).some(
+        key => {
+          const prevValue = prev[key as keyof WizardState];
+          const newValue = updates[key as keyof WizardState];
+          // Handle Set comparison for visitedSteps
+          if (prevValue instanceof Set && newValue instanceof Set) {
+            return prevValue.size !== newValue.size || ![...prevValue].every(v => newValue.has(v));
+          }
+          return prevValue !== newValue;
+        }
+      );
+
+      if (!hasChanges) {
+        return prev; // Return same state to prevent re-render
+      }
+
+      return { ...prev, ...updates };
+    });
   }, []);
 
   const updateConfig = useCallback((updates: Partial<WizardConfig>) => {
-    setState(prev => ({
-      ...prev,
-      config: { ...prev.config, ...updates },
-    }));
+    setState(prev => {
+      // Only update if values actually changed
+      const hasChanges = Object.keys(updates).some(
+        key => prev.config[key as keyof WizardConfig] !== updates[key as keyof WizardConfig]
+      );
+
+      if (!hasChanges) {
+        return prev; // Return same state to prevent re-render
+      }
+
+      return {
+        ...prev,
+        config: { ...prev.config, ...updates },
+      };
+    });
   }, []);
 
   const updateProcessing = useCallback((updates: Partial<ProcessingStatus>) => {
-    setState(prev => ({
-      ...prev,
-      processing: { ...prev.processing, ...updates },
-    }));
+    setState(prev => {
+      // Only update if values actually changed
+      const hasChanges = Object.keys(updates).some(
+        key => prev.processing[key as keyof ProcessingStatus] !== updates[key as keyof ProcessingStatus]
+      );
+
+      if (!hasChanges) {
+        return prev; // Return same state to prevent re-render
+      }
+
+      return {
+        ...prev,
+        processing: { ...prev.processing, ...updates },
+      };
+    });
   }, []);
 
   const goToStep = useCallback((step: number) => {

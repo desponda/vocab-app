@@ -30,6 +30,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
   const { stage, progress, message, sheetId, error, upload, reset } = useTestUpload();
 
   // Sync upload hook state to wizard context
+  // Only update if values actually changed to prevent infinite re-renders
   useEffect(() => {
     updateProcessing({
       stage,
