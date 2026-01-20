@@ -695,25 +695,31 @@ export const testRoutes = async (app: FastifyInstance) => {
   });
 
   // Get student's test attempts history (for review)
+  // Accessible by: student viewing own data OR teacher viewing student in their classroom
   app.get('/students/:studentId/attempts', async (request: FastifyRequest, reply) => {
     const studentId = (request.params as any).studentId;
 
-    // Verify student is enrolled in one of the teacher's classrooms
-    const student = await prisma.student.findFirst({
-      where: {
-        id: studentId,
-        enrollments: {
-          some: {
-            classroom: {
-              teacherId: request.userId,
+    // Check if user is the student themselves OR a teacher who has this student
+    const isOwnStudent = studentId === request.userId;
+
+    if (!isOwnStudent) {
+      // If not the student, verify student is enrolled in one of the teacher's classrooms
+      const student = await prisma.student.findFirst({
+        where: {
+          id: studentId,
+          enrollments: {
+            some: {
+              classroom: {
+                teacherId: request.userId,
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    if (!student) {
-      return reply.code(404).send({ error: 'Student not found or not in your classrooms' });
+      if (!student) {
+        return reply.code(404).send({ error: 'Student not found or not in your classrooms' });
+      }
     }
 
     const attempts = await prisma.testAttempt.findMany({
