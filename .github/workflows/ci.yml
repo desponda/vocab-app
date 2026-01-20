@@ -294,17 +294,90 @@ jobs:
           JWT_REFRESH_SECRET: test_refresh_secret
           NODE_ENV: test
 
+  # Health endpoint validation
+  health-check-validation:
+    name: Validate Health Endpoints
+    runs-on: ubuntu-latest
+    needs: [setup, changes, typecheck]
+    if: needs.changes.outputs.api == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build test API image
+        run: docker build -f docker/api.Dockerfile -t test-api:latest .
+
+      - name: Start test container
+        run: |
+          docker run -d --name test-api \
+            -e DATABASE_URL="postgresql://test:test@localhost:5432/test" \
+            -e REDIS_URL="redis://localhost:6379" \
+            -e JWT_ACCESS_SECRET="test-secret" \
+            -e JWT_REFRESH_SECRET="test-secret" \
+            -e ANTHROPIC_API_KEY="test-key" \
+            -e MINIO_ENDPOINT="localhost" \
+            -e MINIO_PORT="9000" \
+            -e MINIO_USE_SSL="false" \
+            -e MINIO_ACCESS_KEY="test" \
+            -e MINIO_SECRET_KEY="test" \
+            -e MINIO_BUCKET_NAME="test" \
+            -p 3001:3001 \
+            test-api:latest
+          sleep 10
+
+      - name: Test health endpoints
+        run: |
+          LIVENESS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)
+          if [ "$LIVENESS" != "200" ]; then
+            echo "❌ Liveness endpoint failed: $LIVENESS"
+            docker logs test-api
+            exit 1
+          fi
+          echo "✓ Liveness endpoint OK"
+
+          READINESS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health/ready)
+          if [ "$READINESS" != "200" ] && [ "$READINESS" != "503" ]; then
+            echo "❌ Readiness endpoint failed: $READINESS"
+            docker logs test-api
+            exit 1
+          fi
+          echo "✓ Readiness endpoint OK (status: $READINESS)"
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f test-api || true
+
+  # Pre-deployment validation
+  pre-deploy-validation:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [setup, changes]
+    if: needs.changes.outputs.any == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.12.0'
+
+      - name: Run pre-deployment validation
+        run: ./scripts/pre-deploy-validate.sh
+
   # Combined build job that only runs if all checks pass
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [setup, changes, lint, typecheck, test]
+    needs: [setup, changes, lint, typecheck, test, health-check-validation, pre-deploy-validation]
     if: |
       always() &&
       needs.changes.outputs.any == 'true' &&
       needs.lint.result == 'success' &&
       needs.typecheck.result == 'success' &&
-      needs.test.result == 'success'
+      needs.test.result == 'success' &&
+      (needs.health-check-validation.result == 'success' || needs.health-check-validation.result == 'skipped') &&
+      needs.pre-deploy-validation.result == 'success'
     steps:
       - uses: actions/checkout@v4
 

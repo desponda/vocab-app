@@ -4,8 +4,16 @@ metadata:
   name: {{ include "vocab-app.fullname" . }}-web
   labels:
     app: web
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   replicas: {{ .Values.web.replicaCount }}
+  progressDeadlineSeconds: 600
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: web

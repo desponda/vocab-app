@@ -5,6 +5,8 @@ metadata:
   name: {{ include "vocab-app.fullname" . }}-postgres
   labels:
     app: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   serviceName: {{ include "vocab-app.fullname" . }}-postgres
   replicas: 1
