@@ -126,19 +126,15 @@ async function ensureSupportedFormat(
     return { buffer, mimeType };
   }
 
-  // Convert to PNG if not in supported format
+  // Convert to PNG if not in supported format (includes HEIC/HEIF)
   try {
     const convertedBuffer = await sharp(buffer).png().toBuffer();
     return { buffer: convertedBuffer, mimeType: 'image/png' };
   } catch (error) {
-    // HEIC/HEIF conversion requires libheif - provide helpful error
-    if (mimeType === 'image/heic' || mimeType === 'image/heif') {
-      throw new Error(
-        'HEIC/HEIF format not supported. Please convert your iPhone photo to JPG before uploading. ' +
-        'On iPhone: Open Photos → Select image → Share → Save as File → Change format to JPEG'
-      );
-    }
-    throw new Error(`Unsupported image format: ${mimeType}. Please use JPG, PNG, GIF, WebP, or PDF`);
+    throw new Error(
+      `Failed to convert image format: ${mimeType}. ` +
+      `Supported formats: JPG, PNG, GIF, WebP, HEIC, PDF. Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -170,14 +166,10 @@ async function compressImageIfNeeded(
     image = sharp(buffer);
     metadata = await image.metadata();
   } catch (error) {
-    // HEIC format requires libheif library
-    if (mimeType === 'image/heic' || mimeType === 'image/heif') {
-      throw new Error(
-        'HEIC format requires additional libraries. Please convert to JPG first. ' +
-        'iPhone users: Open Photos → Select → Share → Save as File → Change to JPEG'
-      );
-    }
-    throw error;
+    throw new Error(
+      `Failed to process image for compression. ` +
+      `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 
   let width = metadata.width;

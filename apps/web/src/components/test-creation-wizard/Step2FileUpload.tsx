@@ -21,7 +21,7 @@ import { toast } from '@/lib/toast';
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 const ACCEPTED_FILE_TYPES = {
-  'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+  'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.heif'],
   'application/pdf': ['.pdf'],
 };
 
@@ -99,7 +99,7 @@ export function Step2FileUpload() {
       if (rejection.errors[0]?.code === 'file-too-large') {
         toast.error('File too large', `Maximum file size is ${formatFileSize(MAX_FILE_SIZE)}`);
       } else if (rejection.errors[0]?.code === 'file-invalid-type') {
-        toast.error('Invalid file type', 'Supported: PNG, JPG, GIF, WebP, PDF. iPhone users: convert HEIC to JPG first');
+        toast.error('Invalid file type', 'Supported: PNG, JPG, GIF, WebP, HEIC, PDF');
       } else {
         toast.error('Upload failed', 'Please try a different file');
       }
@@ -171,7 +171,7 @@ export function Step2FileUpload() {
             </div>
 
             <div className="text-xs text-muted-foreground">
-              Images (PNG, JPG, GIF, WebP) or PDF • Max {formatFileSize(MAX_FILE_SIZE)}
+              Images (PNG, JPG, GIF, WebP, HEIC) or PDF • Max {formatFileSize(MAX_FILE_SIZE)}
             </div>
           </div>
         </Card>

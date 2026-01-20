@@ -47,6 +47,7 @@ const FILE_SIGNATURES: FileSignature[] = [
   { mimeType: 'image/png', signature: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
   { mimeType: 'image/gif', signature: [0x47, 0x49, 0x46, 0x38] }, // GIF8
   { mimeType: 'image/webp', signature: [0x52, 0x49, 0x46, 0x46], offset: 0 }, // RIFF (WebP has more bytes after)
+  { mimeType: 'image/heic', signature: [0x66, 0x74, 0x79, 0x70], offset: 4 }, // ftyp at offset 4 (HEIC/HEIF)
 ];
 
 /**
@@ -71,9 +72,22 @@ function validateFileType(buffer: Buffer): { mimeType: string; isValid: boolean 
     return { mimeType: 'image/webp', isValid: true };
   }
 
+  // Check for HEIC/HEIF (ftyp at offset 4, then brand identifier at offset 8)
+  // Common brand identifiers: heic, heix, hevc, hevx, mif1, msf1
+  if (matchesSignature(buffer, [0x66, 0x74, 0x79, 0x70], 4)) {
+    const brand = buffer.toString('utf8', 8, 12);
+    if (brand.startsWith('heic') || brand.startsWith('heix') ||
+        brand.startsWith('hevc') || brand.startsWith('hevx') ||
+        brand.startsWith('mif1') || brand.startsWith('msf1')) {
+      return { mimeType: 'image/heic', isValid: true };
+    }
+  }
+
   // Check other file signatures
   for (const sig of FILE_SIGNATURES) {
-    if (sig.mimeType === 'image/webp') continue; // Already checked above
+    if (sig.mimeType === 'image/webp' || sig.mimeType === 'image/heic') {
+      continue; // Already checked above
+    }
 
     if (matchesSignature(buffer, sig.signature, sig.offset || 0)) {
       return { mimeType: sig.mimeType, isValid: true };
@@ -131,7 +145,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
 
     if (!isValid) {
       return reply.code(400).send({
-        error: `Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP. iPhone users: convert HEIC to JPG first.`,
+        error: `Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP, HEIC`,
       });
     }
 

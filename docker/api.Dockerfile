@@ -49,6 +49,15 @@ WORKDIR /app
 # Install pnpm (needed for Prisma)
 RUN corepack enable && corepack prepare pnpm@8.15.1 --activate
 
+# Install image processing libraries for HEIC/HEIF support (iPhone photos)
+# libheif: Core HEIC/HEIF format support
+# libde265: H.265 decoder (required by libheif)
+# vips: Image processing library (ensures HEIC loader is available to sharp)
+RUN apk add --no-cache \
+    vips \
+    libheif \
+    libde265
+
 # Copy package files
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
