@@ -211,14 +211,7 @@ export function Step2FileUpload() {
         </Card>
       )}
 
-      <div className="rounded-lg bg-muted/50 p-3">
-        <p className="text-sm font-medium mb-2">Good examples:</p>
-        <p className="text-sm text-muted-foreground">
-          {guidance?.examples.join(' • ')}
-        </p>
-      </div>
-
-      <div className="flex justify-center pt-2">
+      <div className="flex justify-center pt-4">
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
@@ -234,90 +227,21 @@ export function Step2FileUpload() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 pt-4">
+            <div className="space-y-4 pt-4">
               <div>
-                <h4 className="font-semibold mb-2">Good examples:</h4>
-                <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
-                  {guidance?.examples.map((example, index) => (
-                    <li key={index}>{example}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">Tips for best results:</h4>
-                <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
-                  {guidance?.tips.map((tip, index) => (
-                    <li key={index}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2 text-amber-900 dark:text-amber-100">Image Quality Tips:</h4>
-                <ul className="space-y-1 list-disc list-inside text-sm text-amber-800 dark:text-amber-200">
-                  <li>Use good lighting - avoid shadows and glare</li>
-                  <li>Keep camera steady - avoid blurry photos</li>
-                  <li>Fill the frame - get close to the content</li>
-                  <li>Straighten the image - avoid tilted angles</li>
-                  <li>Higher resolution is better (but under {formatFileSize(MAX_FILE_SIZE)})</li>
-                </ul>
-              </div>
-
-              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">File Size Limit:</h4>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Maximum file size is {formatFileSize(MAX_FILE_SIZE)}. Files are automatically compressed before processing, so don&apos;t worry about exact size - just keep it under the limit.
+                <h4 className="font-semibold mb-2 text-sm">Good to upload:</h4>
+                <p className="text-sm text-muted-foreground">
+                  {guidance?.examples.join(' • ')}
                 </p>
               </div>
 
-              {/* Troubleshooting Section */}
-              <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg space-y-3">
-                <h4 className="font-semibold text-amber-900 dark:text-amber-100">🔧 Troubleshooting Common Issues</h4>
-
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: AI can&apos;t extract any words</p>
-                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
-                      <li>Check if text is readable in the image</li>
-                      <li>Try taking a new photo with better lighting</li>
-                      <li>Avoid shadows, glare, and reflections</li>
-                      <li>Make sure image is not rotated or upside down</li>
-                      <li>For handwriting: use clear, legible writing</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: File is too large</p>
-                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
-                      <li>Take a screenshot instead of uploading the full image</li>
-                      <li>Crop the image to show only the vocabulary content</li>
-                      <li>Reduce image resolution (we&apos;ll compress it anyway)</li>
-                      <li>Convert to JPG format which is smaller than PNG</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: Poor quality results</p>
-                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
-                      <li>Use higher resolution images (but under {formatFileSize(MAX_FILE_SIZE)})</li>
-                      <li>Ensure good contrast between text and background</li>
-                      <li>Avoid blurry or out-of-focus images</li>
-                      <li>Take photo straight-on, not at an angle</li>
-                      <li>For best results: use PDF or high-quality scans</li>
-                    </ul>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Problem: Processing takes too long</p>
-                    <ul className="text-sm text-amber-800 dark:text-amber-200 list-disc list-inside ml-2 mt-1">
-                      <li>Reduce number of test variants (3 is fastest)</li>
-                      <li>Disable preview generation in advanced options</li>
-                      <li>For spelling tests: use &quot;Use all words&quot; mode</li>
-                      <li>Processing typically takes 2-3 minutes for 3 variants</li>
-                    </ul>
-                  </div>
-                </div>
+              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">💡 Quick Tips</p>
+                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                  <li>• Use clear, well-lit photos</li>
+                  <li>• PDFs and high-resolution images work best</li>
+                  <li>• Max size: {formatFileSize(MAX_FILE_SIZE)}</li>
+                </ul>
               </div>
             </div>
           </DialogContent>

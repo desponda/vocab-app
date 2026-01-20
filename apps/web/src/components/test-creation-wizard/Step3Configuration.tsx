@@ -129,9 +129,6 @@ export function Step3Configuration() {
           {errors.name && (
             <p className="text-sm text-destructive">{errors.name.message}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            This name will be visible to students when they take the test
-          </p>
         </div>
 
         {/* Grade Level */}
@@ -143,11 +140,8 @@ export function Step3Configuration() {
                 <TooltipTrigger asChild>
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p>
-                    Adjusts question complexity and phrasing to be age-appropriate.
-                    This doesn&apos;t affect which words are included, just how questions are worded.
-                  </p>
+                <TooltipContent>
+                  <p>Adjusts question difficulty for age-appropriate language</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -167,9 +161,6 @@ export function Step3Configuration() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            Leave empty for general audience
-          </p>
         </div>
 
         {/* Number of Variants */}
@@ -181,11 +172,8 @@ export function Step3Configuration() {
                 <TooltipTrigger asChild>
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p>
-                    Creates different versions of the same test with questions in different orders.
-                    Useful for preventing cheating when students sit near each other.
-                  </p>
+                <TooltipContent>
+                  <p>Different versions prevent cheating</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -258,7 +246,7 @@ export function Step3Configuration() {
                       Use all words from file
                     </label>
                     <p className="text-xs text-muted-foreground">
-                      Skip AI extraction and use every line as a spelling word. Best for simple word lists without definitions.
+                      Skip AI extraction (faster processing)
                     </p>
                   </div>
                 </div>

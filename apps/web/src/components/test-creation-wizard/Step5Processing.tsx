@@ -168,10 +168,8 @@ export function Step5Processing() {
             <div className="text-sm text-muted-foreground">
               <p className="font-medium mb-2">Possible solutions:</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Check that your image is clear and readable</li>
-                <li>Ensure the file contains the expected content type</li>
-                <li>Try uploading a different file format (PDF or image)</li>
-                <li>Reduce file size if it&apos;s very large</li>
+                <li>Ensure image is clear with readable text</li>
+                <li>Try a different file format or reduce file size</li>
               </ul>
             </div>
             <div className="flex gap-2">
@@ -204,14 +202,6 @@ export function Step5Processing() {
       )}
 
       {/* Processing info */}
-      {isProcessing && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-          <p className="text-sm text-blue-900 dark:text-blue-100">
-            <strong>Processing in background:</strong> You can close this wizard and the processing
-            will continue. You&apos;ll be notified when your tests are ready.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

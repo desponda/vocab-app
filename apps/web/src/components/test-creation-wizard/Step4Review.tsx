@@ -53,12 +53,7 @@ export function Step4Review() {
 
   return (
     <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
-      <div className="space-y-1 sm:space-y-2">
-        <h3 className="text-lg sm:text-xl font-semibold">Review & Confirm</h3>
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Please review your selections before creating the test
-        </p>
-      </div>
+      <h3 className="text-lg sm:text-xl font-semibold">Review & Confirm</h3>
 
       <div className="space-y-3 sm:space-y-4">
         {/* Test Type */}
@@ -177,7 +172,7 @@ export function Step4Review() {
           </Badge>
         </div>
         <p className="text-xs text-muted-foreground text-center -mt-2">
-          Background processing - you can continue working
+          You can close this and continue working
         </p>
       </div>
     </div>
