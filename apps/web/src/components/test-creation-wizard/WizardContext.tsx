@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import {
   WizardState,
   WizardContextValue,
@@ -71,7 +71,7 @@ export function WizardProvider({ children, onComplete }: WizardProviderProps) {
   }, []);
 
   // Validation logic - can we proceed from current step?
-  const canProceed = (() => {
+  const canProceed = useMemo(() => {
     switch (state.currentStep) {
       case 1: // Test Type Selection
         return state.testType !== null;
@@ -91,19 +91,22 @@ export function WizardProvider({ children, onComplete }: WizardProviderProps) {
       default:
         return false;
     }
-  })();
+  }, [state.currentStep, state.testType, state.file, state.config.name]);
 
-  const value: WizardContextValue = {
-    state,
-    updateState,
-    updateConfig,
-    updateProcessing,
-    goToStep,
-    nextStep,
-    previousStep,
-    resetWizard,
-    canProceed,
-  };
+  const value: WizardContextValue = useMemo(
+    () => ({
+      state,
+      updateState,
+      updateConfig,
+      updateProcessing,
+      goToStep,
+      nextStep,
+      previousStep,
+      resetWizard,
+      canProceed,
+    }),
+    [state, updateState, updateConfig, updateProcessing, goToStep, nextStep, previousStep, resetWizard, canProceed]
+  );
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;
 }
