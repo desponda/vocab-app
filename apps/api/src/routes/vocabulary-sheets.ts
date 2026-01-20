@@ -47,6 +47,8 @@ const FILE_SIGNATURES: FileSignature[] = [
   { mimeType: 'image/png', signature: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
   { mimeType: 'image/gif', signature: [0x47, 0x49, 0x46, 0x38] }, // GIF8
   { mimeType: 'image/webp', signature: [0x52, 0x49, 0x46, 0x46], offset: 0 }, // RIFF (WebP has more bytes after)
+  { mimeType: 'image/heic', signature: [0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63], offset: 4 }, // ftypheic at offset 4
+  { mimeType: 'image/heif', signature: [0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x66], offset: 4 }, // ftypheif at offset 4
 ];
 
 /**
@@ -131,7 +133,7 @@ export const vocabularySheetRoutes = async (app: FastifyInstance) => {
 
     if (!isValid) {
       return reply.code(400).send({
-        error: `Invalid file type. Allowed types: PDF, JPEG, PNG, GIF, WebP`,
+        error: `Invalid file type. Allowed: PDF, JPEG, PNG, GIF, WebP, HEIC`,
       });
     }
 

@@ -21,7 +21,7 @@ import { toast } from '@/lib/toast';
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 const ACCEPTED_FILE_TYPES = {
-  'image/*': ['.png', '.jpg', '.jpeg', '.webp'],
+  'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.heif'],
   'application/pdf': ['.pdf'],
 };
 
@@ -99,7 +99,7 @@ export function Step2FileUpload() {
       if (rejection.errors[0]?.code === 'file-too-large') {
         toast.error('File too large', `Maximum file size is ${formatFileSize(MAX_FILE_SIZE)}`);
       } else if (rejection.errors[0]?.code === 'file-invalid-type') {
-        toast.error('Invalid file type', 'Please upload an image (PNG, JPG, WEBP) or PDF file');
+        toast.error('Invalid file type', 'Supported: Images (PNG, JPG, GIF, WebP, HEIC) or PDF');
       } else {
         toast.error('Upload failed', 'Please try a different file');
       }
@@ -170,14 +170,8 @@ export function Step2FileUpload() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <FileImage className="h-4 w-4" />
-              <span>PNG, JPG, WEBP</span>
-              <span>•</span>
-              <FileText className="h-4 w-4" />
-              <span>PDF</span>
-              <span>•</span>
-              <span>Max {formatFileSize(MAX_FILE_SIZE)}</span>
+            <div className="text-xs text-muted-foreground">
+              Images (PNG, JPG, GIF, WebP, HEIC) or PDF • Max {formatFileSize(MAX_FILE_SIZE)}
             </div>
           </div>
         </Card>
@@ -217,13 +211,11 @@ export function Step2FileUpload() {
         </Card>
       )}
 
-      <div className="space-y-3 rounded-lg bg-muted/50 p-4">
-        <p className="text-sm font-medium">What to upload:</p>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          {guidance?.examples.map((example, index) => (
-            <li key={index}>{example}</li>
-          ))}
-        </ul>
+      <div className="rounded-lg bg-muted/50 p-3">
+        <p className="text-sm font-medium mb-2">Good examples:</p>
+        <p className="text-sm text-muted-foreground">
+          {guidance?.examples.join(' • ')}
+        </p>
       </div>
 
       <div className="flex justify-center pt-2">
