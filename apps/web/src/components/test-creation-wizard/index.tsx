@@ -27,25 +27,25 @@ interface TestCreationWizardProps {
 function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTestCreated?: (sheetId: string) => void }) {
   const { state, resetWizard, nextStep, updateProcessing } = useWizard();
   const { currentStep, testType, file, config } = state;
-  const uploadHook = useTestUpload();
+  const { stage, progress, message, sheetId, error, upload, reset } = useTestUpload();
 
   // Sync upload hook state to wizard context
   useEffect(() => {
     updateProcessing({
-      stage: uploadHook.stage,
-      progress: uploadHook.progress,
-      message: uploadHook.message,
-      sheetId: uploadHook.sheetId,
-      error: uploadHook.error,
+      stage,
+      progress,
+      message,
+      sheetId,
+      error,
     });
-  }, [uploadHook.stage, uploadHook.progress, uploadHook.message, uploadHook.sheetId, uploadHook.error, updateProcessing]);
+  }, [stage, progress, message, sheetId, error, updateProcessing]);
 
   // Call onTestCreated when processing completes
   useEffect(() => {
-    if (uploadHook.stage === 'complete' && uploadHook.sheetId && onTestCreated) {
-      onTestCreated(uploadHook.sheetId);
+    if (stage === 'complete' && sheetId && onTestCreated) {
+      onTestCreated(sheetId);
     }
-  }, [uploadHook.stage, uploadHook.sheetId, onTestCreated]);
+  }, [stage, sheetId, onTestCreated]);
 
   // Handle "Create Test" button click on Step 4
   const handleCreateTest = useCallback(async () => {
@@ -57,7 +57,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
     nextStep();
 
     // Start upload
-    await uploadHook.upload({
+    await upload({
       file,
       name: config.name,
       testType,
@@ -66,7 +66,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
       useAllWords: config.useAllWords,
       generatePreview: config.generatePreview,
     });
-  }, [testType, file, config, nextStep, uploadHook]);
+  }, [testType, file, config, nextStep, upload]);
 
   // Handle "Next" button - on step 4 this becomes "Create Test"
   const handleNext = useCallback(() => {
@@ -79,16 +79,16 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
 
   // Handle dialog close with confirmation if needed
   const handleClose = useCallback(() => {
-    if (uploadHook.stage === 'uploading') {
+    if (stage === 'uploading') {
       if (confirm('Upload in progress. Cancel upload?')) {
-        uploadHook.reset();
+        reset();
         resetWizard();
         onClose();
       }
       return;
     }
 
-    if (uploadHook.stage === 'extracting' || uploadHook.stage === 'generating') {
+    if (stage === 'extracting' || stage === 'generating') {
       if (confirm('Processing will continue in background. Close wizard?')) {
         onClose();
       }
@@ -96,15 +96,15 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
     }
 
     // Safe to close in other stages
-    uploadHook.reset();
+    reset();
     resetWizard();
     onClose();
-  }, [uploadHook.stage, uploadHook.reset, resetWizard, onClose]);
+  }, [stage, reset, resetWizard, onClose]);
 
   // Browser-level protection during upload
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (uploadHook.stage === 'uploading') {
+      if (stage === 'uploading') {
         e.preventDefault();
         e.returnValue = 'Upload in progress. Leave page?';
       }
@@ -112,7 +112,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [uploadHook.stage]);
+  }, [stage]);
 
   const renderStep = () => {
     switch (currentStep) {
