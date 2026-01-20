@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// Force rebuild: 2026-01-20T20:16:00Z
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export class ApiError extends Error {
