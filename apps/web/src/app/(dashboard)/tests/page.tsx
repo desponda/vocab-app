@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { vocabularySheetsApi, classroomsApi, VocabularySheet, Classroom, ProcessingStatus } from '@/lib/api';
 import {
@@ -118,6 +118,17 @@ export default function VocabularyPage() {
     // The toast in AssignSheetDialog already handles user feedback
   };
 
+  // Memoized callback for when test is created to prevent infinite loop
+  const handleTestCreated = useCallback(() => {
+    // Refresh sheets list after test is created
+    if (accessToken) {
+      vocabularySheetsApi.list(accessToken).then((data) => {
+        setSheets(data.sheets);
+      });
+    }
+    setIsWizardOpen(false);
+  }, [accessToken]);
+
   // Filter sheets based on status and test type
   const filteredSheets = useMemo(() => {
     let filtered = sheets;
@@ -163,15 +174,7 @@ export default function VocabularyPage() {
       <TestCreationWizard
         open={isWizardOpen}
         onOpenChange={setIsWizardOpen}
-        onTestCreated={() => {
-          // Refresh sheets list after test is created
-          if (accessToken) {
-            vocabularySheetsApi.list(accessToken).then((data) => {
-              setSheets(data.sheets);
-            });
-          }
-          setIsWizardOpen(false);
-        }}
+        onTestCreated={handleTestCreated}
       />
 
       {sheets.length === 0 ? (
