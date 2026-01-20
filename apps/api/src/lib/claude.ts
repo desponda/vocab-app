@@ -354,24 +354,37 @@ export async function extractVocabulary(
 
   const base64Image = finalBuffer.toString('base64');
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 4096,
-    messages: [
-      {
-        role: 'user',
-        content: [
+  // Retry logic for API calls (handles 529 overloaded errors)
+  const MAX_RETRIES = 3;
+  const INITIAL_DELAY = 2000; // 2 seconds
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = INITIAL_DELAY * Math.pow(2, attempt - 1); // Exponential backoff: 2s, 4s, 8s
+        logger.info({ attempt, delay }, 'Retrying Claude API call after overload error');
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 4096,
+        messages: [
           {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: finalMimeType as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp',
-              data: base64Image,
-            },
-          },
-          {
-            type: 'text',
-            text: SECURITY_PREAMBLE + (testType === 'SPELLING'
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: finalMimeType as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp',
+                  data: base64Image,
+                },
+              },
+              {
+                type: 'text',
+                text: SECURITY_PREAMBLE + (testType === 'SPELLING'
               ? `Analyze this spelling word list image.
 
 TASK: Extract ONLY spelling words (individual words without definitions).
@@ -431,78 +444,101 @@ Return ONLY valid JSON (no markdown code blocks, no explanation):
           },
         ],
       },
-    ],
-  });
+      ],
+    });
 
-  const textContent = response.content.find((c) => c.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text response from Claude');
-  }
-
-  // Parse JSON response (Claude might wrap it in markdown code blocks)
-  let jsonText = textContent.text.trim();
-
-  // Remove markdown code blocks if present
-  if (jsonText.startsWith('```')) {
-    jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-  }
-
-  // Validate JSON size to prevent DoS
-  if (jsonText.length > 100000) { // 100KB limit
-    logger.error({ length: jsonText.length }, 'Claude response too large');
-    throw new Error('Response too large. Please use a smaller image with fewer words.');
-  }
-
-  try {
-    const parsedResult = JSON.parse(jsonText);
-
-    // Validate with Zod schema (strict validation)
-    const result = ClaudeResponseSchema.parse(parsedResult);
-
-    // Sanitize all text content
-    result.vocabulary = result.vocabulary.map(item => ({
-      word: sanitizeText(item.word),
-      definition: sanitizeText(item.definition),
-      context: item.context ? sanitizeText(item.context) : undefined,
-    }));
-
-    result.spelling = result.spelling.map(word => sanitizeText(word));
-
-    // Check for suspicious content
-    const allTexts = [
-      ...result.vocabulary.map(v => `${v.word} ${v.definition} ${v.context || ''}`),
-      ...result.spelling,
-    ];
-
-    for (const text of allTexts) {
-      if (containsSuspiciousContent(text)) {
-        logger.warn({ text: text.substring(0, 100) }, 'Suspicious content detected in extraction');
-        throw new Error('Suspicious content detected. Please verify your image contains only educational content.');
+      const textContent = response.content.find((c) => c.type === 'text');
+      if (!textContent || textContent.type !== 'text') {
+        throw new Error('No text response from Claude');
       }
+
+      // Parse JSON response (Claude might wrap it in markdown code blocks)
+      let jsonText = textContent.text.trim();
+
+      // Remove markdown code blocks if present
+      if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+      }
+
+      // Validate JSON size to prevent DoS
+      if (jsonText.length > 100000) { // 100KB limit
+        logger.error({ length: jsonText.length }, 'Claude response too large');
+        throw new Error('Response too large. Please use a smaller image with fewer words.');
+      }
+
+      const parsedResult = JSON.parse(jsonText);
+
+      // Validate with Zod schema (strict validation)
+      const result = ClaudeResponseSchema.parse(parsedResult);
+
+      // Sanitize all text content
+      result.vocabulary = result.vocabulary.map(item => ({
+        word: sanitizeText(item.word),
+        definition: sanitizeText(item.definition),
+        context: item.context ? sanitizeText(item.context) : undefined,
+      }));
+
+      result.spelling = result.spelling.map(word => sanitizeText(word));
+
+      // Check for suspicious content
+      const allTexts = [
+        ...result.vocabulary.map(v => `${v.word} ${v.definition} ${v.context || ''}`),
+        ...result.spelling,
+      ];
+
+      for (const text of allTexts) {
+        if (containsSuspiciousContent(text)) {
+          logger.warn({ text: text.substring(0, 100) }, 'Suspicious content detected in extraction');
+          throw new Error('Suspicious content detected. Please verify your image contains only educational content.');
+        }
+      }
+
+      logger.info({
+        vocabularyCount: result.vocabulary.length,
+        spellingCount: result.spelling.length,
+      }, 'Successfully extracted and validated vocabulary');
+
+      // Include processed image so teacher can download what Claude saw
+      return {
+        ...result,
+        processedImage: {
+          buffer: finalBuffer,
+          mimeType: finalMimeType,
+        },
+      };
+    } catch (error) {
+      // Check if error is a 529 overloaded error
+      if (error instanceof Error &&
+          (error.message.includes('overloaded') || error.message.includes('529'))) {
+        lastError = error;
+        if (attempt < MAX_RETRIES) {
+          logger.warn({ attempt, error: error.message }, 'Claude API overloaded, will retry');
+          continue; // Retry
+        }
+        // Max retries exhausted
+        throw new Error(
+          'Claude API is currently experiencing high traffic. Please try again in a few minutes.'
+        );
+      }
+
+      // Check for parsing/validation errors (don't retry these)
+      if (error instanceof z.ZodError) {
+        logger.error({ errors: error.errors }, 'Claude response validation failed');
+        throw new Error('Invalid content format. Please ensure image contains valid vocabulary or spelling words.');
+      }
+
+      if (error instanceof SyntaxError) {
+        logger.error({ err: error }, 'Failed to parse Claude response as JSON');
+        throw new Error('Failed to parse vocabulary extraction result. Please try a clearer image.');
+      }
+
+      // Other errors - don't retry
+      throw error;
     }
-
-    logger.info({
-      vocabularyCount: result.vocabulary.length,
-      spellingCount: result.spelling.length,
-    }, 'Successfully extracted and validated vocabulary');
-
-    // Include processed image so teacher can download what Claude saw
-    return {
-      ...result,
-      processedImage: {
-        buffer: finalBuffer,
-        mimeType: finalMimeType,
-      },
-    };
-  } catch (parseError) {
-    if (parseError instanceof z.ZodError) {
-      logger.error({ errors: parseError.errors }, 'Claude response validation failed');
-      throw new Error('Invalid content format. Please ensure image contains valid vocabulary or spelling words.');
-    }
-
-    logger.error({ err: parseError, jsonText: jsonText.substring(0, 200) }, 'Failed to parse Claude response');
-    throw new Error(`Failed to parse vocabulary extraction result: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
+
+  // Should never reach here, but TypeScript needs this
+  throw lastError || new Error('Failed to extract vocabulary after retries');
 }
 
 interface TestQuestion {
