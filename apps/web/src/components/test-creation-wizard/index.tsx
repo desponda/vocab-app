@@ -138,14 +138,23 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
   };
 
   return (
-    <div className="space-y-6">
-      <WizardProgress />
-
-      <div className="min-h-[400px]">
-        {renderStep()}
+    <div className="flex flex-col h-full max-h-[calc(100vh-120px)] sm:max-h-none">
+      {/* Progress - fixed at top */}
+      <div className="flex-shrink-0">
+        <WizardProgress />
       </div>
 
-      <WizardNavigation onCancel={handleClose} onNext={handleNext} />
+      {/* Content - scrollable */}
+      <div className="flex-1 overflow-y-auto px-1 py-4 sm:py-6">
+        <div className="max-w-3xl mx-auto">
+          {renderStep()}
+        </div>
+      </div>
+
+      {/* Navigation - fixed at bottom on mobile */}
+      <div className="flex-shrink-0 border-t bg-background pt-4">
+        <WizardNavigation onCancel={handleClose} onNext={handleNext} />
+      </div>
     </div>
   );
 }
@@ -157,20 +166,24 @@ export function TestCreationWizard({ open, onOpenChange, onTestCreated }: TestCr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-sm:h-full max-sm:max-w-full max-sm:rounded-none">
-        <DialogHeader>
-          <DialogTitle>Create Test</DialogTitle>
-          <DialogDescription>
-            Upload a worksheet or study guide to generate practice tests for your students
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-sm:fixed max-sm:inset-0 max-sm:h-screen max-sm:max-h-screen max-sm:w-screen max-sm:max-w-full max-sm:rounded-none max-sm:border-0 flex flex-col p-0 sm:p-6">
+        <div className="flex-shrink-0 px-6 pt-6 sm:p-0">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Create Test</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Upload a worksheet to generate practice tests
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <WizardProvider>
-          <WizardContent
-            onClose={handleClose}
-            onTestCreated={onTestCreated}
-          />
-        </WizardProvider>
+        <div className="flex-1 overflow-hidden px-6 pb-6 sm:p-0">
+          <WizardProvider>
+            <WizardContent
+              onClose={handleClose}
+              onTestCreated={onTestCreated}
+            />
+          </WizardProvider>
+        </div>
       </DialogContent>
     </Dialog>
   );

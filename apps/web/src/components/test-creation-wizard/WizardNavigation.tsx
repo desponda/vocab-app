@@ -2,7 +2,7 @@
 
 import { useWizard } from './WizardContext';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface WizardNavigationProps {
   onCancel?: () => void;
@@ -25,31 +25,53 @@ export function WizardNavigation({ onCancel, onNext }: WizardNavigationProps) {
   };
 
   return (
-    <div className="flex items-center justify-between pt-6 border-t">
-      {/* Back/Cancel button */}
-      <div>
-        {!isFirstStep && !isProcessingStep && (
-          <Button variant="ghost" onClick={previousStep} className="gap-2">
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-        )}
-        {isFirstStep && onCancel && (
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-      </div>
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
+      {/* Back button - only show on non-first, non-processing steps */}
+      {!isFirstStep && !isProcessingStep && (
+        <Button
+          variant="outline"
+          onClick={previousStep}
+          className="w-full sm:w-auto min-h-[44px] gap-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>Back</span>
+        </Button>
+      )}
 
-      {/* Next button */}
-      <div>
-        {!isProcessingStep && (
-          <Button onClick={handleNext} disabled={!canProceed} className="gap-2">
-            {currentStep === 4 ? 'Create Test' : 'Next'}
-            {currentStep !== 4 && <ChevronRight className="h-4 w-4" />}
-          </Button>
-        )}
-      </div>
+      {/* Cancel button - only on first step */}
+      {isFirstStep && onCancel && (
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="w-full sm:w-auto min-h-[44px]"
+        >
+          Cancel
+        </Button>
+      )}
+
+      {/* Spacer for desktop when Back button is shown */}
+      {!isFirstStep && !isProcessingStep && <div className="hidden sm:flex sm:flex-1" />}
+
+      {/* Next/Create Test button */}
+      {!isProcessingStep && (
+        <Button
+          onClick={handleNext}
+          disabled={!canProceed}
+          className="w-full sm:w-auto min-h-[44px] gap-2 sm:ml-auto"
+        >
+          {currentStep === 4 ? (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Create Test
+            </>
+          ) : (
+            <>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 }

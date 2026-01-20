@@ -10,8 +10,9 @@ export function WizardProgress() {
   const { currentStep, visitedSteps } = state;
 
   return (
-    <nav aria-label="Progress" className="mb-8">
-      <ol className="flex items-center justify-between">
+    <nav aria-label="Progress" className="mb-4 sm:mb-8">
+      {/* Desktop: Full progress bar */}
+      <ol className="hidden sm:flex items-center justify-between">
         {WIZARD_STEPS.map((step, index) => {
           const isActive = currentStep === step.id;
           const isCompleted = currentStep > step.id;
@@ -80,9 +81,22 @@ export function WizardProgress() {
         })}
       </ol>
 
-      {/* Mobile: Simple text indicator */}
-      <div className="sm:hidden mt-4 text-center text-sm text-muted-foreground">
-        Step {currentStep} of {WIZARD_STEPS.length}: {WIZARD_STEPS[currentStep - 1].label}
+      {/* Mobile: Compact step indicator */}
+      <div className="sm:hidden flex items-center justify-between px-4 py-3 bg-muted/30 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
+            {currentStep}
+          </div>
+          <div>
+            <p className="text-sm font-medium">{WIZARD_STEPS[currentStep - 1].label}</p>
+            <p className="text-xs text-muted-foreground">
+              Step {currentStep} of {WIZARD_STEPS.length}
+            </p>
+          </div>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {Math.round((currentStep / WIZARD_STEPS.length) * 100)}%
+        </span>
       </div>
     </nav>
   );

@@ -135,10 +135,10 @@ export function Step2FileUpload() {
   }
 
   return (
-    <div className="py-8 space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">{guidance?.title}</h3>
-        <p className="text-sm text-muted-foreground">{guidance?.description}</p>
+    <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h3 className="text-lg sm:text-xl font-semibold">{guidance?.title}</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">{guidance?.description}</p>
       </div>
 
       {!file ? (

@@ -52,15 +52,15 @@ export function Step4Review() {
   const estimatedTime = estimateProcessingTime(config.variants, config.generatePreview);
 
   return (
-    <div className="py-8 space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Review & Confirm</h3>
-        <p className="text-sm text-muted-foreground">
+    <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h3 className="text-lg sm:text-xl font-semibold">Review & Confirm</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Please review your selections before creating the test
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {/* Test Type */}
         <Card>
           <CardHeader className="pb-3">
@@ -124,20 +124,20 @@ export function Step4Review() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Test Name</p>
-                <p className="font-medium">{config.name || 'Not set'}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">Test Name</p>
+                <p className="font-medium text-sm sm:text-base">{config.name || 'Not set'}</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Grade Level</p>
-                <p className="font-medium">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">Grade Level</p>
+                <p className="font-medium text-sm sm:text-base">
                   {config.gradeLevel ? `Grade ${config.gradeLevel}` : 'Not specified'}
                 </p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Variants</p>
-                <p className="font-medium">{config.variants} versions</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">Variants</p>
+                <p className="font-medium text-sm sm:text-base">{config.variants} versions</p>
               </div>
             </div>
 
@@ -166,48 +166,18 @@ export function Step4Review() {
           </CardContent>
         </Card>
 
-        {/* Processing Time Estimate */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Estimated Processing Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{estimatedTime}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Processing happens in the background - you can continue working
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* What Happens Next */}
-        <Card className="border-blue-500/20 bg-blue-500/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">What Happens Next?</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ol className="text-sm space-y-2 list-decimal list-inside text-muted-foreground">
-              <li>Your file will be uploaded and processed by AI</li>
-              <li>
-                {testType === 'VOCABULARY'
-                  ? 'Vocabulary words and definitions will be extracted'
-                  : testType === 'SPELLING'
-                  ? 'Spelling words will be extracted from your content'
-                  : 'Key concepts and facts will be extracted'}
-              </li>
-              <li>{config.variants} unique test variants will be generated</li>
-              {config.generatePreview && <li>A preview will be generated for your review</li>}
-              <li>Tests will be ready to assign to your classrooms</li>
-            </ol>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="bg-muted/50 rounded-lg p-4">
-        <p className="text-sm text-center text-muted-foreground">
-          Ready to create your test? Click <strong>&quot;Create Test&quot;</strong> below to begin processing.
+        {/* Processing Time Estimate - Compact */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Processing time</span>
+          </div>
+          <Badge variant="secondary" className="text-sm">
+            {estimatedTime}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground text-center -mt-2">
+          Background processing - you can continue working
         </p>
       </div>
     </div>

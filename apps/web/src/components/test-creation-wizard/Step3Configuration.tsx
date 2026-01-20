@@ -105,15 +105,15 @@ export function Step3Configuration() {
   const gradeLevels = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
-    <div className="py-8 space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Configure Your Test</h3>
-        <p className="text-sm text-muted-foreground">
+    <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h3 className="text-lg sm:text-xl font-semibold">Configure Your Test</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Customize the test settings and options
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Test Name */}
         <div className="space-y-2">
           <Label htmlFor="name">

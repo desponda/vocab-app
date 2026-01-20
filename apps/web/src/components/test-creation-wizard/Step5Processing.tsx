@@ -88,10 +88,10 @@ export function Step5Processing() {
   const isError = processing.stage === 'error';
 
   return (
-    <div className="py-8 space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">{stageDisplay.title}</h3>
-        <p className="text-sm text-muted-foreground">{stageDisplay.description}</p>
+    <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h3 className="text-lg sm:text-xl font-semibold">{stageDisplay.title}</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">{stageDisplay.description}</p>
       </div>
 
       {/* Progress Indicator */}

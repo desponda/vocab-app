@@ -65,15 +65,15 @@ export function Step1TypeSelection() {
   };
 
   return (
-    <div className="py-8 space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">What kind of test do you want to create?</h3>
-        <p className="text-sm text-muted-foreground">
+    <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h3 className="text-lg sm:text-xl font-semibold">What kind of test do you want to create?</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Choose the test type that best matches your teaching material
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {TEST_TYPE_OPTIONS.map((option) => {
           const Icon = option.icon;
           const isSelected = testType === option.type;
