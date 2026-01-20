@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
   }, [uploadHook.stage, uploadHook.sheetId, onTestCreated]);
 
   // Handle "Create Test" button click on Step 4
-  const handleCreateTest = async () => {
+  const handleCreateTest = useCallback(async () => {
     if (!testType || !file) {
       return;
     }
@@ -66,19 +66,19 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
       useAllWords: config.useAllWords,
       generatePreview: config.generatePreview,
     });
-  };
+  }, [testType, file, config, nextStep, uploadHook]);
 
   // Handle "Next" button - on step 4 this becomes "Create Test"
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentStep === 4) {
       handleCreateTest();
     } else {
       nextStep();
     }
-  };
+  }, [currentStep, handleCreateTest, nextStep]);
 
   // Handle dialog close with confirmation if needed
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (uploadHook.stage === 'uploading') {
       if (confirm('Upload in progress. Cancel upload?')) {
         uploadHook.reset();
@@ -99,7 +99,7 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
     uploadHook.reset();
     resetWizard();
     onClose();
-  };
+  }, [uploadHook.stage, uploadHook.reset, resetWizard, onClose]);
 
   // Browser-level protection during upload
   useEffect(() => {
@@ -150,6 +150,10 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
 }
 
 export function TestCreationWizard({ open, onOpenChange, onTestCreated }: TestCreationWizardProps) {
+  const handleClose = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-sm:h-full max-sm:max-w-full max-sm:rounded-none">
@@ -162,7 +166,7 @@ export function TestCreationWizard({ open, onOpenChange, onTestCreated }: TestCr
 
         <WizardProvider>
           <WizardContent
-            onClose={() => onOpenChange(false)}
+            onClose={handleClose}
             onTestCreated={onTestCreated}
           />
         </WizardProvider>
