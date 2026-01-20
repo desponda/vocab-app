@@ -107,7 +107,7 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
           build-args: |
-            NEXT_PUBLIC_API_URL=https://vocab-staging.dresponda.com
+            NEXT_PUBLIC_API_URL=https://vocab-staging.dresponda.com/api
           # Enable multi-layer caching and inline cache
           platforms: linux/amd64
 
