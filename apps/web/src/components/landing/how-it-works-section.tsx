@@ -31,7 +31,7 @@ export function HowItWorksSection() {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section className="bg-muted/50 py-16 sm:py-24">
+    <section id="how-it-works" className="bg-muted/50 py-16 sm:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="mx-auto mb-16 max-w-2xl text-center">

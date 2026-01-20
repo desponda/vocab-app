@@ -47,7 +47,7 @@ export function FeaturesSection() {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section className="py-16 sm:py-24">
+    <section id="features" className="py-16 sm:py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">

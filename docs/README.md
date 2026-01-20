@@ -12,6 +12,7 @@ Guides for developers working on the codebase
 
 ### [⚙️ Operations](./operations/)
 Guides for DevOps/SRE and system administrators
+- [Security Summary](./operations/security-summary.md) - Security audit and legal compliance overview
 - [Monitoring Guide](./operations/monitoring-guide.md) - Observability and alerting
 - [Backup & Restore](./operations/backup-restore-guide.md) - Database and file backups
 - [Disaster Recovery Plan](./operations/disaster-recovery-plan.md) - DR procedures and runbooks

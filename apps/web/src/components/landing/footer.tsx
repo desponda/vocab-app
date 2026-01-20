@@ -7,7 +7,7 @@ export function Footer() {
   return (
     <footer className="border-t bg-muted/30 py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-3">
           {/* Brand */}
           <div className="md:col-span-1">
             <div className="mb-4 flex items-center gap-2">
@@ -39,28 +39,6 @@ export function Footer() {
                 <Link href="/register" className="text-muted-foreground hover:text-foreground">
                   Get Started
                 </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="mb-4 font-semibold">Company</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground">
-                  About
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground">
-                  Contact
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground">
-                  Support
-                </a>
               </li>
             </ul>
           </div>
