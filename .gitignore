@@ -76,6 +76,13 @@ values-production.yaml
 uploads/
 storage/
 pdfs/
+*.heic
+*.heif
+*.HEIC
+*.HEIF
+image.png
+IMG_*.jpg
+IMG_*.png
 
 # Temporary
 tmp/
