@@ -3,15 +3,15 @@ import path from 'path';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
-// Test credentials
+// Test credentials (staging)
 const TEACHER_CREDENTIALS = {
-  email: 'teacher@test.com',
-  password: 'Test123!@#',
+  email: 'daniel103@gmail.com',
+  password: 'aragorn1',
 };
 
 const STUDENT_CREDENTIALS = {
-  email: 'student1@test.com',
-  password: 'Test123!@#',
+  email: 'isaac@gmail.com',
+  password: 'aragorn1',
 };
 
 /**
