@@ -817,9 +817,27 @@ export const testRoutes = async (app: FastifyInstance) => {
       return reply.code(404).send({ error: 'Attempt not found' });
     }
 
-    // Verify student ownership (check if the logged-in user owns this student)
-    if (attempt.student.userId !== request.userId) {
-      return reply.code(403).send({ error: 'Unauthorized' });
+    // Two-tier authorization: student viewing own data OR teacher with classroom access
+    const isStudentOwner = attempt.student.userId === request.userId;
+
+    if (!isStudentOwner) {
+      // Check if user is a teacher with this student in one of their classrooms
+      const teacherStudent = await prisma.student.findFirst({
+        where: {
+          id: attempt.studentId,
+          enrollments: {
+            some: {
+              classroom: {
+                teacherId: request.userId,
+              },
+            },
+          },
+        },
+      });
+
+      if (!teacherStudent) {
+        return reply.code(403).send({ error: 'Unauthorized to view this test review' });
+      }
     }
 
     // Only allow reviewing submitted attempts
