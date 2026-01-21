@@ -347,59 +347,61 @@ export default function StudentDashboardPage() {
 
               return (
                 <Card key={group.sheetId} className="hover:bg-muted/50 transition-colors">
-                  <CardHeader>
+                  <CardHeader className="pb-3 sm:pb-6">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">
+                        {/* Mobile: smaller title */}
+                        <CardTitle className="text-base sm:text-lg truncate">
                           {group.sheetName}
                         </CardTitle>
-                        <CardDescription className="truncate">
+                        {/* Mobile: hide description to save space */}
+                        <CardDescription className="hidden sm:block truncate">
                           {group.originalName}
                         </CardDescription>
                       </div>
-                      <Badge variant="outline" className="flex-shrink-0">
+                      <Badge variant="outline" className="flex-shrink-0 text-xs">
                         {group.total} variant{group.total !== 1 ? 's' : ''}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Progress */}
-                    <div className="flex items-center justify-between text-sm">
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    {/* Progress - more compact on mobile */}
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium">
                         {group.completed} / {group.total} completed
                       </span>
                     </div>
 
-                    {/* Statistics */}
+                    {/* Statistics - horizontal layout on mobile to save space */}
                     {group.bestScore !== null && (
-                      <>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Best Score</span>
-                          <Badge variant={getScoreBadgeVariant(group.bestScore)}>
+                      <div className="flex gap-2 sm:gap-3">
+                        <div className="flex-1 flex items-center justify-between text-xs sm:text-sm">
+                          <span className="text-muted-foreground">Best</span>
+                          <Badge variant={getScoreBadgeVariant(group.bestScore)} className="text-xs">
                             {group.bestScore}%
                           </Badge>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Avg Score</span>
-                          <Badge variant={getScoreBadgeVariant(group.avgScore || 0)}>
+                        <div className="flex-1 flex items-center justify-between text-xs sm:text-sm">
+                          <span className="text-muted-foreground">Avg</span>
+                          <Badge variant={getScoreBadgeVariant(group.avgScore || 0)} className="text-xs">
                             {group.avgScore}%
                           </Badge>
                         </div>
-                      </>
+                      </div>
                     )}
 
-                    {/* Action Buttons */}
+                    {/* Action Buttons - larger touch targets */}
                     <div className="space-y-2">
                       {nextTest ? (
                         <Link href={`/student-dashboard/tests/${nextTest.testId}`}>
-                          <Button className="w-full gap-2">
+                          <Button className="w-full gap-2 min-h-[44px] text-sm sm:text-base">
                             <ClipboardCheck className="h-4 w-4" />
                             {group.completed > 0 ? 'Continue Practice' : 'Start First Test'}
                           </Button>
                         </Link>
                       ) : (
-                        <Button className="w-full" disabled>
+                        <Button className="w-full min-h-[44px] text-sm sm:text-base" disabled>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           All Variants Completed
                         </Button>
@@ -408,7 +410,7 @@ export default function StudentDashboardPage() {
                       {group.total > 1 && (
                         <Button
                           variant="outline"
-                          className="w-full gap-2"
+                          className="w-full gap-2 min-h-[44px] text-sm sm:text-base"
                           onClick={() => toggleGroup(group.sheetId)}
                         >
                           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

@@ -65,15 +65,65 @@ export function Step1TypeSelection() {
   };
 
   return (
-    <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
+    <div className="py-2 sm:py-8 space-y-3 sm:space-y-6">
       <div className="space-y-1 sm:space-y-2">
-        <h3 className="text-lg sm:text-xl font-semibold">What kind of test do you want to create?</h3>
+        <h3 className="text-base sm:text-xl font-semibold">What kind of test do you want to create?</h3>
         <p className="text-xs sm:text-sm text-muted-foreground">
           Choose the test type that best matches your teaching material
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Mobile: List view with large tap targets */}
+      <div className="sm:hidden space-y-2">
+        {TEST_TYPE_OPTIONS.map((option) => {
+          const Icon = option.icon;
+          const isSelected = testType === option.type;
+          const isDisabled = option.disabled;
+
+          return (
+            <button
+              key={option.type}
+              onClick={() => !isDisabled && handleSelectType(option.type)}
+              disabled={isDisabled}
+              className={cn(
+                'w-full p-4 rounded-lg border-2 text-left transition-all',
+                'min-h-[72px] flex items-center gap-3',
+                isSelected && 'border-primary bg-primary/5 shadow-sm',
+                !isSelected && !isDisabled && 'border-border hover:border-muted-foreground/30 hover:bg-muted/50',
+                isDisabled && 'opacity-60 cursor-not-allowed border-border'
+              )}
+            >
+              <div
+                className={cn(
+                  'p-2.5 rounded-lg flex-shrink-0',
+                  isSelected && !isDisabled ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                )}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-semibold text-sm">{option.label}</span>
+                  {option.comingSoon && (
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                      Coming Soon
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-1">
+                  {option.description}
+                </p>
+              </div>
+              {isSelected && !isDisabled && (
+                <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop: Card grid (original design) */}
+      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {TEST_TYPE_OPTIONS.map((option) => {
           const Icon = option.icon;
           const isSelected = testType === option.type;
@@ -125,10 +175,14 @@ export function Step1TypeSelection() {
         })}
       </div>
 
-      <div className="flex justify-center pt-4">
+      <div className="flex justify-center pt-3 sm:pt-4">
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground hover:text-foreground min-h-[44px] px-4"
+            >
               <HelpCircle className="h-4 w-4" />
               Need help choosing?
             </Button>

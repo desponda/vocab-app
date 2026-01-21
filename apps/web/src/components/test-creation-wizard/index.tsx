@@ -145,11 +145,14 @@ function WizardContent({ onClose, onTestCreated }: { onClose: () => void; onTest
         <WizardProgress />
       </div>
 
-      {/* Content - scrollable */}
-      <div className="flex-1 overflow-y-auto px-1 py-4 sm:py-6">
+      {/* Content - scrollable with scroll indicator */}
+      <div className="flex-1 overflow-y-auto px-1 py-4 sm:py-6 relative">
         <div className="max-w-3xl mx-auto">
           {renderStep()}
         </div>
+
+        {/* Scroll indicator gradient - only on mobile when content overflows */}
+        <div className="sm:hidden absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
       </div>
 
       {/* Navigation - fixed at bottom on mobile */}

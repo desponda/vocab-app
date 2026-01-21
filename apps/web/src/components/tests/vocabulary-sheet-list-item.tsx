@@ -143,52 +143,71 @@ export function VocabularySheetListItem({
       <CardContent className="p-4 sm:p-6">
         <div className="flex items-start sm:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
-            <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center flex-shrink-0 ${statusConfig.color}`}>
-              <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+            {/* Icon - smaller on mobile for less visual weight */}
+            <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${statusConfig.color}`}>
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
 
-            <div className="flex-1 min-w-0 space-y-2">
-              <h3 className="font-semibold text-base sm:text-lg leading-tight line-clamp-2">{name || originalName}</h3>
+            <div className="flex-1 min-w-0 space-y-1.5 sm:space-y-2">
+              {/* Title - smaller on mobile, single line to reduce height */}
+              <h3 className="font-semibold text-sm sm:text-lg leading-tight line-clamp-1 sm:line-clamp-2">
+                {name || originalName}
+              </h3>
 
+              {/* Primary badges - status and test type only, hide grade on mobile */}
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+                <Badge variant={statusConfig.variant} className="flex items-center gap-1 text-xs">
                   <StatusIcon className={`h-3 w-3 ${status === 'PROCESSING' ? 'animate-spin' : ''}`} />
                   {statusConfig.label}
                 </Badge>
                 <Badge
                   variant={testType === 'SPELLING' ? 'secondary' : testType === 'GENERAL_KNOWLEDGE' ? 'default' : 'outline'}
+                  className="text-xs"
                 >
                   {testType === 'VOCABULARY' ? '📚 Vocab' : testType === 'SPELLING' ? '✏️ Spelling' : '🧠 Knowledge'}
                 </Badge>
-                {gradeLevel && (
-                  <Badge variant="outline">
-                    Grade {gradeLevel}
-                  </Badge>
+              </div>
+
+              {/* Mobile: Only essential metadata (date + test count) */}
+              <div className="sm:hidden flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{formatRelativeDate(uploadedAt)}</span>
+                {testCount && testCount > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>{testCount} test{testCount === 1 ? '' : 's'}</span>
+                  </>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
+              {/* Desktop: Full metadata */}
+              <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                 <span>{formatFileSize(fileSize)}</span>
-                <span className="hidden sm:inline">•</span>
+                <span>•</span>
                 <span>{formatRelativeDate(uploadedAt)}</span>
-                <span className="hidden md:inline">•</span>
-                <span className="hidden md:inline uppercase">{fileType.replace('application/', '').replace('image/', '')}</span>
+                {gradeLevel && (
+                  <>
+                    <span>•</span>
+                    <span>Grade {gradeLevel}</span>
+                  </>
+                )}
+                <span>•</span>
+                <span className="uppercase">{fileType.replace('application/', '').replace('image/', '')}</span>
                 {wordCount && wordCount > 0 && (
                   <>
-                    <span className="hidden sm:inline">•</span>
+                    <span>•</span>
                     <span>{wordCount} words</span>
                   </>
                 )}
                 {testCount && testCount > 0 && (
                   <>
-                    <span className="hidden sm:inline">•</span>
+                    <span>•</span>
                     <span>{testCount} test{testCount === 1 ? '' : 's'}</span>
                   </>
                 )}
               </div>
 
               {errorMessage && (
-                <p className="text-sm text-destructive">{errorMessage}</p>
+                <p className="text-xs sm:text-sm text-destructive">{errorMessage}</p>
               )}
             </div>
           </div>
