@@ -61,9 +61,13 @@ export default function TestResultsPage() {
 
   const attemptId = params?.attemptId as string;
 
-  // Redirect if not authenticated or not a student
+  // Determine back link based on user role
+  const backLink = user?.role === 'TEACHER' ? '/dashboard' : '/student-dashboard';
+
+  // Redirect if not authenticated
+  // Allow both students (viewing own results) and teachers (viewing student results in their classroom)
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'STUDENT')) {
+    if (!isLoading && !user) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
@@ -112,7 +116,7 @@ export default function TestResultsPage() {
         <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
           {error}
         </div>
-        <Link href="/student-dashboard">
+        <Link href={backLink}>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
@@ -126,7 +130,7 @@ export default function TestResultsPage() {
     return (
       <div className="space-y-8">
         <div className="text-center text-muted-foreground">No results found</div>
-        <Link href="/student-dashboard">
+        <Link href={backLink}>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
@@ -148,7 +152,7 @@ export default function TestResultsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <Link href="/student-dashboard">
+        <Link href={backLink}>
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
@@ -324,7 +328,7 @@ export default function TestResultsPage() {
 
       {/* Back Button */}
       <div className="flex justify-center pt-8">
-        <Link href="/student-dashboard">
+        <Link href={backLink}>
           <Button>Back to Dashboard</Button>
         </Link>
       </div>
