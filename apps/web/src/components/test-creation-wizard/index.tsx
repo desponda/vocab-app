@@ -170,7 +170,7 @@ export function TestCreationWizard({ open, onOpenChange, onTestCreated }: TestCr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-sm:fixed max-sm:inset-0 max-sm:h-screen max-sm:max-h-screen max-sm:w-screen max-sm:max-w-full max-sm:rounded-none max-sm:border-0 flex flex-col p-0 sm:p-6">
+      <DialogContent className="sm:max-w-3xl max-sm:!fixed max-sm:!inset-0 max-sm:!top-0 max-sm:!left-0 max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:h-screen max-sm:max-h-screen max-sm:w-screen max-sm:max-w-full max-sm:rounded-none max-sm:border-0 flex flex-col p-0 sm:p-6">
         <div className="flex-shrink-0 px-6 pt-6 sm:p-0">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Create Test</DialogTitle>
