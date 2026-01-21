@@ -42,25 +42,22 @@ const configSchema = z.object({
 
 type ConfigFormData = z.infer<typeof configSchema>;
 
-function generateTestName(fileName: string): string {
-  // Remove extension
-  const nameWithoutExt = fileName.replace(/\.(png|jpg|jpeg|webp|pdf)$/i, '');
-
-  // Replace underscores and hyphens with spaces
-  const withSpaces = nameWithoutExt.replace(/[_-]/g, ' ');
-
-  // Capitalize first letter of each word
-  const capitalized = withSpaces
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-
-  return capitalized.trim();
+function getPlaceholderText(testType: string): string {
+  switch (testType) {
+    case 'SPELLING':
+      return 'e.g., Week 3 Spelling Words';
+    case 'VOCABULARY':
+      return 'e.g., Chapter 5 Science Terms';
+    case 'GENERAL_KNOWLEDGE':
+      return 'e.g., History Quiz - Civil War';
+    default:
+      return 'e.g., Chapter 5 Vocabulary';
+  }
 }
 
 export function Step3Configuration() {
   const { state, updateConfig } = useWizard();
-  const { config, file, testType } = state;
+  const { config, testType } = state;
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const {
@@ -81,15 +78,6 @@ export function Step3Configuration() {
   });
 
   const watchedValues = watch();
-
-  // Auto-generate name from file if empty
-  useEffect(() => {
-    if (file && !config.name) {
-      const generatedName = generateTestName(file.name);
-      setValue('name', generatedName);
-      updateConfig({ name: generatedName });
-    }
-  }, [file, config.name, setValue, updateConfig]);
 
   // Sync form values to wizard state
   useEffect(() => {
@@ -123,7 +111,7 @@ export function Step3Configuration() {
           <Input
             id="name"
             {...register('name')}
-            placeholder="Enter test name"
+            placeholder={getPlaceholderText(testType || 'VOCABULARY')}
             className={cn(errors.name && 'border-destructive')}
           />
           {errors.name && (
