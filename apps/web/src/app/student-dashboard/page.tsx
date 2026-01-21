@@ -19,8 +19,10 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { Error500 } from '@/components/error/http-errors';
 import { useErrorHandler } from '@/hooks/use-error-handler';
 import { TestAssignment, Student, TestAttempt } from '@/lib/api';
-import { ClipboardCheck, Target, TrendingUp, FileText, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
+import { ClipboardCheck, Target, TrendingUp, FileText, Loader2, CheckCircle2 } from 'lucide-react';
+import { formatRelativeDate } from '@/lib/utils';
+import { TestListItem } from '@/components/student-dashboard/test-list-item';
+import { CompletedTestListItem } from '@/components/student-dashboard/completed-test-list-item';
 
 interface StudentStats {
   testsAssigned: number;
@@ -51,7 +53,6 @@ export default function StudentDashboardPage() {
   const [error, setError] = useState<string>('');
   const { handleError } = useErrorHandler({ showToast: false });
   const [isLoadingTests, setIsLoadingTests] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Group assignments by vocabulary sheet
   const vocabularyGroups = useMemo(() => {
@@ -105,18 +106,6 @@ export default function StudentDashboardPage() {
       a.sheetName.localeCompare(b.sheetName)
     );
   }, [assignments, pastAttempts]);
-
-  const toggleGroup = (sheetId: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(sheetId)) {
-        next.delete(sheetId);
-      } else {
-        next.add(sheetId);
-      }
-      return next;
-    });
-  };
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
@@ -268,7 +257,7 @@ export default function StudentDashboardPage() {
                           {attempt.test?.name || 'Vocabulary Test'}
                         </CardTitle>
                         <CardDescription className="truncate">
-                          {attempt.test?.sheet?.originalName || 'Practice Test'}
+                          {attempt.test?.sheet?.name || 'Practice Test'}
                         </CardDescription>
                       </div>
                       <Badge variant="outline" className="flex-shrink-0">
@@ -338,119 +327,10 @@ export default function StudentDashboardPage() {
             description="Your teacher hasn&apos;t assigned any tests to your classroom. Check back later!"
           />
         ) : (
-          <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {vocabularyGroups.map((group) => {
-              const isExpanded = expandedGroups.has(group.sheetId);
-              const nextTest = group.assignments.find((assignment) =>
-                !group.attempts.some((attempt) => attempt.testId === assignment.testId)
-              );
-
-              return (
-                <Card key={group.sheetId} className="hover:bg-muted/50 transition-colors">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        {/* Mobile: smaller title */}
-                        <CardTitle className="text-base sm:text-lg truncate">
-                          {group.sheetName}
-                        </CardTitle>
-                        {/* Mobile: hide description to save space */}
-                        <CardDescription className="hidden sm:block truncate">
-                          {group.originalName}
-                        </CardDescription>
-                      </div>
-                      <Badge variant="outline" className="flex-shrink-0 text-xs">
-                        {group.total} variant{group.total !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-4">
-                    {/* Progress - more compact on mobile */}
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">
-                        {group.completed} / {group.total} completed
-                      </span>
-                    </div>
-
-                    {/* Statistics - horizontal layout on mobile to save space */}
-                    {group.bestScore !== null && (
-                      <div className="flex gap-2 sm:gap-3">
-                        <div className="flex-1 flex items-center justify-between text-xs sm:text-sm">
-                          <span className="text-muted-foreground">Best</span>
-                          <Badge variant={getScoreBadgeVariant(group.bestScore)} className="text-xs">
-                            {group.bestScore}%
-                          </Badge>
-                        </div>
-                        <div className="flex-1 flex items-center justify-between text-xs sm:text-sm">
-                          <span className="text-muted-foreground">Avg</span>
-                          <Badge variant={getScoreBadgeVariant(group.avgScore || 0)} className="text-xs">
-                            {group.avgScore}%
-                          </Badge>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Buttons - larger touch targets */}
-                    <div className="space-y-2">
-                      {nextTest ? (
-                        <Link href={`/student-dashboard/tests/${nextTest.testId}`}>
-                          <Button className="w-full gap-2 min-h-[44px] text-sm sm:text-base">
-                            <ClipboardCheck className="h-4 w-4" />
-                            {group.completed > 0 ? 'Continue Practice' : 'Start First Test'}
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Button className="w-full min-h-[44px] text-sm sm:text-base" disabled>
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          All Variants Completed
-                        </Button>
-                      )}
-
-                      {group.total > 1 && (
-                        <Button
-                          variant="outline"
-                          className="w-full gap-2 min-h-[44px] text-sm sm:text-base"
-                          onClick={() => toggleGroup(group.sheetId)}
-                        >
-                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          {isExpanded ? 'Hide' : 'Show'} All Variants
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Expanded Variant List */}
-                    {isExpanded && (
-                      <div className="pt-2 border-t space-y-2">
-                        {group.assignments.map((assignment) => {
-                          const attempt = group.attempts.find((a) => a.testId === assignment.testId);
-                          return (
-                            <div
-                              key={assignment.id}
-                              className="flex items-center justify-between text-sm p-2 rounded border"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{assignment.test?.variant}</span>
-                                {attempt && (
-                                  <Badge variant={getScoreBadgeVariant(attempt.score || 0)} className="text-xs">
-                                    {attempt.score}%
-                                  </Badge>
-                                )}
-                              </div>
-                              <Link href={`/student-dashboard/tests/${assignment.testId}`}>
-                                <Button size="sm" variant="ghost">
-                                  {attempt ? 'Retake' : 'Start'}
-                                </Button>
-                              </Link>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="space-y-3 sm:space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+            {vocabularyGroups.map((group) => (
+              <TestListItem key={group.sheetId} group={group} />
+            ))}
           </div>
         )}
       </div>
@@ -475,47 +355,13 @@ export default function StudentDashboardPage() {
             description="Complete your first test to see your results and track your progress"
           />
         ) : (
-          <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2 sm:space-y-3">
             {pastAttempts.map((attempt) => (
-              <Card key={attempt.id} className="hover:bg-muted/50 transition-colors">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">
-                        {attempt.test?.name}
-                      </CardTitle>
-                      <CardDescription className="truncate">
-                        {attempt.test?.sheet?.originalName || 'Vocabulary Test'}
-                      </CardDescription>
-                    </div>
-                    <Badge variant={getScoreBadgeVariant(attempt.score || 0)} className="flex-shrink-0">
-                      {attempt.score ?? 0}%
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Correct Answers</span>
-                    <span className="font-medium">
-                      {attempt.correctAnswers ?? 0} / {attempt.totalQuestions}
-                    </span>
-                  </div>
-                  {attempt.completedAt && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Completed</span>
-                      <span className="font-medium">
-                        {formatRelativeDate(attempt.completedAt)}
-                      </span>
-                    </div>
-                  )}
-                  <Link href={`/student-dashboard/results/${attempt.id}`}>
-                    <Button variant="outline" className="w-full gap-2">
-                      <FileText className="h-4 w-4" />
-                      View Details
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              <CompletedTestListItem
+                key={attempt.id}
+                attempt={attempt}
+                onClick={() => router.push(`/student-dashboard/results/${attempt.id}`)}
+              />
             ))}
           </div>
         )}
