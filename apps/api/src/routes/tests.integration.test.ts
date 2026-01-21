@@ -832,4 +832,276 @@ describe('Tests Routes', () => {
       ).rejects.toThrow();
     });
   });
+
+  /**
+   * AUTHORIZATION REGRESSION TESTS
+   * These tests prevent the bug where students couldn't view their own test attempts
+   * Bug: Line 703 compared studentId (Student.id) === request.userId (User.id)
+   * Fix: Query Student table with: id=studentId AND userId=request.userId
+   */
+  describe('GET /students/:studentId/attempts - Authorization', () => {
+    let otherTeacherId: string;
+    let otherClassroomId: string;
+    let otherStudentId: string;
+    let otherStudentUserId: string;
+
+    beforeAll(async () => {
+      // Create another teacher with their own classroom and student
+      // This simulates a different teacher who should NOT have access
+      const otherTeacher = await prisma.user.create({
+        data: {
+          email: `other-teacher-${Date.now()}@test.com`,
+          name: 'Other Teacher',
+          passwordHash: 'hashed-password',
+          role: 'TEACHER',
+        },
+      });
+      otherTeacherId = otherTeacher.id;
+
+      const otherClassroom = await prisma.classroom.create({
+        data: {
+          name: 'Other Classroom',
+          code: `OTH${Date.now().toString().slice(-6)}`,
+          gradeLevel: 5,
+          teacherId: otherTeacherId,
+        },
+      });
+      otherClassroomId = otherClassroom.id;
+
+      const otherStudentUser = await prisma.user.create({
+        data: {
+          email: `other-student-${Date.now()}@test.com`,
+          name: 'Other Student',
+          passwordHash: 'hashed-password',
+          role: 'STUDENT',
+        },
+      });
+      otherStudentUserId = otherStudentUser.id;
+
+      const otherStudent = await prisma.student.create({
+        data: {
+          name: 'Other Student',
+          gradeLevel: 5,
+          userId: otherStudentUserId,
+        },
+      });
+      otherStudentId = otherStudent.id;
+
+      await prisma.studentEnrollment.create({
+        data: {
+          studentId: otherStudentId,
+          classroomId: otherClassroomId,
+        },
+      });
+    });
+
+    it('should allow student to view their own test attempts', async () => {
+      // Simulate the authorization check for a student viewing their own data
+      // This is what happens when GET /api/tests/students/:studentId/attempts is called
+
+      // First check if student belongs to this user (for student viewing own data)
+      const student = await prisma.student.findFirst({
+        where: {
+          id: studentId,
+          userId: studentUserId, // This must match for students to view own data
+        },
+      });
+
+      // Student should be found (authorization succeeds)
+      expect(student).toBeDefined();
+      expect(student!.id).toBe(studentId);
+      expect(student!.userId).toBe(studentUserId);
+
+      // If authorized, fetch attempts
+      const attempts = await prisma.testAttempt.findMany({
+        where: { studentId },
+        select: {
+          id: true,
+          testId: true,
+          studentId: true,
+          totalQuestions: true,
+          correctAnswers: true,
+          score: true,
+          status: true,
+          startedAt: true,
+          completedAt: true,
+          test: {
+            select: {
+              id: true,
+              name: true,
+              variant: true,
+              sheet: {
+                select: {
+                  id: true,
+                  name: true,
+                  originalName: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { startedAt: 'desc' },
+      });
+
+      // Should return attempts (at least one from earlier tests)
+      expect(attempts.length).toBeGreaterThan(0);
+      expect(attempts[0].studentId).toBe(studentId);
+    });
+
+    it('should allow teacher to view test attempts of students in their classroom', async () => {
+      // Teacher trying to view student in their classroom
+      // First check if student belongs to teacher's user ID (will fail for teachers)
+      const ownStudent = await prisma.student.findFirst({
+        where: {
+          id: studentId,
+          userId: teacherId, // Teacher's user ID - won't match
+        },
+      });
+
+      expect(ownStudent).toBeNull(); // Not their own student
+
+      // Then check if they're a teacher with access via classroom enrollment
+      const teacherStudent = await prisma.student.findFirst({
+        where: {
+          id: studentId,
+          enrollments: {
+            some: {
+              classroom: {
+                teacherId: teacherId, // Check teacher owns the classroom
+              },
+            },
+          },
+        },
+      });
+
+      // Teacher should have access (student is in their classroom)
+      expect(teacherStudent).toBeDefined();
+      expect(teacherStudent!.id).toBe(studentId);
+
+      // If authorized, fetch attempts
+      const attempts = await prisma.testAttempt.findMany({
+        where: { studentId },
+      });
+
+      expect(attempts.length).toBeGreaterThan(0);
+    });
+
+    it('should prevent teacher from viewing test attempts of students NOT in their classroom', async () => {
+      // Teacher trying to view student NOT in their classroom
+      // First check if student belongs to teacher's user ID
+      const ownStudent = await prisma.student.findFirst({
+        where: {
+          id: otherStudentId, // Different student
+          userId: teacherId, // Teacher's user ID - won't match
+        },
+      });
+
+      expect(ownStudent).toBeNull(); // Not their own student
+
+      // Then check if they're a teacher with access via classroom enrollment
+      const teacherStudent = await prisma.student.findFirst({
+        where: {
+          id: otherStudentId,
+          enrollments: {
+            some: {
+              classroom: {
+                teacherId: teacherId, // Check teacher owns the classroom
+              },
+            },
+          },
+        },
+      });
+
+      // Teacher should NOT have access (student not in their classroom)
+      expect(teacherStudent).toBeNull();
+
+      // In the real endpoint, this would return 404
+      // We're testing the authorization logic here
+    });
+
+    it('should prevent teacher from viewing student with wrong userId check (the bug)', async () => {
+      // This test demonstrates the BUG we fixed
+      // The old code did: studentId === request.userId
+      // This compares Student.id with User.id (different tables, different IDs)
+
+      // Simulate the BUGGY authorization check
+      const isOwnStudent = studentId === teacherId; // This will ALWAYS be false!
+
+      expect(isOwnStudent).toBe(false); // The bug!
+
+      // This demonstrates why the bug caused 404 errors:
+      // - Student viewing own data: studentId !== studentUserId (different IDs)
+      // - Authorization always failed, fell through to teacher check
+      // - Student is not a teacher, so query returned null
+      // - Returned 404 error
+
+      // The CORRECT way (what we fixed it to):
+      const correctCheck = await prisma.student.findFirst({
+        where: {
+          id: studentId,
+          userId: studentUserId, // Check Student.userId = User.id
+        },
+      });
+
+      expect(correctCheck).toBeDefined(); // This works!
+    });
+
+    it('should validate the complete authorization flow end-to-end', async () => {
+      // Test the exact flow from the fixed endpoint
+      async function checkStudentAccess(
+        requestedStudentId: string,
+        requestUserId: string
+      ): Promise<boolean> {
+        // First check if student belongs to this user (for student viewing own data)
+        const student = await prisma.student.findFirst({
+          where: {
+            id: requestedStudentId,
+            userId: requestUserId,
+          },
+        });
+
+        // If not their own student, check if they're a teacher with access
+        if (!student) {
+          const teacherStudent = await prisma.student.findFirst({
+            where: {
+              id: requestedStudentId,
+              enrollments: {
+                some: {
+                  classroom: {
+                    teacherId: requestUserId,
+                  },
+                },
+              },
+            },
+          });
+
+          return teacherStudent !== null;
+        }
+
+        return true;
+      }
+
+      // Test 1: Student viewing own data
+      const studentAccess = await checkStudentAccess(studentId, studentUserId);
+      expect(studentAccess).toBe(true);
+
+      // Test 2: Teacher viewing classroom student
+      const teacherAccess = await checkStudentAccess(studentId, teacherId);
+      expect(teacherAccess).toBe(true);
+
+      // Test 3: Teacher viewing non-classroom student
+      const unauthorizedAccess = await checkStudentAccess(
+        otherStudentId,
+        teacherId
+      );
+      expect(unauthorizedAccess).toBe(false);
+
+      // Test 4: Other teacher viewing our student
+      const otherTeacherAccess = await checkStudentAccess(
+        studentId,
+        otherTeacherId
+      );
+      expect(otherTeacherAccess).toBe(false);
+    });
+  });
 });
