@@ -326,17 +326,12 @@ export const testRoutes = async (app: FastifyInstance) => {
   });
 
   // Get attempt details with answers so far
+  // Accessible by: student viewing own data OR teacher viewing student in their classroom
   app.get('/attempts/:attemptId', async (request: FastifyRequest, reply) => {
     const attemptId = (request.params as any).attemptId;
 
     if (!attemptId) {
       return reply.code(400).send({ error: 'Attempt ID required' });
-    }
-
-    // Verify student ownership from query param
-    const studentId = (request.query as any).studentId;
-    if (!studentId) {
-      return reply.code(400).send({ error: 'Student ID required' });
     }
 
     const attempt = await prisma.testAttempt.findUnique({
@@ -366,6 +361,7 @@ export const testRoutes = async (app: FastifyInstance) => {
           select: {
             id: true,
             name: true,
+            userId: true,
           },
         },
         test: {
@@ -382,9 +378,34 @@ export const testRoutes = async (app: FastifyInstance) => {
       return reply.code(404).send({ error: 'Attempt not found' });
     }
 
-    // Verify student ownership
-    if (attempt.student.id !== (request.query as any).studentId) {
-      return reply.code(403).send({ error: 'Unauthorized' });
+    // CRITICAL AUTHORIZATION: Two-tier access control
+    // Do NOT compare studentId with request.userId - they are from different tables!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is enrolled in teacher's classroom
+    const isStudentOwner = attempt.student.userId === request.userId;
+
+    if (!isStudentOwner) {
+      // Check if user is a teacher with this student in one of their classrooms
+      const teacherStudent = await prisma.student.findFirst({
+        where: {
+          id: attempt.studentId,
+          enrollments: {
+            some: {
+              classroom: {
+                teacherId: request.userId,
+              },
+            },
+          },
+        },
+      });
+
+      if (!teacherStudent) {
+        return reply.code(403).send({ error: 'Unauthorized to view this test attempt' });
+      }
     }
 
     return reply.send({ attempt });
