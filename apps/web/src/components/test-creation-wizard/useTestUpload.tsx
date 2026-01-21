@@ -43,9 +43,12 @@ const PROCESSING_STATUS_TO_STAGE: Record<ProcessingStatus, ProcessingStage> = {
 
 /**
  * Convert backend error messages to user-friendly messages
+ *
+ * Handles null, undefined, and empty strings safely
  */
-function getUserFriendlyError(errorMessage: string | null): { title: string; description: string } {
-  if (!errorMessage) {
+function getUserFriendlyError(errorMessage: string | null | undefined): { title: string; description: string } {
+  // Handle null, undefined, or empty string
+  if (!errorMessage || typeof errorMessage !== 'string' || errorMessage.trim() === '') {
     return {
       title: 'Processing failed',
       description: 'An unexpected error occurred. Please try again.',
@@ -113,6 +116,8 @@ export function useTestUpload(): UseTestUploadReturn {
   const isMountedRef = useRef(true);
   // Track active polling timer so it can be cancelled
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Upload mutex - prevent double-click race condition
+  const isUploadingRef = useRef(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -124,6 +129,8 @@ export function useTestUpload(): UseTestUploadReturn {
         clearTimeout(pollingTimerRef.current);
         pollingTimerRef.current = null;
       }
+      // Reset upload mutex
+      isUploadingRef.current = false;
     };
   }, []);
 
@@ -132,6 +139,7 @@ export function useTestUpload(): UseTestUploadReturn {
 
     const pollInterval = 2000; // Poll every 2 seconds
     const maxAttempts = 150; // 5 minutes maximum (150 * 2s = 300s)
+    const maxConsecutiveErrors = 5; // Fail after 5 consecutive errors (10s, 20s, 40s total ~70s)
     let attempts = 0;
     let consecutiveErrors = 0;
 
@@ -216,10 +224,23 @@ export function useTestUpload(): UseTestUploadReturn {
           console.error('Polling error:', err);
           consecutiveErrors++;
 
+          // Fail fast if too many consecutive errors (likely a persistent issue)
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.error(`Polling failed after ${consecutiveErrors} consecutive errors`);
+            if (isMountedRef.current) {
+              setStage('error');
+              setError('Unable to check processing status. Please refresh and try again.');
+              setMessage('Connection error');
+            }
+            reject(new Error('Too many consecutive polling errors'));
+            return;
+          }
+
           // Don't fail immediately on network errors, retry with exponential backoff
           if (attempts < maxAttempts && isMountedRef.current) {
             // Exponential backoff: 2s, 4s, 8s, 16s, 32s (max 30s)
             const backoffDelay = Math.min(30000, pollInterval * Math.pow(2, consecutiveErrors - 1));
+            console.warn(`Retrying poll after ${backoffDelay}ms (attempt ${attempts}/${maxAttempts}, consecutive errors: ${consecutiveErrors})`);
             pollingTimerRef.current = setTimeout(poll, backoffDelay);
           } else {
             if (isMountedRef.current) {
@@ -242,7 +263,16 @@ export function useTestUpload(): UseTestUploadReturn {
       return null;
     }
 
+    // Prevent double-click race condition
+    if (isUploadingRef.current) {
+      console.warn('Upload already in progress, ignoring duplicate request');
+      return null;
+    }
+
     try {
+      // Set upload mutex
+      isUploadingRef.current = true;
+
       // Reset state
       setProgress(0);
       setError(null);
@@ -287,6 +317,9 @@ export function useTestUpload(): UseTestUploadReturn {
 
       toast.error('Upload failed', errorMessage);
       return null;
+    } finally {
+      // Always clear upload mutex when complete (success or error)
+      isUploadingRef.current = false;
     }
   }, [accessToken, pollProcessingStatus]);
 
@@ -296,6 +329,8 @@ export function useTestUpload(): UseTestUploadReturn {
     setMessage('');
     setSheetId(null);
     setError(null);
+    // Clear upload mutex on reset
+    isUploadingRef.current = false;
   }, []);
 
   return {

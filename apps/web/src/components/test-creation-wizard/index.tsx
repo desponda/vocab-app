@@ -17,6 +17,7 @@ import { Step3Configuration } from './Step3Configuration';
 import { Step4Review } from './Step4Review';
 import { Step5Processing } from './Step5Processing';
 import { useTestUpload } from './useTestUpload';
+import { TestCreationErrorBoundary } from './ErrorBoundary';
 
 interface TestCreationWizardProps {
   open: boolean;
@@ -178,10 +179,12 @@ export function TestCreationWizard({ open, onOpenChange, onTestCreated }: TestCr
 
         <div className="flex-1 overflow-hidden px-6 pb-6 sm:p-0">
           <WizardProvider>
-            <WizardContent
-              onClose={handleClose}
-              onTestCreated={onTestCreated}
-            />
+            <TestCreationErrorBoundary onReset={handleClose}>
+              <WizardContent
+                onClose={handleClose}
+                onTestCreated={onTestCreated}
+              />
+            </TestCreationErrorBoundary>
           </WizardProvider>
         </div>
       </DialogContent>
