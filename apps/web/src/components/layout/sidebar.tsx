@@ -102,11 +102,12 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
           <SheetTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
-              className="fixed top-4 left-4 z-40"
+              size="sm"
+              className="fixed top-4 left-4 z-40 gap-2 min-h-[44px] px-3"
             >
               <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
+              <span className="text-sm font-medium">Menu</span>
+              <span className="sr-only">Toggle navigation menu</span>
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
