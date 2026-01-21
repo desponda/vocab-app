@@ -753,10 +753,17 @@ ${wordsText}
 ${gradeLevelGuidance}
 CRITICAL REQUIREMENTS:
 1. For EACH word: create EXACTLY 1 multiple choice question
-2. Question format: "Which is the correct spelling?"
+2. Question format: "Which word is spelled correctly in this sentence: [sentence with blank]?"
+   - Create a natural, contextual sentence using the word
+   - The blank should be where the spelling word fits (use ___ for the blank)
+   - Sentence should demonstrate proper word usage
+   - Make sentences grade-appropriate and clear
+   - Example: "Which word is spelled correctly in this sentence: I hope to _____ your letter soon?"
+
 3. Provide exactly 4 options:
    - 1 correct spelling (the actual word)
    - 3 plausible misspellings (distractors)
+   - ALL OPTIONS MUST BE UNIQUE (no duplicates allowed)
 
 4. Misspelling strategies (make them believable but clearly wrong):
    - Phonetic errors: spelling based on sound (e.g., "receive" → "recieve")
@@ -765,19 +772,22 @@ CRITICAL REQUIREMENTS:
    - Homophone confusion: using similar sounding combinations (e.g., "their/there/they're")
    - Silent letter errors: removing silent letters (e.g., "knight" → "nite")
 
-5. Make distractors grade-appropriate:
-   - Lower grades: simpler, more obvious errors
-   - Higher grades: subtle, sophisticated errors that require careful study
+5. Make sentences and misspellings grade-appropriate:
+   - Lower grades: simpler sentences, more obvious errors
+   - Higher grades: complex sentences, subtle spelling errors
 
-6. Ensure variety in your misspellings - don't use the same pattern for all words
-7. Each test variant should have different misspellings
-8. DO NOT include orderIndex - we'll randomize after generation
+6. Ensure variety:
+   - Different sentence structures across questions
+   - Different misspelling patterns for each word
+   - Each test variant should have unique sentences
+
+7. DO NOT include orderIndex - we'll randomize after generation
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
   "questions": [
     {
-      "questionText": "Which is the correct spelling?",
+      "questionText": "Which word is spelled correctly in this sentence: I hope to _____ your letter soon?",
       "questionType": "SPELLING",
       "correctAnswer": "receive",
       "options": ["receive", "recieve", "recive", "receeve"]
@@ -827,6 +837,28 @@ Return ONLY valid JSON (no markdown, no explanation):
         if (!q.options.includes(q.correctAnswer)) {
           throw new Error(
             `Correct answer "${q.correctAnswer}" not found in options for question: ${q.questionText}`
+          );
+        }
+
+        // Deduplicate options while preserving correct answer
+        const uniqueOptions = Array.from(new Set(q.options));
+        if (uniqueOptions.length !== q.options.length) {
+          logger.warn(
+            {
+              questionText: q.questionText,
+              originalOptions: q.options,
+              uniqueOptions,
+              duplicateCount: q.options.length - uniqueOptions.length,
+            },
+            'Duplicate options detected in spelling question, deduplicating'
+          );
+          q.options = uniqueOptions;
+        }
+
+        // Validate we still have enough unique options
+        if (q.options.length < 2) {
+          throw new Error(
+            `Insufficient unique options (${q.options.length}) for question: ${q.questionText}. Need at least 2 options.`
           );
         }
 
