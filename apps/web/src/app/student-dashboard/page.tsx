@@ -23,6 +23,7 @@ import { ClipboardCheck, Target, TrendingUp, FileText, Loader2, CheckCircle2 } f
 import { formatRelativeDate } from '@/lib/utils';
 import { TestListItem } from '@/components/student-dashboard/test-list-item';
 import { CompletedTestListItem } from '@/components/student-dashboard/completed-test-list-item';
+import { CompactTestList } from '@/components/student-dashboard/compact-test-list';
 
 interface StudentStats {
   testsAssigned: number;
@@ -40,7 +41,11 @@ interface VocabularyGroup {
   bestScore: number | null;
   avgScore: number | null;
   attempts: TestAttempt[];
+  mostRecentAssignedAt: string;
 }
+
+type SortOption = 'recent' | 'name' | 'progress' | 'score';
+type FilterOption = 'all' | 'new' | 'incomplete' | 'complete';
 
 export default function StudentDashboardPage() {
   const router = useRouter();
@@ -53,6 +58,8 @@ export default function StudentDashboardPage() {
   const [error, setError] = useState<string>('');
   const { handleError } = useErrorHandler({ showToast: false });
   const [isLoadingTests, setIsLoadingTests] = useState(true);
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
 
   // Group assignments by vocabulary sheet
   const vocabularyGroups = useMemo(() => {
@@ -73,12 +80,18 @@ export default function StudentDashboardPage() {
           bestScore: null,
           avgScore: null,
           attempts: [],
+          mostRecentAssignedAt: assignment.assignedAt,
         });
       }
 
       const group = groupsMap.get(sheetId)!;
       group.assignments.push(assignment);
       group.total++;
+
+      // Track most recent assignment date
+      if (new Date(assignment.assignedAt) > new Date(group.mostRecentAssignedAt)) {
+        group.mostRecentAssignedAt = assignment.assignedAt;
+      }
     });
 
     // Add attempt statistics to each group
@@ -102,10 +115,52 @@ export default function StudentDashboardPage() {
       }
     });
 
-    return Array.from(groupsMap.values()).sort((a, b) =>
-      a.sheetName.localeCompare(b.sheetName)
-    );
+    return Array.from(groupsMap.values());
   }, [assignments, pastAttempts]);
+
+  // Separate new assignments (last 7 days) from all
+  const newAssignments = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    return vocabularyGroups
+      .filter((group) => new Date(group.mostRecentAssignedAt) >= sevenDaysAgo)
+      .sort((a, b) => new Date(b.mostRecentAssignedAt).getTime() - new Date(a.mostRecentAssignedAt).getTime());
+  }, [vocabularyGroups]);
+
+  // Filter and sort all assignments
+  const filteredAndSortedGroups = useMemo(() => {
+    let filtered = [...vocabularyGroups];
+
+    // Apply filter
+    if (filterBy === 'new') {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      filtered = filtered.filter((group) => new Date(group.mostRecentAssignedAt) >= sevenDaysAgo);
+    } else if (filterBy === 'incomplete') {
+      filtered = filtered.filter((group) => group.completed < group.total);
+    } else if (filterBy === 'complete') {
+      filtered = filtered.filter((group) => group.completed === group.total);
+    }
+
+    // Apply sort
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'recent':
+          return new Date(b.mostRecentAssignedAt).getTime() - new Date(a.mostRecentAssignedAt).getTime();
+        case 'name':
+          return a.sheetName.localeCompare(b.sheetName);
+        case 'progress':
+          const aProgress = a.total > 0 ? a.completed / a.total : 0;
+          const bProgress = b.total > 0 ? b.completed / b.total : 0;
+          return bProgress - aProgress; // Higher progress first
+        case 'score':
+          return (b.bestScore ?? -1) - (a.bestScore ?? -1);
+        default:
+          return 0;
+      }
+    });
+  }, [vocabularyGroups, sortBy, filterBy]);
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
@@ -307,13 +362,95 @@ export default function StudentDashboardPage() {
         </div>
       )}
 
-      {/* Available Tests Section */}
+      {/* New Assignments Section - Prominent cards for recent assignments */}
+      {!isLoadingTests && newAssignments.length > 0 && (
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-2xl font-bold tracking-tight">New Assignments</h3>
+              <Badge variant="default" className="text-xs">
+                {newAssignments.length}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1">
+              Recently assigned tests (last 7 days) - start here!
+            </p>
+          </div>
+
+          <div className="space-y-3 sm:space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+            {newAssignments.map((group) => (
+              <TestListItem key={group.sheetId} group={group} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All Tests Section - Compact sortable list */}
       <div className="space-y-4">
-        <div className="space-y-1">
-          <h3 className="text-2xl font-bold tracking-tight">Available Tests</h3>
-          <p className="text-muted-foreground mt-1">
-            Tests assigned by your teacher that you can take now
-          </p>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold tracking-tight">All Tests</h3>
+            <p className="text-muted-foreground mt-1">
+              {newAssignments.length > 0
+                ? 'Browse all your assigned tests'
+                : 'Tests assigned by your teacher'}
+            </p>
+          </div>
+
+          {/* Sort and Filter Controls */}
+          {!isLoadingTests && vocabularyGroups.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                <span className="text-sm text-muted-foreground self-center">Filter:</span>
+                <Button
+                  size="sm"
+                  variant={filterBy === 'all' ? 'default' : 'outline'}
+                  onClick={() => setFilterBy('all')}
+                  className="h-8 text-xs"
+                >
+                  All ({vocabularyGroups.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filterBy === 'new' ? 'default' : 'outline'}
+                  onClick={() => setFilterBy('new')}
+                  className="h-8 text-xs"
+                >
+                  New ({newAssignments.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filterBy === 'incomplete' ? 'default' : 'outline'}
+                  onClick={() => setFilterBy('incomplete')}
+                  className="h-8 text-xs"
+                >
+                  Incomplete ({vocabularyGroups.filter((g) => g.completed < g.total).length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filterBy === 'complete' ? 'default' : 'outline'}
+                  onClick={() => setFilterBy('complete')}
+                  className="h-8 text-xs"
+                >
+                  Complete ({vocabularyGroups.filter((g) => g.completed === g.total).length})
+                </Button>
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="h-8 text-xs rounded-md border border-input bg-background px-3 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="recent">Most Recent</option>
+                  <option value="name">Name (A-Z)</option>
+                  <option value="progress">Progress</option>
+                  <option value="score">Best Score</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {isLoadingTests ? (
@@ -326,10 +463,16 @@ export default function StudentDashboardPage() {
             title="No tests assigned yet"
             description="Your teacher hasn&apos;t assigned any tests to your classroom. Check back later!"
           />
+        ) : filteredAndSortedGroups.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No tests match your filters"
+            description="Try adjusting your filters to see more tests"
+          />
         ) : (
-          <div className="space-y-3 sm:space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
-            {vocabularyGroups.map((group) => (
-              <TestListItem key={group.sheetId} group={group} />
+          <div className="space-y-2 sm:space-y-3">
+            {filteredAndSortedGroups.map((group) => (
+              <CompactTestList key={group.sheetId} group={group} />
             ))}
           </div>
         )}
