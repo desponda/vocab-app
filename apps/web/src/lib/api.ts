@@ -6,10 +6,39 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public details?: unknown
+    public details?: unknown,
+    public context?: string
   ) {
     super(message);
     this.name = 'ApiError';
+  }
+
+  /**
+   * Check if error is recoverable (can retry or redirect)
+   */
+  isRecoverable(): boolean {
+    return [401, 403, 404, 429].includes(this.statusCode);
+  }
+
+  /**
+   * Check if error is network-related
+   */
+  isNetworkError(): boolean {
+    return this.statusCode === 0 || this.statusCode === 408;
+  }
+
+  /**
+   * Check if error is client-side (4xx)
+   */
+  isClientError(): boolean {
+    return this.statusCode >= 400 && this.statusCode < 500;
+  }
+
+  /**
+   * Check if error is server-side (5xx)
+   */
+  isServerError(): boolean {
+    return this.statusCode >= 500;
   }
 }
 

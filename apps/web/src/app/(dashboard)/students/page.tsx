@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { studentsApi } from '@/lib/api';
+import { studentsApi, ApiError } from '@/lib/api';
 import {
   Card,
   CardContent,
@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { Users, Search, Loader2 } from 'lucide-react';
 import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
 
@@ -43,24 +45,27 @@ export default function StudentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const { handleError } = useErrorHandler({ showToast: false });
+
+  const fetchStudents = async () => {
+    if (!accessToken) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const { students } = await studentsApi.getAllEnriched(accessToken);
+      setStudents(students);
+    } catch (err) {
+      handleError(err, 'Failed to load students');
+      setError(err instanceof ApiError ? err.message : 'Failed to load students');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      if (!accessToken) return;
-
-      try {
-        setIsLoading(true);
-        const { students } = await studentsApi.getAllEnriched(accessToken);
-        setStudents(students);
-      } catch (err) {
-        console.error('Failed to fetch students:', err);
-        setError('Failed to load students');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   // Filter students based on search query
@@ -85,11 +90,7 @@ export default function StudentsPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-destructive">{error}</p>
-      </div>
-    );
+    return <Error500 preserveLayout={true} onRetry={fetchStudents} />;
   }
 
   return (
