@@ -11,7 +11,10 @@ import {
   type VocabularySheet,
   type TestAssignment,
   type Enrollment,
+  ApiError,
 } from '@/lib/api';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -115,6 +118,7 @@ export default function ClassroomDetailPage() {
   // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const { handleError } = useErrorHandler({ showToast: false });
   const [copiedCode, setCopiedCode] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedSheetId, setSelectedSheetId] = useState<string>('');
@@ -135,44 +139,45 @@ export default function ClassroomDetailPage() {
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
   // Load classroom details
-  useEffect(() => {
+  const loadClassroom = async () => {
     if (!accessToken) return;
 
-    const loadClassroom = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
+    try {
+      setIsLoading(true);
+      setError('');
 
-        // Get classroom details with enrolled students
-        const classroomData = await classroomsApi.get(classroomId, accessToken);
-        setClassroom(classroomData.classroom);
-        setEnrollments(classroomData.classroom.enrollments || []);
+      // Get classroom details with enrolled students
+      const classroomData = await classroomsApi.get(classroomId, accessToken);
+      setClassroom(classroomData.classroom);
+      setEnrollments(classroomData.classroom.enrollments || []);
 
-        // Initialize edit form data
-        setEditFormData({
-          name: classroomData.classroom.name,
-          gradeLevel: classroomData.classroom.gradeLevel,
-        });
+      // Initialize edit form data
+      setEditFormData({
+        name: classroomData.classroom.name,
+        gradeLevel: classroomData.classroom.gradeLevel,
+      });
 
-        // Load stats, activity, and test attempts in parallel
-        const [statsData, activityData, attemptsData] = await Promise.all([
-          classroomsApi.getStats(classroomId, accessToken),
-          classroomsApi.getActivity(classroomId, accessToken),
-          classroomsApi.getTestAttempts(classroomId, accessToken),
-        ]);
+      // Load stats, activity, and test attempts in parallel
+      const [statsData, activityData, attemptsData] = await Promise.all([
+        classroomsApi.getStats(classroomId, accessToken),
+        classroomsApi.getActivity(classroomId, accessToken),
+        classroomsApi.getTestAttempts(classroomId, accessToken),
+      ]);
 
-        setStats(statsData);
-        setActivities(activityData.activities);
-        setTestAttempts(attemptsData.attempts);
-      } catch (err) {
-        console.error('Error loading classroom:', err);
-        setError('Failed to load classroom details. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setStats(statsData);
+      setActivities(activityData.activities);
+      setTestAttempts(attemptsData.attempts);
+    } catch (err) {
+      handleError(err, 'Failed to load classroom');
+      setError(err instanceof ApiError ? err.message : 'Failed to load classroom');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadClassroom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classroomId, accessToken]);
 
   // Load vocabulary sheets for bulk assignment
@@ -339,17 +344,7 @@ export default function ClassroomDetailPage() {
   }
 
   if (error || !classroom) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error || 'Classroom not found'}
-        </div>
-        <Button onClick={() => router.push('/classrooms')} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Classrooms
-        </Button>
-      </div>
-    );
+    return <Error500 preserveLayout={true} onRetry={loadClassroom} />;
   }
 
   return (

@@ -9,8 +9,11 @@ import {
   type TestAttempt,
   type Student,
   type TestQuestion,
-  type TestDetail
+  type TestDetail,
+  ApiError,
 } from '@/lib/api';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -41,6 +44,7 @@ export default function TakeTestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const { handleError } = useErrorHandler({ showToast: false });
   const [results, setResults] = useState<TestAttempt | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -76,59 +80,60 @@ export default function TakeTestPage() {
   }, [user, isAuthLoading, router]);
 
   // Load student and start test attempt
-  useEffect(() => {
+  const startTest = async () => {
     if (!accessToken || !user) return;
 
-    const startTest = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
+    try {
+      setIsLoading(true);
+      setError('');
 
-        // Get student record
-        const { students } = await studentsApi.list(accessToken);
-        if (students.length === 0) {
-          setError('No student record found. Please contact your teacher.');
-          setIsLoading(false);
-          return;
-        }
-
-        const userStudent = students[0];
-        setStudent(userStudent);
-
-        // Create test attempt (or resume existing)
-        const attemptData = await testsApi.createAttempt(
-          testId,
-          userStudent.id,
-          accessToken
-        );
-
-        setAttempt(attemptData.attempt as TestAttemptWithQuestions);
-        setQuestions(attemptData.attempt.test.questions || []);
-
-        // Resume detection and state restoration
-        if (attemptData.resumed) {
-          setIsResumed(true);
-
-          // Restore saved answers
-          const answerMap: Record<string, string> = {};
-          attemptData.attempt.answers?.forEach((ans) => {
-            answerMap[ans.questionId] = ans.answer;
-          });
-          setAnswers(answerMap);
-
-          // Restore question position
-          const savedIndex = attemptData.attempt.currentQuestionIndex ?? 0;
-          setCurrentQuestionIndex(savedIndex);
-        }
-      } catch (err) {
-        console.error('Error starting test:', err);
-        setError('Failed to start test. Please try again.');
-      } finally {
+      // Get student record
+      const { students } = await studentsApi.list(accessToken);
+      if (students.length === 0) {
+        setError('No student record found. Please contact your teacher.');
         setIsLoading(false);
+        return;
       }
-    };
 
+      const userStudent = students[0];
+      setStudent(userStudent);
+
+      // Create test attempt (or resume existing)
+      const attemptData = await testsApi.createAttempt(
+        testId,
+        userStudent.id,
+        accessToken
+      );
+
+      setAttempt(attemptData.attempt as TestAttemptWithQuestions);
+      setQuestions(attemptData.attempt.test.questions || []);
+
+      // Resume detection and state restoration
+      if (attemptData.resumed) {
+        setIsResumed(true);
+
+        // Restore saved answers
+        const answerMap: Record<string, string> = {};
+        attemptData.attempt.answers?.forEach((ans) => {
+          answerMap[ans.questionId] = ans.answer;
+        });
+        setAnswers(answerMap);
+
+        // Restore question position
+        const savedIndex = attemptData.attempt.currentQuestionIndex ?? 0;
+        setCurrentQuestionIndex(savedIndex);
+      }
+    } catch (err) {
+      handleError(err, 'Failed to load test');
+      setError(err instanceof ApiError ? err.message : 'Failed to load test');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     startTest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId, accessToken, user]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
@@ -212,16 +217,7 @@ export default function TakeTestPage() {
   }
 
   if (error && !attempt) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error}
-        </div>
-        <Button onClick={() => router.push('/student-dashboard')} variant="outline">
-          Back to Dashboard
-        </Button>
-      </div>
-    );
+    return <Error500 preserveLayout={true} onRetry={() => window.location.reload()} />;
   }
 
   // Show results after submission

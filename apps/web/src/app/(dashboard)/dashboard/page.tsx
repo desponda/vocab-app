@@ -14,6 +14,9 @@ import {
 import { StatCard } from '@/components/dashboard/stat-card';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { Badge } from '@/components/ui/badge';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
+import { ApiError } from '@/lib/api';
 import {
   Users,
   GraduationCap,
@@ -65,12 +68,14 @@ export default function DashboardPage() {
   const [recentClassrooms, setRecentClassrooms] = useState<Classroom[]>([]);
   const [recentSheets, setRecentSheets] = useState<VocabularySheet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { handleError } = useErrorHandler({ showToast: false });
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!accessToken) return;
+  const fetchDashboardData = async () => {
+    if (!accessToken) return;
 
-      try {
+    try {
+      setError(null);
         // Fetch dashboard stats
         const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/teachers/dashboard-stats`, {
           headers: {
@@ -106,14 +111,17 @@ export default function DashboardPage() {
           const data = await sheetsRes.json();
           setRecentSheets(data.sheets.slice(0, 5));
         }
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
+      } catch (err) {
+        handleError(err, 'Failed to load dashboard');
+        setError(err instanceof ApiError ? err.message : 'Failed to load dashboard');
       } finally {
         setIsLoading(false);
       }
     };
 
+  useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   if (isLoading) {
@@ -122,6 +130,10 @@ export default function DashboardPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (error) {
+    return <Error500 preserveLayout={true} onRetry={fetchDashboardData} />;
   }
 
   return (

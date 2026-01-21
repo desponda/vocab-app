@@ -16,6 +16,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { TestAssignment, Student, TestAttempt } from '@/lib/api';
 import { ClipboardCheck, Target, TrendingUp, FileText, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
@@ -47,6 +49,7 @@ export default function StudentDashboardPage() {
   const [inProgressAttempts, setInProgressAttempts] = useState<TestAttempt[]>([]);
   const [stats, setStats] = useState<StudentStats | null>(null);
   const [error, setError] = useState<string>('');
+  const { handleError } = useErrorHandler({ showToast: false });
   const [isLoadingTests, setIsLoadingTests] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -123,78 +126,75 @@ export default function StudentDashboardPage() {
   }, [user, isLoading, router]);
 
   // Load assigned tests and stats
-  useEffect(() => {
+  const loadData = async () => {
     if (!accessToken || !user) return;
 
-    const loadData = async () => {
-      try {
-        setIsLoadingTests(true);
-        setError('');
+    try {
+      setIsLoadingTests(true);
+      setError('');
 
-        // Get the student record
-        const { students } = await studentsApi.list(accessToken);
+      // Get the student record
+      const { students } = await studentsApi.list(accessToken);
 
-        if (students.length === 0) {
-          setError('No student record found. Please contact your teacher.');
-          setIsLoadingTests(false);
-          return;
-        }
-
-        const userStudent = students[0];
-        setStudent(userStudent);
-
-        // Load assigned tests and past attempts in parallel
-        const [assignmentsResponse, attemptsResponse] = await Promise.all([
-          testsApi.listAssignedToStudent(userStudent.id, accessToken),
-          testsApi.getAttemptHistory(userStudent.id, accessToken),
-        ]);
-
-        // Filter valid assignments (new format with questions)
-        const newFormatCutoff = new Date('2026-01-18T00:00:00Z');
-        const validAssignments = assignmentsResponse.assignments.filter((assignment) => {
-          if (!assignment.test?.createdAt) return false;
-          const testCreatedAt = new Date(assignment.test.createdAt);
-          const hasQuestions = (assignment.test?._count?.questions || 0) > 0;
-          return testCreatedAt >= newFormatCutoff && hasQuestions;
-        });
-
-        setAssignments(validAssignments);
-
-        // Separate in-progress and completed attempts
-        const completedAttempts = attemptsResponse.attempts.filter(
-          (attempt) => attempt.status === 'SUBMITTED'
-        );
-        const inProgress = attemptsResponse.attempts.filter(
-          (attempt) => attempt.status === 'IN_PROGRESS'
-        );
-
-        setPastAttempts(completedAttempts);
-        setInProgressAttempts(inProgress);
-
-        // Calculate stats
-        const testsAssigned = validAssignments.length;
-        const testsCompleted = completedAttempts.length;
-        const avgScore = completedAttempts.length > 0
-          ? Math.round(
-              completedAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) /
-                completedAttempts.length
-            )
-          : 0;
-
-        setStats({ testsAssigned, testsCompleted, avgScore });
-      } catch (err) {
-        if (err instanceof ApiError) {
-          setError(err.message);
-        } else {
-          setError('Failed to load assigned tests');
-        }
-        console.error('Error loading tests:', err);
-      } finally {
+      if (students.length === 0) {
+        setError('No student record found. Please contact your teacher.');
         setIsLoadingTests(false);
+        return;
       }
-    };
 
+      const userStudent = students[0];
+      setStudent(userStudent);
+
+      // Load assigned tests and past attempts in parallel
+      const [assignmentsResponse, attemptsResponse] = await Promise.all([
+        testsApi.listAssignedToStudent(userStudent.id, accessToken),
+        testsApi.getAttemptHistory(userStudent.id, accessToken),
+      ]);
+
+      // Filter valid assignments (new format with questions)
+      const newFormatCutoff = new Date('2026-01-18T00:00:00Z');
+      const validAssignments = assignmentsResponse.assignments.filter((assignment) => {
+        if (!assignment.test?.createdAt) return false;
+        const testCreatedAt = new Date(assignment.test.createdAt);
+        const hasQuestions = (assignment.test?._count?.questions || 0) > 0;
+        return testCreatedAt >= newFormatCutoff && hasQuestions;
+      });
+
+      setAssignments(validAssignments);
+
+      // Separate in-progress and completed attempts
+      const completedAttempts = attemptsResponse.attempts.filter(
+        (attempt) => attempt.status === 'SUBMITTED'
+      );
+      const inProgress = attemptsResponse.attempts.filter(
+        (attempt) => attempt.status === 'IN_PROGRESS'
+      );
+
+      setPastAttempts(completedAttempts);
+      setInProgressAttempts(inProgress);
+
+      // Calculate stats
+      const testsAssigned = validAssignments.length;
+      const testsCompleted = completedAttempts.length;
+      const avgScore = completedAttempts.length > 0
+        ? Math.round(
+            completedAttempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) /
+              completedAttempts.length
+          )
+        : 0;
+
+      setStats({ testsAssigned, testsCompleted, avgScore });
+    } catch (err) {
+      handleError(err, 'Failed to load assigned tests');
+      setError(err instanceof ApiError ? err.message : 'Failed to load assigned tests');
+    } finally {
+      setIsLoadingTests(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, accessToken]);
 
   if (isLoading || !user) {
@@ -203,6 +203,10 @@ export default function StudentDashboardPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (error) {
+    return <Error500 preserveLayout={true} onRetry={loadData} />;
   }
 
   return (
@@ -214,12 +218,6 @@ export default function StudentDashboardPage() {
           Here&apos;s an overview of your test progress
         </p>
       </div>
-
-      {error && (
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
 
       {/* Stats Overview */}
       {stats && !isLoadingTests && (

@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { vocabularySheetsApi, VocabularySheetDetail } from '@/lib/api';
+import { vocabularySheetsApi, VocabularySheetDetail, ApiError } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { ArrowLeft, FileText, CheckCircle, AlertCircle, Clock, Loader2, Download, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -26,27 +28,29 @@ export default function VocabularySheetDetailPage() {
   const [sheet, setSheet] = useState<VocabularySheetDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { handleError } = useErrorHandler({ showToast: false });
 
   const sheetId = params.id as string;
 
-  useEffect(() => {
+  const fetchSheet = async () => {
     if (!accessToken || !sheetId) return;
 
-    const fetchSheet = async () => {
-      try {
-        setIsLoading(true);
-        const data = await vocabularySheetsApi.get(sheetId, accessToken);
-        setSheet(data.sheet);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch vocabulary sheet:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load vocabulary sheet');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await vocabularySheetsApi.get(sheetId, accessToken);
+      setSheet(data.sheet);
+    } catch (err) {
+      handleError(err, 'Failed to load test details');
+      setError(err instanceof ApiError ? err.message : 'Failed to load test details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSheet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, sheetId]);
 
   const handleDelete = async () => {
@@ -78,23 +82,7 @@ export default function VocabularySheetDetailPage() {
   }
 
   if (error || !sheet) {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" onClick={() => router.push('/tests')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Tests
-        </Button>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-            <h3 className="text-lg font-medium mb-2">Error Loading Sheet</h3>
-            <p className="text-sm text-muted-foreground">
-              {error || 'Test not found'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <Error500 preserveLayout={true} onRetry={fetchSheet} />;
   }
 
   const statusConfig = STATUS_CONFIG[sheet.status];

@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { classroomsApi, Classroom } from '@/lib/api';
+import { classroomsApi, Classroom, ApiError } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { ClassroomListItem } from '@/components/classroom/classroom-list-item';
 import { CreateClassroomDialog } from '@/components/classroom/create-classroom-dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { GraduationCap, Search, Loader2 } from 'lucide-react';
 
 export default function ClassroomsPage() {
@@ -14,22 +16,27 @@ export default function ClassroomsPage() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const { handleError } = useErrorHandler({ showToast: false });
 
-  useEffect(() => {
+  const fetchClassrooms = async () => {
     if (!accessToken) return;
 
-    const fetchClassrooms = async () => {
-      try {
-        const data = await classroomsApi.list(accessToken);
-        setClassrooms(data.classrooms);
-      } catch (error) {
-        console.error('Failed to fetch classrooms:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    try {
+      setError(null);
+      const data = await classroomsApi.list(accessToken);
+      setClassrooms(data.classrooms);
+    } catch (err) {
+      handleError(err, 'Failed to load classrooms');
+      setError(err instanceof ApiError ? err.message : 'Failed to load classrooms');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchClassrooms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   const handleClassroomCreated = (classroom: Classroom) => {
@@ -55,6 +62,10 @@ export default function ClassroomsPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (error) {
+    return <Error500 preserveLayout={true} onRetry={fetchClassrooms} />;
   }
 
   return (

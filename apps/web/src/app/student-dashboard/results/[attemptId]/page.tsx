@@ -14,6 +14,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
 
 interface ReviewData {
@@ -57,6 +59,7 @@ export default function TestResultsPage() {
   const { user, accessToken, isLoading } = useAuth();
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [error, setError] = useState<string>('');
+  const { handleError } = useErrorHandler({ showToast: false });
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const attemptId = params?.attemptId as string;
@@ -73,29 +76,26 @@ export default function TestResultsPage() {
   }, [user, isLoading, router]);
 
   // Load review data
-  useEffect(() => {
+  const loadReviewData = async () => {
     if (!accessToken || !attemptId) return;
 
-    const loadReviewData = async () => {
-      try {
-        setIsLoadingData(true);
-        setError('');
+    try {
+      setIsLoadingData(true);
+      setError('');
 
-        const data = await testsApi.getAttemptReview(attemptId, accessToken);
-        setReviewData(data);
-      } catch (err) {
-        if (err instanceof ApiError) {
-          setError(err.message);
-        } else {
-          setError('Failed to load test results');
-        }
-        console.error('Error loading review data:', err);
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
+      const data = await testsApi.getAttemptReview(attemptId, accessToken);
+      setReviewData(data);
+    } catch (err) {
+      handleError(err, 'Failed to load test results');
+      setError(err instanceof ApiError ? err.message : 'Failed to load test results');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
+  useEffect(() => {
     loadReviewData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attemptId, accessToken]);
 
   if (isLoading || !user) {
@@ -111,19 +111,7 @@ export default function TestResultsPage() {
   }
 
   if (error) {
-    return (
-      <div className="space-y-8">
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error}
-        </div>
-        <Link href={backLink}>
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Link>
-      </div>
-    );
+    return <Error500 preserveLayout={true} onRetry={loadReviewData} />;
   }
 
   if (!reviewData) {

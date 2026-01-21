@@ -3,13 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { studentsApi, testsApi, type TestAttempt } from '@/lib/api';
+import { studentsApi, testsApi, type TestAttempt, ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { ArrowLeft, Loader2, ClipboardCheck, Target, Clock, FileText } from 'lucide-react';
 import { formatRelativeDate, getScoreBadgeVariant } from '@/lib/utils';
 
@@ -33,46 +35,49 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState<EnrichedStudent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { handleError } = useErrorHandler({ showToast: false });
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
   const [isLoadingAttempts, setIsLoadingAttempts] = useState(false);
 
-  useEffect(() => {
-    const fetchStudentData = async () => {
-      if (!accessToken) return;
+  const fetchStudentData = async () => {
+    if (!accessToken) return;
 
-      try {
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        // Get all students and find the specific one
-        const { students } = await studentsApi.getAllEnriched(accessToken);
-        const foundStudent = students.find((s) => s.id === studentId);
+      // Get all students and find the specific one
+      const { students } = await studentsApi.getAllEnriched(accessToken);
+      const foundStudent = students.find((s) => s.id === studentId);
 
-        if (!foundStudent) {
-          setError('Student not found');
-          return;
-        }
-
-        setStudent(foundStudent);
-
-        // Fetch test attempts for this student
-        setIsLoadingAttempts(true);
-        try {
-          const { attempts } = await testsApi.getAttemptHistory(studentId, accessToken);
-          setTestAttempts(attempts.filter(a => a.status === 'SUBMITTED'));
-        } catch (err) {
-          console.error('Error loading test attempts:', err);
-        } finally {
-          setIsLoadingAttempts(false);
-        }
-      } catch (err) {
-        console.error('Error loading student:', err);
-        setError('Failed to load student data');
-      } finally {
-        setIsLoading(false);
+      if (!foundStudent) {
+        setError('Student not found');
+        return;
       }
-    };
 
+      setStudent(foundStudent);
+
+      // Fetch test attempts for this student
+      setIsLoadingAttempts(true);
+      try {
+        const { attempts } = await testsApi.getAttemptHistory(studentId, accessToken);
+        setTestAttempts(attempts.filter(a => a.status === 'SUBMITTED'));
+      } catch (err) {
+        console.error('Error loading test attempts:', err);
+      } finally {
+        setIsLoadingAttempts(false);
+      }
+    } catch (err) {
+      handleError(err, 'Failed to load student data');
+      setError(err instanceof ApiError ? err.message : 'Failed to load student data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchStudentData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, studentId]);
 
   if (isLoading) {
@@ -84,17 +89,7 @@ export default function StudentDetailPage() {
   }
 
   if (error || !student) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error || 'Student not found'}
-        </div>
-        <Button onClick={() => router.push('/students')} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Students
-        </Button>
-      </div>
-    );
+    return <Error500 preserveLayout={true} onRetry={fetchStudentData} />;
   }
 
   return (

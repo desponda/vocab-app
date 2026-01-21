@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { vocabularySheetsApi, classroomsApi, VocabularySheet, Classroom, ProcessingStatus } from '@/lib/api';
+import { vocabularySheetsApi, classroomsApi, VocabularySheet, Classroom, ProcessingStatus, ApiError } from '@/lib/api';
 import {
   Select,
   SelectContent,
@@ -13,6 +13,8 @@ import {
 import { VocabularySheetListItem } from '@/components/tests/vocabulary-sheet-list-item';
 import { TestCreationWizard } from '@/components/test-creation-wizard';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Error500 } from '@/components/error/http-errors';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, Plus } from 'lucide-react';
 
@@ -24,26 +26,31 @@ export default function VocabularyPage() {
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | 'ALL'>('ALL');
   const [testTypeFilter, setTestTypeFilter] = useState<'ALL' | 'VOCABULARY' | 'SPELLING' | 'GENERAL_KNOWLEDGE'>('ALL');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { handleError } = useErrorHandler({ showToast: false });
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!accessToken) return;
 
-    const fetchData = async () => {
-      try {
-        const [sheetsData, classroomsData] = await Promise.all([
-          vocabularySheetsApi.list(accessToken),
-          classroomsApi.list(accessToken),
-        ]);
-        setSheets(sheetsData.sheets);
-        setClassrooms(classroomsData.classrooms);
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    try {
+      setError(null);
+      const [sheetsData, classroomsData] = await Promise.all([
+        vocabularySheetsApi.list(accessToken),
+        classroomsApi.list(accessToken),
+      ]);
+      setSheets(sheetsData.sheets);
+      setClassrooms(classroomsData.classrooms);
+    } catch (err) {
+      handleError(err, 'Failed to load tests');
+      setError(err instanceof ApiError ? err.message : 'Failed to load tests');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
 
@@ -152,6 +159,10 @@ export default function VocabularyPage() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (error) {
+    return <Error500 preserveLayout={true} onRetry={fetchData} />;
   }
 
   return (
