@@ -4,7 +4,14 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Trash2, Loader2, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, RefreshCw, UserPlus, Eye, EyeOff } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { FileText, Download, Trash2, Loader2, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, RefreshCw, UserPlus, Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/utils';
 import { ProcessingStatus, VocabularyWord, Classroom, vocabularySheetsApi } from '@/lib/api';
 import { TestPreviewDialog } from '@/components/classroom/test-preview-dialog';
@@ -133,15 +140,15 @@ export function VocabularySheetListItem({
 
   return (
     <Card className="hover:bg-muted/50 transition-colors">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className={`h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0 ${statusConfig.color}`}>
-              <FileText className="h-6 w-6" />
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
+            <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center flex-shrink-0 ${statusConfig.color}`}>
+              <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
 
             <div className="flex-1 min-w-0 space-y-2">
-              <h3 className="font-semibold text-lg leading-tight line-clamp-2">{name || originalName}</h3>
+              <h3 className="font-semibold text-base sm:text-lg leading-tight line-clamp-2">{name || originalName}</h3>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant={statusConfig.variant} className="flex items-center gap-1">
@@ -160,21 +167,21 @@ export function VocabularySheetListItem({
                 )}
               </div>
 
-              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
                 <span>{formatFileSize(fileSize)}</span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span>{formatRelativeDate(uploadedAt)}</span>
-                <span>•</span>
-                <span className="uppercase">{fileType.replace('application/', '').replace('image/', '')}</span>
+                <span className="hidden md:inline">•</span>
+                <span className="hidden md:inline uppercase">{fileType.replace('application/', '').replace('image/', '')}</span>
                 {wordCount && wordCount > 0 && (
                   <>
-                    <span>•</span>
+                    <span className="hidden sm:inline">•</span>
                     <span>{wordCount} words</span>
                   </>
                 )}
                 {testCount && testCount > 0 && (
                   <>
-                    <span>•</span>
+                    <span className="hidden sm:inline">•</span>
                     <span>{testCount} test{testCount === 1 ? '' : 's'}</span>
                   </>
                 )}
@@ -186,7 +193,8 @@ export function VocabularySheetListItem({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          {/* Desktop: Show all buttons inline */}
+          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
             {/* View Words Button */}
             {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
               <Button
@@ -273,6 +281,80 @@ export function VocabularySheetListItem({
               <Trash2 className="h-4 w-4" />
               Delete
             </Button>
+          </div>
+
+          {/* Mobile: Show dropdown menu */}
+          <div className="sm:hidden flex items-center gap-2">
+            {/* Show Tests Button - Always visible on mobile for quick access */}
+            {hasTests && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="gap-2 min-h-[44px]"
+              >
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                {isExpanded ? 'Hide' : 'Show'}
+              </Button>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="min-h-[44px] min-w-[44px] px-2">
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {/* View Words */}
+                {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
+                  <DropdownMenuItem onClick={handleToggleWords}>
+                    {isWordsExpanded ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                    {isWordsExpanded ? 'Hide' : 'View'} Words
+                  </DropdownMenuItem>
+                )}
+
+                {/* Assign */}
+                {status === 'COMPLETED' && testCount && testCount > 0 && accessToken && (
+                  <DropdownMenuItem onClick={() => setShowAssignDialog(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign to Classroom
+                  </DropdownMenuItem>
+                )}
+
+                {/* Regenerate */}
+                {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
+                  <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate Tests
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+
+                {/* Download */}
+                <DropdownMenuItem onClick={() => onDownload(id)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Original
+                </DropdownMenuItem>
+
+                {/* AI Image */}
+                {status === 'COMPLETED' && onDownloadProcessed && (
+                  <DropdownMenuItem onClick={() => onDownloadProcessed(id)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download AI Image
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+
+                {/* Delete */}
+                <DropdownMenuItem onClick={() => onDelete(id)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
