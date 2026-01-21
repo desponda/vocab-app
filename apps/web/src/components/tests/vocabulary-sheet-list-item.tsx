@@ -324,7 +324,7 @@ export function VocabularySheetListItem({
                   <span className="sr-only">More options</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
                 {/* View Words */}
                 {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
                   <DropdownMenuItem onClick={handleToggleWords}>
