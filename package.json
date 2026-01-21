@@ -12,7 +12,7 @@
     "typecheck": "turbo run typecheck",
     "validate": "turbo run lint typecheck test",
     "validate:quick": "turbo run lint typecheck",
-    "pre-push": "pnpm validate:quick",
+    "pre-push": "pnpm validate",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "clean": "turbo run clean && rm -rf node_modules"
   },

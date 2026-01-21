@@ -270,6 +270,12 @@ vocab-app/
 
    These are the EXACT same checks that run in CI. If `pnpm pre-push` passes, CI will pass.
 
+   **Note on tests:**
+   - Unit tests run without external dependencies (always pass if code is correct)
+   - Integration tests require database/Redis (will be skipped if not running)
+   - To run integration tests: `docker-compose up -d postgres redis minio`
+   - If integration tests fail due to missing services, unit tests still validate your changes
+
    **Special cases:**
 
    ```bash
