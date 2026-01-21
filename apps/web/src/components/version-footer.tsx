@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function VersionFooter() {
   const [version, setVersion] = useState<string | null>(null);
@@ -10,7 +10,7 @@ export function VersionFooter() {
 
   useEffect(() => {
     // Fetch backend version from health endpoint
-    fetch(`${API_URL}/health`)
+    fetch(`${API_URL}/api/health`)
       .then((res) => res.json())
       .then((data) => {
         if (data.version) {

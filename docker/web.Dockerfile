@@ -19,7 +19,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 FROM node:20-alpine AS builder
 
 # Build arguments for Next.js public env vars
-ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@8.15.1 --activate
