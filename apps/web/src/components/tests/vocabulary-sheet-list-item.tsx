@@ -64,6 +64,7 @@ export function VocabularySheetListItem({
   originalName,
   status,
   uploadedAt,
+  // fileSize and fileType intentionally unused (kept for API compatibility)
   fileSize,
   fileType,
   wordCount,
@@ -82,6 +83,9 @@ export function VocabularySheetListItem({
   onTestsRegenerated,
   onAssigned,
 }: VocabularySheetListItemProps) {
+  // Suppress unused variable warnings - these are intentionally not displayed to reduce clutter
+  void fileSize;
+  void fileType;
   const [isExpanded, setIsExpanded] = useState(false);
   const [isWordsExpanded, setIsWordsExpanded] = useState(false);
   const [words, setWords] = useState<VocabularyWord[]>([]);
@@ -92,13 +96,6 @@ export function VocabularySheetListItem({
 
   const statusConfig = STATUS_CONFIG[status];
   const StatusIcon = statusConfig.icon;
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const hasTests = tests && tests.length > 0;
 
   const handleToggleWords = async () => {
@@ -179,10 +176,8 @@ export function VocabularySheetListItem({
                 )}
               </div>
 
-              {/* Desktop: Full metadata */}
+              {/* Desktop: Simplified metadata - only show what matters */}
               <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                <span>{formatFileSize(fileSize)}</span>
-                <span>•</span>
                 <span>{formatRelativeDate(uploadedAt)}</span>
                 {gradeLevel && (
                   <>
@@ -190,12 +185,10 @@ export function VocabularySheetListItem({
                     <span>Grade {gradeLevel}</span>
                   </>
                 )}
-                <span>•</span>
-                <span className="uppercase">{fileType.replace('application/', '').replace('image/', '')}</span>
                 {wordCount && wordCount > 0 && (
                   <>
                     <span>•</span>
-                    <span>{wordCount} words</span>
+                    <span>{wordCount} word{wordCount === 1 ? '' : 's'}</span>
                   </>
                 )}
                 {testCount && testCount > 0 && (
@@ -212,54 +205,25 @@ export function VocabularySheetListItem({
             </div>
           </div>
 
-          {/* Desktop: Show all buttons inline */}
+          {/* Desktop: Primary actions + dropdown menu */}
           <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-            {/* View Words Button */}
-            {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleWords}
-                className="gap-2"
-                aria-label="View extracted vocabulary words"
-              >
-                {isWordsExpanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                {isWordsExpanded ? 'Hide' : 'View'} Words
-              </Button>
-            )}
-
-            {/* Assign to Classroom Button */}
+            {/* Primary Action: Assign (most common) */}
             {status === 'COMPLETED' && testCount && testCount > 0 && accessToken && (
               <Button
-                variant="ghost"
+                variant="default"
                 size="sm"
                 onClick={() => setShowAssignDialog(true)}
                 className="gap-2"
-                aria-label="Assign all test variants to classroom"
               >
                 <UserPlus className="h-4 w-4" />
                 Assign
               </Button>
             )}
 
-            {/* Regenerate Tests Button */}
-            {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowRegenerateDialog(true)}
-                className="gap-2"
-                aria-label="Regenerate tests from current words"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Regenerate
-              </Button>
-            )}
-
-            {/* Show Tests Button */}
+            {/* Show/Hide Tests Toggle */}
             {hasTests && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="gap-2"
@@ -269,37 +233,61 @@ export function VocabularySheetListItem({
               </Button>
             )}
 
-            {/* Download Buttons */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDownload(id)}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download
-            </Button>
-            {status === 'COMPLETED' && onDownloadProcessed && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDownloadProcessed(id)}
-                className="gap-2"
-                title="Download the compressed/processed image sent to AI"
-              >
-                <Download className="h-4 w-4" />
-                AI Image
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDelete(id)}
-              className="gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
+            {/* Dropdown Menu: All other actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">More actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {/* View/Hide Words */}
+                {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
+                  <DropdownMenuItem onClick={handleToggleWords}>
+                    {isWordsExpanded ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                    {isWordsExpanded ? 'Hide Words' : 'View Words'}
+                  </DropdownMenuItem>
+                )}
+
+                {/* Regenerate Tests */}
+                {status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken && (
+                  <DropdownMenuItem onClick={() => setShowRegenerateDialog(true)}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate Tests
+                  </DropdownMenuItem>
+                )}
+
+                {(status === 'COMPLETED' && wordCount && wordCount > 0 && accessToken) && (
+                  <DropdownMenuSeparator />
+                )}
+
+                {/* Download Original */}
+                <DropdownMenuItem onClick={() => onDownload(id)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Original
+                </DropdownMenuItem>
+
+                {/* Download AI Image */}
+                {status === 'COMPLETED' && onDownloadProcessed && (
+                  <DropdownMenuItem onClick={() => onDownloadProcessed(id)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download AI Image
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+
+                {/* Delete */}
+                <DropdownMenuItem
+                  onClick={() => onDelete(id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile: Show dropdown menu */}
