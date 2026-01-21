@@ -280,3 +280,264 @@ test.describe('Student Dashboard - Data Display', () => {
     await expect(page.locator('text=/loading/i').first()).not.toBeVisible({ timeout: 10000 }).catch(() => {});
   });
 });
+
+test.describe('Spelling Test Format Validation', () => {
+  test('spelling tests should show fill-in-blank sentences, not generic prompt', async ({ page, browser }) => {
+    const timestamp = Date.now();
+    const teacherEmail = `teacher-spelling-${timestamp}@example.com`;
+    const studentEmail = `student-spelling-${timestamp}@example.com`;
+
+    // Set up teacher and create classroom
+    await page.goto(`${BASE_URL}/register`);
+    await page.fill('input#name', 'Spelling Test Teacher');
+    await page.fill('input#email', teacherEmail);
+    await page.fill('input#password', testPassword);
+    await page.fill('input#confirmPassword', testPassword);
+    await page.click('button[type="submit"]');
+
+    await expect(page.locator('h2')).toContainText('Dashboard', { timeout: 10000 });
+
+    // Create classroom
+    await page.goto(`${BASE_URL}/classrooms`);
+    await page.click('button:has-text("Create Classroom")');
+    const classroomName = `Spelling Test Classroom ${timestamp}`;
+    await page.fill('input[name="name"]', classroomName);
+    await page.selectOption('select[name="gradeLevel"]', '5');
+    await page.click('button[type="submit"]:has-text("Create")');
+    await expect(page.locator(`text=${classroomName}`)).toBeVisible({ timeout: 5000 });
+
+    // Get classroom code
+    const classroomCard = page.locator(`text=${classroomName}`).locator('..').locator('..');
+    const codeElement = classroomCard.locator('code, .font-mono, [class*="code"]').first();
+    const classroomCode = await codeElement.textContent();
+    expect(classroomCode).toBeTruthy();
+
+    // Navigate to Tests (formerly Vocabulary)
+    await page.goto(`${BASE_URL}/vocabulary`);
+
+    // Upload spelling test
+    // Look for "Create Test" or "Upload" button
+    const createButton = page.locator('button:has-text("Create Test"), button:has-text("Upload")').first();
+    await createButton.click({ timeout: 10000 });
+
+    // Wait for wizard/dialog to open
+    await page.waitForTimeout(500);
+
+    // Select SPELLING test type (if wizard UI exists)
+    const spellingOption = page.locator('text=/spelling/i, [data-test-type="SPELLING"]').first();
+    if (await spellingOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await spellingOption.click();
+
+      // If there's a Next/Continue button in wizard
+      const nextButton = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
+      if (await nextButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await nextButton.click();
+      }
+    }
+
+    // For "Use All Words" mode, check if there's a checkbox/toggle
+    const useAllWordsToggle = page.locator('input[type="checkbox"]:near(:text("Use All Words")), input[type="checkbox"]:near(:text("Skip AI"))').first();
+    if (await useAllWordsToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await useAllWordsToggle.check();
+    }
+
+    // Enter spelling words in textarea or input
+    const wordsInput = page.locator('textarea[placeholder*="word" i], textarea[name*="word"], textarea').first();
+    await wordsInput.fill('receive\nbeautiful\nseparate\ndefinitely');
+
+    // Fill other fields if present
+    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]').first();
+    if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await nameInput.fill(`Spelling Test ${timestamp}`);
+    }
+
+    // Submit the form
+    const submitButton = page.locator('button:has-text("Create"), button:has-text("Upload"), button[type="submit"]').last();
+    await submitButton.click();
+
+    // Wait for upload to complete (may take time for AI processing)
+    await page.waitForTimeout(3000);
+
+    // Wait for success message or redirect
+    const successIndicator = page.locator('text=/success|created|uploaded/i, [role="status"]').first();
+    await successIndicator.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+
+    // Navigate back to vocabulary/tests page to find the created test
+    await page.goto(`${BASE_URL}/vocabulary`);
+    await page.waitForTimeout(1000);
+
+    // Find the spelling test in the list
+    const spellingTestCard = page.locator(`text=Spelling Test ${timestamp}`).first();
+    await spellingTestCard.waitFor({ state: 'visible', timeout: 10000 });
+
+    // Assign test to classroom
+    // Look for assign button near the test
+    const assignButton = spellingTestCard.locator('..').locator('button:has-text("Assign")').first();
+    await assignButton.click({ timeout: 5000 });
+
+    // Select classroom and submit
+    const classroomCheckbox = page.locator(`label:has-text("${classroomName}") input[type="checkbox"]`).first();
+    await classroomCheckbox.check();
+
+    const assignSubmitButton = page.locator('button:has-text("Assign Test"), button[type="submit"]').last();
+    await assignSubmitButton.click();
+
+    await page.waitForTimeout(1000);
+
+    // Now register student and enroll
+    const studentPage = await browser.newPage();
+    await studentPage.goto(`${BASE_URL}/register`);
+    await studentPage.fill('input#name', 'Spelling Test Student');
+    await studentPage.fill('input#email', studentEmail);
+    await studentPage.fill('input#password', testPassword);
+    await studentPage.fill('input#confirmPassword', testPassword);
+    await studentPage.click('button[type="submit"]');
+
+    await expect(studentPage.locator('h2')).toContainText('Dashboard', { timeout: 10000 });
+
+    // Enroll in classroom
+    const joinButton = studentPage.locator('button:has-text("Join"), a:has-text("Join")').first();
+    if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await joinButton.click();
+    }
+
+    await studentPage.fill('input[placeholder*="code" i], input[name="code"]', classroomCode!);
+    await studentPage.click('button[type="submit"]:has-text("Join")');
+    await studentPage.waitForTimeout(1000);
+
+    // Navigate to student dashboard
+    await studentPage.goto(`${BASE_URL}/student-dashboard`);
+    await studentPage.waitForLoadState('networkidle');
+
+    // Find and click on the spelling test
+    const testLink = studentPage.locator(`text=Spelling Test ${timestamp}, a:has-text("Take Test")`).first();
+    await testLink.click({ timeout: 10000 });
+
+    // Wait for test page to load
+    await studentPage.waitForLoadState('networkidle');
+
+    // Verify question format shows fill-in-blank with sentence context
+    const questionText = await studentPage.locator('[class*="question"] p, [data-testid="question-text"], h2, h3').first().textContent();
+
+    // Should contain fill-in-blank format
+    expect(questionText).toMatch(/Which word is spelled correctly in this sentence:/i);
+    expect(questionText).toContain('_____'); // Contains blank
+
+    // Should NOT contain generic prompt
+    const genericPrompt = await studentPage.locator('text="Which is the correct spelling?"').count();
+    expect(genericPrompt).toBe(0);
+
+    await studentPage.close();
+  });
+
+  test('spelling tests should have no duplicate options', async ({ page, browser }) => {
+    const timestamp = Date.now();
+    const teacherEmail = `teacher-dupes-${timestamp}@example.com`;
+    const studentEmail = `student-dupes-${timestamp}@example.com`;
+
+    // Similar setup as above but focused on checking for duplicates
+    await page.goto(`${BASE_URL}/register`);
+    await page.fill('input#name', 'Duplicate Check Teacher');
+    await page.fill('input#email', teacherEmail);
+    await page.fill('input#password', testPassword);
+    await page.fill('input#confirmPassword', testPassword);
+    await page.click('button[type="submit"]');
+
+    await expect(page.locator('h2')).toContainText('Dashboard', { timeout: 10000 });
+
+    await page.goto(`${BASE_URL}/classrooms`);
+    await page.click('button:has-text("Create Classroom")');
+    const classroomName = `Duplicate Check Classroom ${timestamp}`;
+    await page.fill('input[name="name"]', classroomName);
+    await page.selectOption('select[name="gradeLevel"]', '3');
+    await page.click('button[type="submit"]:has-text("Create")');
+    await expect(page.locator(`text=${classroomName}`)).toBeVisible({ timeout: 5000 });
+
+    const classroomCard = page.locator(`text=${classroomName}`).locator('..').locator('..');
+    const codeElement = classroomCard.locator('code, .font-mono, [class*="code"]').first();
+    const classroomCode = await codeElement.textContent();
+
+    // Create spelling test with words that might cause duplicates
+    await page.goto(`${BASE_URL}/vocabulary`);
+    const createButton = page.locator('button:has-text("Create Test"), button:has-text("Upload")').first();
+    await createButton.click({ timeout: 10000 });
+    await page.waitForTimeout(500);
+
+    const spellingOption = page.locator('text=/spelling/i, [data-test-type="SPELLING"]').first();
+    if (await spellingOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await spellingOption.click();
+      const nextButton = page.locator('button:has-text("Next"), button:has-text("Continue")').first();
+      if (await nextButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await nextButton.click();
+      }
+    }
+
+    const wordsInput = page.locator('textarea[placeholder*="word" i], textarea[name*="word"], textarea').first();
+    await wordsInput.fill('most\ncat\ndog\ntree');
+
+    const submitButton = page.locator('button:has-text("Create"), button:has-text("Upload"), button[type="submit"]').last();
+    await submitButton.click();
+    await page.waitForTimeout(3000);
+
+    // Register student
+    const studentPage = await browser.newPage();
+    await studentPage.goto(`${BASE_URL}/register`);
+    await studentPage.fill('input#name', 'Duplicate Check Student');
+    await studentPage.fill('input#email', studentEmail);
+    await studentPage.fill('input#password', testPassword);
+    await studentPage.fill('input#confirmPassword', testPassword);
+    await studentPage.click('button[type="submit"]');
+    await studentPage.waitForTimeout(1000);
+
+    // Enroll and take test
+    const joinButton = studentPage.locator('button:has-text("Join"), a:has-text("Join")').first();
+    if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await joinButton.click();
+    }
+
+    await studentPage.fill('input[placeholder*="code" i], input[name="code"]', classroomCode!);
+    await studentPage.click('button[type="submit"]:has-text("Join")');
+    await studentPage.waitForTimeout(1000);
+
+    await studentPage.goto(`${BASE_URL}/student-dashboard`);
+    await studentPage.waitForLoadState('networkidle');
+
+    // Find test and navigate to it
+    const testButtons = await studentPage.locator('button, a').all();
+    for (const button of testButtons) {
+      const text = await button.textContent();
+      if (text?.toLowerCase().includes('test') || text?.toLowerCase().includes('take')) {
+        await button.click().catch(() => {});
+        break;
+      }
+    }
+
+    await studentPage.waitForTimeout(2000);
+
+    // Get all option buttons for the current question
+    const optionButtons = studentPage.locator('button[class*="option"], button:has-text("A."), button:has-text("B."), button:has-text("C."), button:has-text("D.")');
+    const optionCount = await optionButtons.count();
+
+    if (optionCount > 0) {
+      // Get text of all options
+      const optionTexts: string[] = [];
+      for (let i = 0; i < optionCount; i++) {
+        const text = await optionButtons.nth(i).textContent();
+        if (text) {
+          // Remove letter prefix (A., B., etc.) and trim
+          const cleanText = text.replace(/^[A-D]\.\s*/, '').trim();
+          optionTexts.push(cleanText);
+        }
+      }
+
+      // Check for uniqueness
+      const uniqueOptions = new Set(optionTexts);
+      expect(uniqueOptions.size, `All options should be unique. Found: ${JSON.stringify(optionTexts)}`).toBe(optionTexts.length);
+
+      // Should have 4 options (or at least 2 after deduplication)
+      expect(optionTexts.length, 'Should have multiple options').toBeGreaterThanOrEqual(2);
+    }
+
+    await studentPage.close();
+  });
+});
