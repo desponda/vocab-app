@@ -252,6 +252,9 @@ export const vocabularySheetsApi = {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
+      // Set timeout to 5 minutes for large file uploads
+      xhr.timeout = 300000;
+
       if (onProgress) {
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
@@ -263,15 +266,35 @@ export const vocabularySheetsApi = {
 
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(JSON.parse(xhr.responseText));
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (err) {
+            // Server returned non-JSON response (e.g., HTML error page)
+            console.error('Failed to parse upload response:', xhr.responseText.substring(0, 200));
+            reject(new ApiError('Server returned invalid response', xhr.status));
+          }
         } else {
-          const errorData = JSON.parse(xhr.responseText);
-          reject(new ApiError(errorData.error || 'Upload failed', xhr.status));
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            reject(new ApiError(errorData.error || 'Upload failed', xhr.status));
+          } catch (err) {
+            // Server returned non-JSON error (e.g., 502/503 HTML page)
+            console.error('Failed to parse error response:', xhr.responseText.substring(0, 200));
+            reject(new ApiError(`Upload failed with status ${xhr.status}`, xhr.status));
+          }
         }
       });
 
       xhr.addEventListener('error', () => {
         reject(new ApiError('Network error', 0));
+      });
+
+      xhr.addEventListener('timeout', () => {
+        reject(new ApiError('Upload timed out after 5 minutes', 0));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new ApiError('Upload was cancelled', 0));
       });
 
       const encodedName = encodeURIComponent(name);
@@ -567,6 +590,9 @@ export const documentsApi = {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
+      // Set timeout to 5 minutes for large file uploads
+      xhr.timeout = 300000;
+
       if (onProgress) {
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
@@ -578,15 +604,33 @@ export const documentsApi = {
 
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(JSON.parse(xhr.responseText));
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (err) {
+            console.error('Failed to parse upload response:', xhr.responseText.substring(0, 200));
+            reject(new ApiError('Server returned invalid response', xhr.status));
+          }
         } else {
-          const errorData = JSON.parse(xhr.responseText);
-          reject(new ApiError(errorData.error || 'Upload failed', xhr.status));
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            reject(new ApiError(errorData.error || 'Upload failed', xhr.status));
+          } catch (err) {
+            console.error('Failed to parse error response:', xhr.responseText.substring(0, 200));
+            reject(new ApiError(`Upload failed with status ${xhr.status}`, xhr.status));
+          }
         }
       });
 
       xhr.addEventListener('error', () => {
         reject(new ApiError('Network error', 0));
+      });
+
+      xhr.addEventListener('timeout', () => {
+        reject(new ApiError('Upload timed out after 5 minutes', 0));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new ApiError('Upload was cancelled', 0));
       });
 
       xhr.open('POST', `${API_URL}/api/documents`);

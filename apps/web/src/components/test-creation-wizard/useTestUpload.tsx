@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { vocabularySheetsApi, VocabularySheet, ProcessingStatus } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -109,6 +109,24 @@ export function useTestUpload(): UseTestUploadReturn {
   const [sheetId, setSheetId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Track if component is mounted to prevent state updates on unmounted component
+  const isMountedRef = useRef(true);
+  // Track active polling timer so it can be cancelled
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Cancel any pending polling timer
+      if (pollingTimerRef.current) {
+        clearTimeout(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const pollProcessingStatus = useCallback(async (id: string): Promise<void> => {
     if (!accessToken) return;
 
@@ -119,15 +137,40 @@ export function useTestUpload(): UseTestUploadReturn {
 
     return new Promise((resolve, reject) => {
       const poll = async () => {
+        // Check if component is still mounted before proceeding
+        if (!isMountedRef.current) {
+          reject(new Error('Component unmounted during polling'));
+          return;
+        }
+
         try {
           attempts++;
 
           // Get sheet status
           const { sheet } = await vocabularySheetsApi.get(id, accessToken);
+
+          // Null check: sheet might be null or undefined if deleted or not found
+          if (!sheet) {
+            console.error('Sheet not found or was deleted:', id);
+            if (isMountedRef.current) {
+              setStage('error');
+              setError('Test sheet not found');
+              setMessage('Test sheet not found');
+            }
+            reject(new Error('Sheet not found'));
+            return;
+          }
+
           const status = sheet.status;
 
           // Reset consecutive errors on success
           consecutiveErrors = 0;
+
+          // Only update state if component is still mounted
+          if (!isMountedRef.current) {
+            reject(new Error('Component unmounted during polling'));
+            return;
+          }
 
           // Update stage based on status
           const newStage = PROCESSING_STATUS_TO_STAGE[status];
@@ -158,11 +201,14 @@ export function useTestUpload(): UseTestUploadReturn {
 
           // Continue polling if not complete and haven't exceeded max attempts
           if (attempts < maxAttempts) {
-            setTimeout(poll, pollInterval);
+            // Store timer ref so it can be cancelled on unmount
+            pollingTimerRef.current = setTimeout(poll, pollInterval);
           } else {
-            setStage('error');
-            setError('Processing timeout - taking longer than expected');
-            setMessage('Processing timeout - taking longer than expected');
+            if (isMountedRef.current) {
+              setStage('error');
+              setError('Processing timeout - taking longer than expected');
+              setMessage('Processing timeout - taking longer than expected');
+            }
             reject(new Error('Processing timeout'));
           }
         } catch (err) {
@@ -171,14 +217,16 @@ export function useTestUpload(): UseTestUploadReturn {
           consecutiveErrors++;
 
           // Don't fail immediately on network errors, retry with exponential backoff
-          if (attempts < maxAttempts) {
+          if (attempts < maxAttempts && isMountedRef.current) {
             // Exponential backoff: 2s, 4s, 8s, 16s, 32s (max 30s)
             const backoffDelay = Math.min(30000, pollInterval * Math.pow(2, consecutiveErrors - 1));
-            setTimeout(poll, backoffDelay);
+            pollingTimerRef.current = setTimeout(poll, backoffDelay);
           } else {
-            setStage('error');
-            setError('Failed to check processing status');
-            setMessage('Failed to check processing status');
+            if (isMountedRef.current) {
+              setStage('error');
+              setError('Failed to check processing status');
+              setMessage('Failed to check processing status');
+            }
             reject(err);
           }
         }
