@@ -150,22 +150,22 @@ export function Step2FileUpload() {
           )}
         >
           <input {...getInputProps()} />
-          <div className="p-12 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="p-6 sm:p-12 flex flex-col items-center justify-center text-center space-y-4">
             <div className={cn(
-              'p-4 rounded-full',
+              'p-3 sm:p-4 rounded-full',
               isDragActive ? 'bg-primary/10' : 'bg-muted'
             )}>
               <Upload className={cn(
-                'h-8 w-8',
+                'h-6 w-6 sm:h-8 sm:w-8',
                 isDragActive ? 'text-primary' : 'text-muted-foreground'
               )} />
             </div>
 
             <div className="space-y-2">
-              <p className="text-lg font-medium">
+              <p className="text-base sm:text-lg font-medium">
                 {isDragActive ? 'Drop your file here' : 'Drag & drop your file here'}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 or click to browse
               </p>
             </div>
@@ -176,34 +176,35 @@ export function Step2FileUpload() {
           </div>
         </Card>
       ) : (
-        <Card className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-lg bg-primary/10">
+        <Card className="p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 rounded-lg bg-primary/10 shrink-0">
               {file.type.startsWith('image/') ? (
-                <FileImage className="h-6 w-6 text-primary" />
+                <FileImage className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               ) : (
-                <FileText className="h-6 w-6 text-primary" />
+                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               )}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{file.name}</p>
-                  <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{file.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleRemoveFile}
-                  className="shrink-0"
+                  className="shrink-0 -mr-2 sm:-mr-0 min-h-[44px] min-w-[44px] h-11 w-11 p-0"
+                  aria-label="Remove file"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="mt-3 flex items-center gap-2 text-sm text-green-600 dark:text-green-500">
-                <CheckCircle2 className="h-4 w-4" />
+              <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm text-green-600 dark:text-green-500">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>File ready to upload</span>
               </div>
             </div>
@@ -219,7 +220,7 @@ export function Step2FileUpload() {
               What should I upload?
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl max-sm:fixed max-sm:inset-0 max-sm:h-screen max-sm:w-screen max-sm:max-w-full max-sm:rounded-none max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Upload Guidelines for {testType === 'VOCABULARY' ? 'Vocabulary' : testType === 'SPELLING' ? 'Spelling' : 'General Knowledge'} Tests</DialogTitle>
               <DialogDescription>

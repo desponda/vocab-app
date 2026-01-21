@@ -133,23 +133,23 @@ export function Step5Processing() {
       {isComplete && processing.sheetId && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-base">What would you like to do next?</CardTitle>
-            <CardDescription>Quick actions for your new tests</CardDescription>
+            <CardTitle className="text-base sm:text-lg">What would you like to do next?</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Quick actions for your new tests</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button className="gap-2" variant="default">
+          <CardContent className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
+            <Button className="gap-2 w-full min-h-[44px]" variant="default">
               <Send className="h-4 w-4" />
               Assign to Classroom
             </Button>
-            <Button className="gap-2" variant="outline">
+            <Button className="gap-2 w-full min-h-[44px]" variant="outline">
               <Eye className="h-4 w-4" />
               Preview Tests
             </Button>
-            <Button className="gap-2" variant="outline" onClick={resetWizard}>
+            <Button className="gap-2 w-full min-h-[44px]" variant="outline" onClick={resetWizard}>
               <Plus className="h-4 w-4" />
               Create Another Test
             </Button>
-            <Button className="gap-2" variant="outline">
+            <Button className="gap-2 w-full min-h-[44px]" variant="outline">
               <Home className="h-4 w-4" />
               Back to Test Library
             </Button>
@@ -161,22 +161,22 @@ export function Step5Processing() {
       {isError && (
         <Card className="border-destructive/20 bg-destructive/5">
           <CardHeader>
-            <CardTitle className="text-base text-destructive">What went wrong?</CardTitle>
-            <CardDescription>{processing.error}</CardDescription>
+            <CardTitle className="text-base sm:text-lg text-destructive">What went wrong?</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">{processing.error}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               <p className="font-medium mb-2">Possible solutions:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Ensure image is clear with readable text</li>
                 <li>Try a different file format or reduce file size</li>
               </ul>
             </div>
-            <div className="flex gap-2">
-              <Button variant="default" onClick={() => window.location.reload()}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button className="w-full sm:w-auto min-h-[44px]" variant="default" onClick={() => window.location.reload()}>
                 Try Again
               </Button>
-              <Button variant="outline" onClick={resetWizard}>
+              <Button className="w-full sm:w-auto min-h-[44px]" variant="outline" onClick={resetWizard}>
                 Start Over
               </Button>
             </div>

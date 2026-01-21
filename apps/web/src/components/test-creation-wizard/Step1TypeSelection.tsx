@@ -133,7 +133,7 @@ export function Step1TypeSelection() {
               Need help choosing?
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl max-sm:fixed max-sm:inset-0 max-sm:h-screen max-sm:w-screen max-sm:max-w-full max-sm:rounded-none max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>How to Choose a Test Type</DialogTitle>
               <DialogDescription>
