@@ -322,17 +322,38 @@ pnpm test             # Run all unit tests (Vitest)
 pnpm test:watch       # Run tests in watch mode
 
 # E2E Testing (Playwright)
+## Against Staging
 cd apps/web
-pnpm test:e2e                    # Run all e2e tests
+pnpm test:e2e                    # Run all e2e tests (defaults to staging)
 pnpm test:e2e:ui                 # Run with Playwright UI
 pnpm test:e2e:headed             # Run in headed mode
-BASE_URL=https://vocab-staging.dresponda.com pnpm test:e2e  # Test staging
+BASE_URL=https://vocab-staging.dresponda.com pnpm test:e2e  # Explicit staging URL
+
+## Local E2E Testing (Full Stack)
+# One-time setup (from repository root):
+pnpm setup:e2e               # Sets up Docker + DB + seeds test data
+
+# Run local e2e tests:
+pnpm test:e2e:local          # Run all e2e tests against localhost:3000
+pnpm test:e2e:local:ui       # Run with Playwright UI (recommended for debugging)
+pnpm test:e2e:local:headed   # Run in headed mode (see browser)
+
+# Individual steps (if needed):
+docker-compose up -d              # Start services (Postgres, Redis, MinIO)
+pnpm db:seed                      # Seed database with test data
+pnpm dev                          # Start frontend + backend
+# Then run tests in another terminal:
+pnpm test:e2e:local
+
+# Database management:
+pnpm db:reset                     # Reset database + reseed (useful after tests)
 
 # Database
 cd apps/api
 pnpm prisma migrate dev    # Create and apply migration
 pnpm prisma studio         # Open Prisma Studio
 pnpm prisma generate       # Generate Prisma client
+pnpm prisma:seed           # Seed database with test data
 
 # Pre-Push Validation (RUN BEFORE EVERY PUSH)
 pnpm pre-push              # Run lint + typecheck + test (same as CI)
@@ -467,13 +488,39 @@ See `docs/testing-strategy.md` for comprehensive testing guidelines.
 - Run with: `pnpm test`
 
 **E2E Tests (Playwright):**
-- ✅ Configured and running against staging
+- ✅ Configured and running against staging AND locally
 - User authentication flows
 - Vocabulary upload and processing
 - Test-taking interface
 - Classroom management
-- Run with: `cd apps/web && pnpm test:e2e`
-- Staging: `BASE_URL=https://vocab-staging.dresponda.com pnpm test:e2e`
+- Teacher viewing student test results (regression test for 403 fix)
+
+**Running E2E Tests:**
+```bash
+# Against staging (default):
+cd apps/web && pnpm test:e2e
+
+# Local e2e testing (full stack):
+pnpm setup:e2e              # One-time setup (Docker + DB + seed data)
+pnpm dev                    # Start frontend + backend in terminal 1
+pnpm test:e2e:local         # Run tests in terminal 2
+pnpm test:e2e:local:ui      # Or run with Playwright UI (recommended)
+
+# Test data available after setup:
+# - Teacher: teacher@test.com (password: Test1234!)
+# - Students: student1@test.com, student2@test.com, student3@test.com
+# - Classroom code: TEST01
+# - Pre-created vocabulary and tests
+```
+
+**Local E2E Setup Details:**
+- `pnpm setup:e2e` does the following:
+  1. Starts Docker services (Postgres, Redis, MinIO)
+  2. Runs database migrations
+  3. Seeds database with test data (see `apps/api/prisma/seed.ts`)
+  4. Installs Playwright browsers if needed
+- Database can be reset anytime with: `pnpm db:reset`
+- Seeds create realistic test data: teacher, 3 students, classroom, vocabulary, and test attempts
 
 **Integration Tests:**
 - API endpoints
