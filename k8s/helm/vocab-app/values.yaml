@@ -35,7 +35,7 @@ web:
   replicaCount: 2
   image:
     repository: ghcr.io/desponda/vocab-app-web
-    tag: sha-f3f75f0
+    tag: sha-5a316d1
     pullPolicy: Always
   service:
     type: ClusterIP
