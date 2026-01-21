@@ -16,11 +16,11 @@ interface StatCardProps {
 }
 
 const colorVariants = {
-  green: 'text-green-600 bg-green-50 dark:bg-green-950/20',
-  purple: 'text-purple-600 bg-purple-50 dark:bg-purple-950/20',
-  blue: 'text-blue-600 bg-blue-50 dark:bg-blue-950/20',
-  orange: 'text-orange-600 bg-orange-50 dark:bg-orange-950/20',
-  default: 'text-primary bg-primary/10',
+  green: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/30',
+  purple: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/30',
+  blue: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/30',
+  orange: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950/30',
+  default: 'text-primary bg-primary/10 dark:bg-primary/20',
 };
 
 export function StatCard({

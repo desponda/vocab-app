@@ -125,20 +125,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
       {/* Welcome Header */}
-      <div>
+      <div className="space-y-1">
         <h2 className="text-3xl font-bold tracking-tight">
           {getTimeBasedGreeting()}
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Here&apos;s what&apos;s happening with your classrooms today
         </p>
       </div>
 
       {/* Stats Overview */}
       {stats && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Students"
             value={stats.totalStudents}
@@ -188,7 +188,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2">
         {/* Recent Classrooms */}
         <Card>
           <CardHeader>

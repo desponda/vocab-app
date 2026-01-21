@@ -353,7 +353,7 @@ export default function ClassroomDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
       {/* Classroom Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -405,10 +405,10 @@ export default function ClassroomDetailPage() {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-5 md:space-y-6">
           {/* Stats Grid */}
           {stats && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 title="Students Enrolled"
                 value={stats.studentCount}
@@ -706,7 +706,7 @@ export default function ClassroomDetailPage() {
         </TabsContent>
 
         {/* Results Tab */}
-        <TabsContent value="results" className="space-y-6">
+        <TabsContent value="results" className="space-y-4 sm:space-y-5 md:space-y-6">
           {testAttempts.length === 0 ? (
             <Card>
               <CardContent className="py-12">

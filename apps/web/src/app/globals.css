@@ -40,36 +40,37 @@
 
 @media (prefers-color-scheme: dark) {
   @theme {
-    --color-background: oklch(9% 0 0);
-    --color-foreground: oklch(98.85% 0.002 264.54);
+    /* ELEVATION SYSTEM */
+    --color-background: oklch(15% 0 0);              /* Was: 9% → Now: ~#1a1a1a */
+    --color-foreground: oklch(92% 0.002 264.54);     /* Was: 98.85% → Softer white */
 
-    --color-card: oklch(9% 0 0);
-    --color-card-foreground: oklch(98.85% 0.002 264.54);
+    --color-card: oklch(19% 0 0);                    /* Was: 9% → Now: ~#262626 (+4% elevation) */
+    --color-card-foreground: oklch(92% 0.002 264.54);
 
-    --color-popover: oklch(9% 0 0);
-    --color-popover-foreground: oklch(98.85% 0.002 264.54);
+    --color-popover: oklch(23% 0 0);                 /* Was: 9% → Now: ~#323232 */
+    --color-popover-foreground: oklch(92% 0.002 264.54);
 
-    /* TestCraft AI Brand Colors - Dark Mode */
-    --color-primary: oklch(65% 0.22 240);  /* Brighter Electric Blue for dark mode */
+    /* Keep existing brand colors (already optimized) */
+    --color-primary: oklch(65% 0.22 240);
     --color-primary-foreground: oklch(15% 0 0);
-
-    --color-secondary: oklch(72% 0.20 50);  /* Brighter Orange for dark mode */
+    --color-secondary: oklch(72% 0.20 50);
     --color-secondary-foreground: oklch(15% 0 0);
-
-    --color-muted: oklch(20.51% 0.014 285.82);
-    --color-muted-foreground: oklch(65.12% 0.013 285.88);
-
-    --color-accent: oklch(70% 0.20 155);  /* Brighter Green for dark mode */
+    --color-accent: oklch(70% 0.20 155);
     --color-accent-foreground: oklch(15% 0 0);
+
+    /* IMPROVED CONTRAST */
+    --color-muted: oklch(25% 0.014 285.82);          /* Was: 20.51% → Background for muted areas */
+    --color-muted-foreground: oklch(70% 0.013 285.88); /* Was: 65.12% → Better readability */
 
     --color-destructive: oklch(62.8% 0.257 29.23);
     --color-destructive-foreground: oklch(98.85% 0.002 264.54);
 
-    --color-border: oklch(20.51% 0.014 285.82);
-    --color-input: oklch(20.51% 0.014 285.82);
+    /* VISIBLE BORDERS */
+    --color-border: oklch(28% 0.014 285.82);         /* Was: 20.51% → Actually visible */
+    --color-input: oklch(28% 0.014 285.82);
     --color-ring: oklch(70.89% 0.196 264.54);
 
-    /* Chart colors - Dark Mode (brighter, more saturated) */
+    /* Chart colors - keep existing */
     --color-chart-success: oklch(70% 0.25 145);
     --color-chart-warning: oklch(75% 0.20 75);
     --color-chart-danger: oklch(68% 0.28 27);
@@ -111,6 +112,17 @@ h4 {
 
 p {
   line-height: 1.6;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+  h2 {
+    font-size: 1.5rem; /* 24px on mobile, down from 30px */
+  }
+
+  h3 {
+    font-size: 1.25rem; /* 20px on mobile, down from 24px */
+  }
 }
 
 /* Focus visible styles */

@@ -206,11 +206,11 @@ export default function StudentDashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
       {/* Welcome Header */}
-      <div>
+      <div className="space-y-1">
         <h2 className="text-3xl font-bold tracking-tight">Welcome back, {user.name}!</h2>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Here&apos;s an overview of your test progress
         </p>
       </div>
@@ -223,7 +223,7 @@ export default function StudentDashboardPage() {
 
       {/* Stats Overview */}
       {stats && !isLoadingTests && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-3">
           <StatCard
             title="Tests Assigned"
             value={stats.testsAssigned}
@@ -248,14 +248,14 @@ export default function StudentDashboardPage() {
       {/* In Progress Tests Section */}
       {!isLoadingTests && inProgressAttempts.length > 0 && (
         <div className="space-y-4">
-          <div>
+          <div className="space-y-1">
             <h3 className="text-2xl font-bold tracking-tight">Continue Tests</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-1">
               Resume tests you started earlier
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {inProgressAttempts.map((attempt) => {
               const currentQuestion = (attempt.currentQuestionIndex ?? 0) + 1;
               const totalQuestions = attempt.totalQuestions;
@@ -322,9 +322,9 @@ export default function StudentDashboardPage() {
 
       {/* Available Tests Section */}
       <div className="space-y-4">
-        <div>
+        <div className="space-y-1">
           <h3 className="text-2xl font-bold tracking-tight">Available Tests</h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Tests assigned by your teacher that you can take now
           </p>
         </div>
@@ -340,7 +340,7 @@ export default function StudentDashboardPage() {
             description="Your teacher hasn&apos;t assigned any tests to your classroom. Check back later!"
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {vocabularyGroups.map((group) => {
               const isExpanded = expandedGroups.has(group.sheetId);
               const nextTest = group.assignments.find((assignment) =>
@@ -457,9 +457,9 @@ export default function StudentDashboardPage() {
 
       {/* Past Attempts Section */}
       <div className="space-y-4">
-        <div>
+        <div className="space-y-1">
           <h3 className="text-2xl font-bold tracking-tight">Completed Tests</h3>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Review your completed tests and scores
           </p>
         </div>
@@ -475,7 +475,7 @@ export default function StudentDashboardPage() {
             description="Complete your first test to see your results and track your progress"
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {pastAttempts.map((attempt) => (
               <Card key={attempt.id} className="hover:bg-muted/50 transition-colors">
                 <CardHeader>
