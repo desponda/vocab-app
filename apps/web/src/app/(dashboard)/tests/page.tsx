@@ -175,11 +175,22 @@ export default function VocabularyPage() {
             Upload worksheets or study guides to generate practice tests
           </p>
         </div>
-        <Button onClick={() => setIsWizardOpen(true)} className="gap-2">
+        {/* Desktop: Header button */}
+        <Button onClick={() => setIsWizardOpen(true)} className="gap-2 hidden sm:flex">
           <Plus className="h-4 w-4" />
           Create Test
         </Button>
       </div>
+
+      {/* Mobile: Floating Action Button (FAB) */}
+      <Button
+        onClick={() => setIsWizardOpen(true)}
+        size="lg"
+        className="sm:hidden fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow p-0"
+        aria-label="Create Test"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
 
       {/* Test Creation Wizard */}
       <TestCreationWizard
