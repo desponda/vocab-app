@@ -1,0 +1,4 @@
+# Ignore generated screenshots (local analysis only)
+*.png
+!.gitkeep
+
