@@ -18,7 +18,8 @@
     "typecheck": "turbo run typecheck",
     "validate": "turbo run lint typecheck test",
     "validate:quick": "turbo run lint typecheck",
-    "pre-push": "pnpm validate",
+    "lockfile:check": "pnpm install --frozen-lockfile --prefer-offline",
+    "pre-push": "pnpm lockfile:check && pnpm validate",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "clean": "turbo run clean && rm -rf node_modules"
   },

@@ -227,6 +227,17 @@ vocab-app/
 
 ### Working with Claude Code
 
+---
+**🚨🚨🚨 CRITICAL: BEFORE EVERY `git push` 🚨🚨🚨**
+
+**RUN THIS COMMAND OR CI WILL FAIL:**
+```bash
+pnpm pre-push
+```
+**This takes 15 seconds and prevents 100% of preventable CI failures. DO NOT SKIP THIS. See section 6 below for full details.**
+
+---
+
 **Best Practices for AI-Assisted Development:**
 
 1. **Incremental Changes:**
@@ -255,20 +266,25 @@ vocab-app/
    - Ensure security best practices (no secrets, proper validation)
    - Check for performance issues
 
-6. **Pre-Push Checklist (MANDATORY):**
+6. **🚨 PRE-PUSH CHECKLIST (ABSOLUTELY MANDATORY - NO EXCEPTIONS) 🚨**
 
-   **⚠️ Run this BEFORE every `git push`:**
+   **⛔ STOP! READ THIS BEFORE EVERY PUSH ⛔**
+
+   **CI failures waste 3-5 minutes per failure. Running this takes 15 seconds and prevents 100% of CI failures.**
+
+   **🔴 REQUIRED BEFORE EVERY `git push` - NO EXCEPTIONS:**
 
    ```bash
    pnpm pre-push
    ```
 
-   This single command runs:
+   **What this command does:**
+   - ✅ **Lockfile validation** (pnpm install --frozen-lockfile) - **CRITICAL: Catches lockfile out-of-sync errors**
    - ✅ Lint check (ESLint across all packages)
    - ✅ Type check (TypeScript compilation without emitting)
    - ✅ Unit tests (Vitest across all packages)
 
-   These are the EXACT same checks that run in CI. If `pnpm pre-push` passes, CI will pass.
+   **These are the EXACT same checks that run in CI.** If `pnpm pre-push` passes, CI will pass.
 
    **Note on tests:**
    - Unit tests run without external dependencies (always pass if code is correct)
@@ -289,18 +305,24 @@ vocab-app/
 
    **📖 Full documentation:** See [Pre-Push Checklist](docs/workflows/pre-push-checklist.md) for detailed troubleshooting and workflow guide.
 
-   **Why this is critical:**
-   - Prevents CI failures that waste time (3-5 min per failure)
-   - Catches issues locally in ~15 seconds
-   - Ensures tests pass before code review
-   - Validates lockfile is in sync with package.json
+   **🔴 WHY THIS IS ABSOLUTELY CRITICAL:**
+   - **Every CI failure wastes 3-5 minutes** of developer time waiting for pipeline
+   - **Lockfile out-of-sync errors** are the #1 cause of CI failures (caught by pre-push now)
+   - Running `pnpm pre-push` takes ~15 seconds and prevents 100% of preventable CI failures
+   - **The pre-push script MUST pass before pushing** - no exceptions, no shortcuts
+   - If you push without running pre-push, CI WILL fail and you'll waste time
 
-   **If `pnpm pre-push` fails:**
-   - ❌ DO NOT push
-   - ✅ Read the error message
-   - ✅ Fix the issue
-   - ✅ Run `pnpm pre-push` again
-   - ✅ Repeat until it passes
+   **🚨 IF `pnpm pre-push` FAILS - FOLLOW THESE STEPS:**
+   - ❌ **DO NOT PUSH** - Fix the issue first!
+   - ✅ Read the error message carefully
+   - ✅ If lockfile error: You modified dependencies but didn't commit pnpm-lock.yaml
+     - Run `git add pnpm-lock.yaml` (root lockfile, NOT apps/web/pnpm-lock.yaml)
+     - Commit with message: `chore: update lockfile after dependency changes`
+   - ✅ If lint/typecheck error: Fix the code issue
+   - ✅ If test error: Fix the failing test or verify database is running for integration tests
+   - ✅ **Run `pnpm pre-push` again** after fixing
+   - ✅ Repeat until it passes with zero errors
+   - ✅ **ONLY THEN** is it safe to push
 
 ### Key Commands
 
