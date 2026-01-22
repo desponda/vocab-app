@@ -14,6 +14,7 @@ import {
 } from '@/lib/api';
 import { Error500 } from '@/components/error/http-errors';
 import { useErrorHandler } from '@/hooks/use-error-handler';
+import { StagingErrorAccordion } from '@/components/debug/staging-error-accordion';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -52,6 +53,7 @@ export default function TakeTestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [detailedError, setDetailedError] = useState<Error | Record<string, unknown> | string | null>(null);
   const { handleError } = useErrorHandler({ showToast: false });
   const [results, setResults] = useState<TestAttempt | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -232,6 +234,8 @@ export default function TakeTestPage() {
     } catch (err) {
       console.error('Error submitting test:', err);
       setError('Failed to submit test. Please try again.');
+      // Capture full error for staging debug
+      setDetailedError(err as Error | Record<string, unknown> | string);
     } finally {
       setIsSubmitting(false);
     }
@@ -413,8 +417,17 @@ export default function TakeTestPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error}
+        <div className="space-y-4">
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            {error}
+          </div>
+          {/* Staging-only detailed error info */}
+          {detailedError && (
+            <StagingErrorAccordion
+              error={detailedError}
+              context="Test submission failed on iPad"
+            />
+          )}
         </div>
       )}
 

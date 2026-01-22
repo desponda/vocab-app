@@ -57,10 +57,18 @@ app.register(helmet, {
 });
 
 // Security: Rate limiting to prevent abuse
-// Increased from 100 to 300 req/15min to accommodate normal student usage
-// (test-taking = ~40 calls, study = ~20 calls, with batch submission reducing load)
+// Differentiated limits: authenticated users (students) need higher limits due to auto-save
+// Real-world usage: test-taking with auto-save = ~150 calls, study mode = ~50 calls
 app.register(rateLimit, {
-  max: 300, // 300 requests per 15 minutes (was 100, causing 429 errors for active students)
+  max: async (request) => {
+    // Authenticated users (students/teachers): 1000 requests per 15 min
+    // This accommodates multiple tests with auto-save without hitting limits
+    if (request.userId) {
+      return 1000;
+    }
+    // Unauthenticated users (login/signup): 100 requests per 15 min
+    return 100;
+  },
   timeWindow: '15 minutes',
   // Exempt health check endpoints from rate limiting (Kubernetes probes check frequently)
   allowList: (request) => {
