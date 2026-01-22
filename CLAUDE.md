@@ -288,9 +288,9 @@ pnpm pre-push
 
    **Note on tests:**
    - Unit tests run without external dependencies (always pass if code is correct)
-   - Integration tests require database/Redis (will be skipped if not running)
-   - To run integration tests: `docker-compose up -d postgres redis minio`
-   - If integration tests fail due to missing services, unit tests still validate your changes
+   - Integration tests require database/Redis to be running
+   - **Option 1 (Recommended):** Start database first: `docker-compose up -d postgres redis minio`
+   - **Option 2 (Quick):** Skip tests if no database: `pnpm lockfile:check && pnpm validate:quick` (runs lockfile check + lint + typecheck only)
 
    **Special cases:**
 
