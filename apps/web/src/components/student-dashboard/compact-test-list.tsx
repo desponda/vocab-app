@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getScoreBadgeVariant } from '@/lib/utils';
 import { TestAssignment, TestAttempt } from '@/lib/api';
-import { ClipboardCheck, ChevronRight } from 'lucide-react';
+import { ClipboardCheck, ChevronRight, BookOpen } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/utils';
 
 interface VocabularyGroup {
@@ -80,6 +80,15 @@ export function CompactTestList({ group }: CompactTestListProps) {
               </Badge>
             )}
 
+            {/* Study button */}
+            <Link href={`/student-dashboard/study/${group.sheetId}`}>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1">
+                <BookOpen className="h-3 w-3" />
+                Study Cards
+              </Button>
+            </Link>
+
+            {/* Test button */}
             {nextTest ? (
               <Link href={`/student-dashboard/tests/${nextTest.testId}`}>
                 <Button size="sm" className="h-8 text-xs gap-1">

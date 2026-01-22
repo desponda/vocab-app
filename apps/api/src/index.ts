@@ -16,6 +16,7 @@ import { classroomRoutes } from './routes/classrooms';
 import { vocabularySheetRoutes } from './routes/vocabulary-sheets';
 import { testRoutes } from './routes/tests';
 import { teachersRoutes } from './routes/teachers';
+import { studyRoutes } from './routes/study';
 import { errorHandler } from './middleware/error-handler';
 import { initializeBucket } from './lib/minio';
 import { createVocabularyWorker } from './jobs/process-vocabulary-sheet';
@@ -105,6 +106,7 @@ app.register(classroomRoutes, { prefix: '/api/classrooms' });
 app.register(vocabularySheetRoutes, { prefix: '/api/vocabulary-sheets' });
 app.register(testRoutes, { prefix: '/api/tests' });
 app.register(teachersRoutes, { prefix: '/api/teachers' });
+app.register(studyRoutes, { prefix: '/api/study' });
 
 // Liveness check (simple check - is the app running?)
 // Used by Kubernetes liveness probe

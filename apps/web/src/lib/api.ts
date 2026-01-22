@@ -604,6 +604,71 @@ export const testsApi = {
     request(`/api/tests/attempts/${attemptId}/review`, { token }),
 };
 
+// Study API (Flashcard study mode)
+export const studyApi = {
+  // Get words for study session with student progress
+  getWords: (
+    sheetId: string,
+    studentId: string,
+    token: string
+  ): Promise<{
+    words: Array<{
+      id: string;
+      word: string;
+      definition: string | null;
+      context: string | null;
+      confidence: number;
+      studyCount: number;
+      lastStudiedAt: string | null;
+    }>;
+    stats: {
+      total: number;
+      mastered: number;
+      notYet: number;
+      notSeen: number;
+    };
+  }> =>
+    request(`/api/study/sheets/${sheetId}/words?studentId=${studentId}`, {
+      token,
+    }),
+
+  // Update confidence level for a word
+  updateConfidence: (
+    wordId: string,
+    studentId: string,
+    confidence: 1 | 2,
+    token: string
+  ): Promise<{
+    progress: {
+      id: string;
+      confidence: number;
+      studyCount: number;
+      lastStudiedAt: string;
+    };
+  }> =>
+    request(`/api/study/words/${wordId}/confidence`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId, confidence }),
+      token,
+    }),
+
+  // Get study stats for a vocabulary sheet
+  getStats: (
+    sheetId: string,
+    studentId: string,
+    token: string
+  ): Promise<{
+    total: number;
+    mastered: number;
+    notYet: number;
+    notSeen: number;
+    progressPercent: number;
+  }> =>
+    request(`/api/study/sheets/${sheetId}/stats?studentId=${studentId}`, {
+      token,
+    }),
+};
+
 // Documents API (Deprecated - use vocabularySheetsApi instead)
 export const documentsApi = {
   upload: (

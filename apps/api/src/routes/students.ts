@@ -40,6 +40,21 @@ export const studentRoutes = async (app: FastifyInstance) => {
   app.get('/:id', async (request: FastifyRequest, reply) => {
     const params = studentIdSchema.parse(request.params);
 
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT tables with DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
+
     const student = await prisma.student.findFirst({
       where: {
         id: params.id,

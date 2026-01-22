@@ -184,6 +184,21 @@ export const classroomRoutes = async (app: FastifyInstance) => {
   app.post('/enroll', async (request: FastifyRequest, reply) => {
     const body = enrollStudentSchema.parse(request.body);
 
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT tables with DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
+
     // Verify student ownership
     const student = await prisma.student.findFirst({
       where: {

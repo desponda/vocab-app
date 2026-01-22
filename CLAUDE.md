@@ -555,6 +555,74 @@ pnpm test:e2e:local:ui      # Or run with Playwright UI (recommended)
 - ✅ Student data showing zero tests (status filter was checking 'GRADED' instead of 'SUBMITTED')
 - ✅ Test attempts authorization (now checks classroom enrollment instead of user ID match)
 
+**Student Authorization Pattern (CRITICAL - READ BEFORE MODIFYING AUTH):**
+
+This is a RECURRING bug that has been reintroduced multiple times. Please read carefully.
+
+**The Problem:**
+Developers confuse `Student.id` with `User.id` when writing authorization checks.
+
+**Key Concept:**
+- `User.id` = Primary key in User table (who you log in as)
+- `Student.id` = Primary key in Student table (which student profile)
+- A single User can have multiple Student profiles (e.g., siblings)
+- `Student.userId` links to `User.id`
+
+**WRONG Pattern (DO NOT USE):**
+```typescript
+// ❌ WRONG! This compares Student.id with User.id (different tables!)
+if (studentId === request.userId) {
+  // This will NEVER work correctly
+}
+```
+
+**CORRECT Pattern (USE THIS):**
+```typescript
+// ✅ CORRECT: Use the authorization helper
+import { canAccessStudentData } from '@/lib/authorization';
+
+const hasAccess = await canAccessStudentData(studentId, request.userId);
+if (!hasAccess) {
+  return reply.code(403).send({ error: 'Unauthorized' });
+}
+```
+
+**Manual Pattern (if you can't use the helper):**
+```typescript
+// ✅ CORRECT: Check Student.userId === User.id
+const student = await prisma.student.findFirst({
+  where: {
+    id: studentId,
+    userId: request.userId
+  }
+});
+
+if (!student) {
+  // If not student owner, check if teacher
+  const teacherAccess = await prisma.student.findFirst({
+    where: {
+      id: studentId,
+      enrollments: {
+        some: {
+          classroom: { teacherId: request.userId }
+        }
+      }
+    }
+  });
+
+  if (!teacherAccess) {
+    return reply.code(403).send({ error: 'Unauthorized' });
+  }
+}
+```
+
+**Authorization Helper Functions:**
+- `canAccessStudentData(studentId, userId)` - Full two-tier check
+- `isStudentOwner(studentId, userId)` - Student ownership only
+- `isTeacherOfStudent(studentId, userId)` - Teacher access only
+
+See `/workspace/apps/api/src/lib/authorization.ts` for implementation.
+
 ## Troubleshooting
 
 ### Common Issues

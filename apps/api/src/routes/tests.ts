@@ -224,6 +224,21 @@ export const testRoutes = async (app: FastifyInstance) => {
   app.post('/attempts/start', async (request: FastifyRequest, reply) => {
     const body = startAttemptSchema.parse(request.body);
 
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT tables with DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
+
     // Verify student belongs to user
     const student = await prisma.student.findFirst({
       where: {
@@ -378,14 +393,20 @@ export const testRoutes = async (app: FastifyInstance) => {
       return reply.code(404).send({ error: 'Attempt not found' });
     }
 
-    // CRITICAL AUTHORIZATION: Two-tier access control
-    // Do NOT compare studentId with request.userId - they are from different tables!
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
     // - studentId is Student.id (student record ID)
     // - request.userId is User.id (auth user ID)
-    // These are DIFFERENT values!
+    // These are DIFFERENT tables with DIFFERENT values!
     //
     // For STUDENTS: Check Student.userId === request.userId
-    // For TEACHERS: Check student is enrolled in teacher's classroom
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
     const isStudentOwner = attempt.student.userId === request.userId;
 
     if (!isStudentOwner) {
@@ -663,6 +684,21 @@ export const testRoutes = async (app: FastifyInstance) => {
   app.get('/students/:studentId/assigned', async (request: FastifyRequest, reply) => {
     const studentId = (request.params as any).studentId;
 
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT tables with DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
+
     // Verify student belongs to user
     const student = await prisma.student.findFirst({
       where: {
@@ -719,6 +755,21 @@ export const testRoutes = async (app: FastifyInstance) => {
   // Accessible by: student viewing own data OR teacher viewing student in their classroom
   app.get('/students/:studentId/attempts', async (request: FastifyRequest, reply) => {
     const studentId = (request.params as any).studentId;
+
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT tables with DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
 
     // First check if student belongs to this user (for student viewing own data)
     const student = await prisma.student.findFirst({
@@ -837,6 +888,21 @@ export const testRoutes = async (app: FastifyInstance) => {
     if (!attempt) {
       return reply.code(404).send({ error: 'Attempt not found' });
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CRITICAL AUTHORIZATION: Student.id vs User.id
+    // ═══════════════════════════════════════════════════════════════
+    // DO NOT compare studentId with request.userId directly!
+    // - studentId is Student.id (student record ID)
+    // - request.userId is User.id (auth user ID)
+    // These are DIFFERENT tables with DIFFERENT values!
+    //
+    // For STUDENTS: Check Student.userId === request.userId
+    // For TEACHERS: Check student is in teacher's classroom
+    //
+    // Use helper: canAccessStudentData(studentId, request.userId)
+    // See: /workspace/apps/api/src/lib/authorization.ts
+    // ═══════════════════════════════════════════════════════════════
 
     // Two-tier authorization: student viewing own data OR teacher with classroom access
     const isStudentOwner = attempt.student.userId === request.userId;

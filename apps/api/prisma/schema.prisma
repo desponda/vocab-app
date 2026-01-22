@@ -58,9 +58,10 @@ model Student {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enrollments  StudentEnrollment[] // Classroom enrollments
-  testAttempts TestAttempt[]       // Tests taken by student
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments   StudentEnrollment[] // Classroom enrollments
+  testAttempts  TestAttempt[]       // Tests taken by student
+  studyProgress StudyProgress[]     // Flashcard study progress (privacy: teachers can't see this)
 
   @@index([userId])
 }
@@ -160,9 +161,10 @@ model VocabularyWord {
   context    String?   @db.Text
   createdAt  DateTime  @default(now())
 
-  sheetId   String
-  sheet     VocabularySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
-  questions TestQuestion[]
+  sheetId       String
+  sheet         VocabularySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  questions     TestQuestion[]
+  studyProgress StudyProgress[] // Student flashcard study progress
 
   @@index([sheetId])
   @@index([word])
@@ -265,4 +267,27 @@ model TestAnswer {
   @@unique([attemptId, questionId])
   @@index([attemptId])
   @@index([questionId])
+}
+
+// ============================================================================
+// Phase 8: Study Mode - Flashcard Study Progress
+// ============================================================================
+
+model StudyProgress {
+  id            String    @id @default(cuid())
+  confidence    Int       @default(0) // 0 = not seen, 1 = "Not Yet", 2 = "Got It!"
+  lastStudiedAt DateTime?
+  studyCount    Int       @default(0) // How many times reviewed
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  studentId String
+  student   Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  wordId    String
+  word      VocabularyWord @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, wordId])
+  @@index([studentId])
+  @@index([wordId])
+  @@index([confidence])
 }
