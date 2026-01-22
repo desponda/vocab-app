@@ -21,8 +21,9 @@ export function ApiDebugPanel() {
 
   // Listen to custom API events
   useEffect(() => {
-    const handleApiLog = (event: CustomEvent<ApiLog>) => {
-      setLogs(prev => [event.detail, ...prev].slice(0, 100)); // Keep last 100, newest first
+    const handleApiLog = (event: Event) => {
+      const customEvent = event as CustomEvent<ApiLog>;
+      setLogs(prev => [customEvent.detail, ...prev].slice(0, 100)); // Keep last 100, newest first
     };
 
     window.addEventListener('api-log', handleApiLog);
