@@ -57,12 +57,18 @@ app.register(helmet, {
 });
 
 // Security: Rate limiting to prevent abuse
+// Increased from 100 to 300 req/15min to accommodate normal student usage
+// (test-taking = ~40 calls, study = ~20 calls, with batch submission reducing load)
 app.register(rateLimit, {
-  max: 100, // Maximum 100 requests
-  timeWindow: '15 minutes', // Per 15 minute window
+  max: 300, // 300 requests per 15 minutes (was 100, causing 429 errors for active students)
+  timeWindow: '15 minutes',
   // Exempt health check endpoints from rate limiting (Kubernetes probes check frequently)
   allowList: (request) => {
     return request.url.startsWith('/api/health');
+  },
+  keyGenerator: (request) => {
+    // Rate limit per user (via JWT userId), fallback to IP
+    return request.userId || request.ip;
   },
   errorResponseBuilder: (request, context) => {
     const retryAfter = typeof context.after === 'string' ? context.after : Math.ceil((context.after as number) / 1000);

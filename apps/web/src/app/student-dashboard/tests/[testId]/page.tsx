@@ -22,6 +22,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import debounce from 'lodash.debounce';
@@ -49,6 +57,8 @@ export default function TakeTestPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isResumed, setIsResumed] = useState(false);
+  const [showUnansweredWarning, setShowUnansweredWarning] = useState(false);
+  const [unansweredCount, setUnansweredCount] = useState(0);
 
   // Debounced auto-save function
   const saveAnswerDebounced = useRef(
@@ -65,12 +75,24 @@ export default function TakeTestPage() {
     }, 500)
   ).current;
 
-  // Cleanup debounced function on unmount
+  // Debounced progress update function (reduces API calls by ~50%)
+  const saveProgressDebounced = useRef(
+    debounce(async (attemptId: string, questionIndex: number, token: string) => {
+      try {
+        await testsApi.updateProgress(attemptId, questionIndex, token);
+      } catch (err) {
+        console.error('Error saving progress:', err);
+      }
+    }, 1000) // 1 second debounce (longer than answer save)
+  ).current;
+
+  // Cleanup debounced functions on unmount
   useEffect(() => {
     return () => {
       saveAnswerDebounced.cancel?.();
+      saveProgressDebounced.cancel?.();
     };
-  }, [saveAnswerDebounced]);
+  }, [saveAnswerDebounced, saveProgressDebounced]);
 
   // Redirect if not authenticated or not a student
   useEffect(() => {
@@ -151,13 +173,9 @@ export default function TakeTestPage() {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
 
-      // Save progress immediately on navigation
+      // Save progress with debounce (reduces API calls by ~50%)
       if (attempt && accessToken) {
-        try {
-          await testsApi.updateProgress(attempt.id, nextIndex, accessToken);
-        } catch (err) {
-          console.error('Error saving progress:', err);
-        }
+        saveProgressDebounced(attempt.id, nextIndex, accessToken);
       }
     }
   };
@@ -167,13 +185,9 @@ export default function TakeTestPage() {
       const prevIndex = currentQuestionIndex - 1;
       setCurrentQuestionIndex(prevIndex);
 
-      // Save progress immediately on navigation
+      // Save progress with debounce (reduces API calls by ~50%)
       if (attempt && accessToken) {
-        try {
-          await testsApi.updateProgress(attempt.id, prevIndex, accessToken);
-        } catch (err) {
-          console.error('Error saving progress:', err);
-        }
+        saveProgressDebounced(attempt.id, prevIndex, accessToken);
       }
     }
   };
@@ -181,6 +195,23 @@ export default function TakeTestPage() {
   const handleSubmit = async () => {
     if (!attempt || !student) return;
 
+    // Check for unanswered questions
+    const unanswered = questions.filter(q => !answers[q.id] || answers[q.id].trim() === '').length;
+
+    if (unanswered > 0) {
+      setUnansweredCount(unanswered);
+      setShowUnansweredWarning(true);
+      return;
+    }
+
+    // Proceed with submission
+    await doSubmit();
+  };
+
+  const doSubmit = async () => {
+    if (!attempt || !student) return;
+
+    setShowUnansweredWarning(false);
     setIsSubmitting(true);
     try {
       // Build answers array
@@ -203,6 +234,15 @@ export default function TakeTestPage() {
       setError('Failed to submit test. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleReviewUnanswered = () => {
+    setShowUnansweredWarning(false);
+    // Find first unanswered question
+    const firstUnanswered = questions.findIndex(q => !answers[q.id] || answers[q.id].trim() === '');
+    if (firstUnanswered !== -1) {
+      setCurrentQuestionIndex(firstUnanswered);
     }
   };
 
@@ -411,6 +451,34 @@ export default function TakeTestPage() {
           {questions.length} questions answered
         </p>
       </div>
+
+      {/* Unanswered Questions Warning Dialog */}
+      <Dialog open={showUnansweredWarning} onOpenChange={setShowUnansweredWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>⚠️ Unanswered Questions</DialogTitle>
+            <DialogDescription>
+              You have {unansweredCount} unanswered question{unansweredCount > 1 ? 's' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Unanswered questions will count as incorrect (0 points).
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Would you like to review them before submitting?
+            </p>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleReviewUnanswered} className="w-full sm:w-auto">
+              Review Unanswered
+            </Button>
+            <Button onClick={doSubmit} disabled={isSubmitting} className="w-full sm:w-auto">
+              {isSubmitting ? 'Submitting...' : 'Submit Anyway'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

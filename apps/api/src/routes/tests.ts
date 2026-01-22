@@ -39,6 +39,13 @@ const updateProgressSchema = z.object({
   currentQuestionIndex: z.number().int().min(0),
 });
 
+const batchSubmitAnswersSchema = z.object({
+  answers: z.array(z.object({
+    questionId: z.string().cuid(),
+    answer: z.string(),
+  })),
+});
+
 export const testRoutes = async (app: FastifyInstance) => {
   // All test routes require authentication
   app.addHook('onRequest', requireAuth);
@@ -284,6 +291,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             questionId: true,
             answer: true,
             isCorrect: true,
+            wasSkipped: true,
             answeredAt: true,
           },
         },
@@ -369,6 +377,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             questionId: true,
             answer: true,
             isCorrect: true,
+            wasSkipped: true,
             answeredAt: true,
           },
         },
@@ -532,6 +541,105 @@ export const testRoutes = async (app: FastifyInstance) => {
     });
 
     return reply.code(201).send({ answer });
+  });
+
+  // Batch submit answers (CRITICAL: Reduces 20+ API calls to 1)
+  app.post('/attempts/:attemptId/answers/batch', async (request: FastifyRequest, reply) => {
+    const params = { attemptId: (request.params as any).attemptId };
+    const body = batchSubmitAnswersSchema.parse(request.body);
+
+    // Verify attempt exists and is in progress
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: params.attemptId },
+      select: {
+        id: true,
+        status: true,
+        studentId: true,
+        testId: true,
+        student: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!attempt) {
+      return reply.code(404).send({ error: 'Attempt not found' });
+    }
+
+    if (attempt.status !== 'IN_PROGRESS') {
+      return reply.code(400).send({ error: 'Attempt not in progress' });
+    }
+
+    // Authorization: Verify attempt belongs to user's student
+    if (attempt.student.userId !== request.userId) {
+      return reply.code(403).send({ error: 'Not authorized to submit answers for this attempt' });
+    }
+
+    // Fetch all questions for this test to validate and score answers
+    const questions = await prisma.testQuestion.findMany({
+      where: { testId: attempt.testId },
+      select: { id: true, correctAnswer: true },
+    });
+
+    const questionMap = new Map(questions.map(q => [q.id, q.correctAnswer]));
+
+    // Validate all question IDs belong to this test
+    for (const ans of body.answers) {
+      if (!questionMap.has(ans.questionId)) {
+        return reply.code(400).send({
+          error: `Question ${ans.questionId} does not belong to this test`
+        });
+      }
+    }
+
+    // Prepare batch upsert data
+    const now = new Date();
+    const answersToUpsert = body.answers.map(ans => {
+      const correctAnswer = questionMap.get(ans.questionId)!;
+      const isCorrect = ans.answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      const wasSkipped = ans.answer.trim() === ''; // Empty answer = skipped
+
+      return {
+        attemptId: params.attemptId,
+        questionId: ans.questionId,
+        answer: ans.answer,
+        isCorrect: wasSkipped ? false : isCorrect, // Skipped questions count as incorrect
+        wasSkipped,
+        answeredAt: now,
+      };
+    });
+
+    // Batch upsert all answers in a transaction (atomic operation)
+    await prisma.$transaction(
+      answersToUpsert.map(ans =>
+        prisma.testAnswer.upsert({
+          where: {
+            attemptId_questionId: {
+              attemptId: params.attemptId,
+              questionId: ans.questionId,
+            },
+          },
+          update: {
+            answer: ans.answer,
+            isCorrect: ans.isCorrect,
+            wasSkipped: ans.wasSkipped,
+            answeredAt: now,
+          },
+          create: ans,
+        })
+      )
+    );
+
+    // Update last activity timestamp
+    await prisma.testAttempt.update({
+      where: { id: params.attemptId },
+      data: { lastActivityAt: now },
+    });
+
+    return reply.send({
+      message: 'Answers submitted successfully',
+      count: answersToUpsert.length
+    });
   });
 
   // Update test progress (current question index)
@@ -879,6 +987,7 @@ export const testRoutes = async (app: FastifyInstance) => {
             questionId: true,
             answer: true,
             isCorrect: true,
+            wasSkipped: true,
             answeredAt: true,
           },
         },

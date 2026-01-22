@@ -257,6 +257,7 @@ model TestAnswer {
   id         String    @id @default(cuid())
   answer     String
   isCorrect  Boolean?
+  wasSkipped Boolean   @default(false) // Track if student skipped this question
   answeredAt DateTime  @default(now())
 
   attemptId  String

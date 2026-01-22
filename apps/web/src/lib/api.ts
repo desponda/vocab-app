@@ -44,13 +44,14 @@ export class ApiError extends Error {
 
 interface RequestOptions extends RequestInit {
   token?: string;
+  timeout?: number; // Custom timeout in milliseconds (default: 5000ms)
 }
 
 async function request<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { token, ...fetchOptions } = options;
+  const { token, timeout: customTimeout, ...fetchOptions } = options;
 
   const headers: Record<string, string> = {
     ...(fetchOptions.headers as Record<string, string>),
@@ -65,11 +66,19 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Create AbortController for timeout
+  // Create AbortController for timeout (use custom or default 5 seconds)
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+  const timeoutMs = customTimeout || 5000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  // Track request start time for debug panel
+  const startTime = Date.now();
+  const method = (fetchOptions.method || 'GET').toUpperCase();
 
   let response;
+  let responseStatus = 0;
+  let errorMessage: string | undefined;
+
   try {
     response = await fetch(`${API_URL}${endpoint}`, {
       ...fetchOptions,
@@ -77,14 +86,55 @@ async function request<T>(
       credentials: 'include', // Include cookies for refresh tokens
       signal: controller.signal,
     });
+    responseStatus = response.status;
     clearTimeout(timeout);
   } catch (error) {
     clearTimeout(timeout);
+    const duration = Date.now() - startTime;
+
     if (error instanceof Error && error.name === 'AbortError') {
+      errorMessage = 'Request timeout';
+      responseStatus = 408;
+
+      // Log to debug panel (staging only)
+      if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENV === 'staging') {
+        window.dispatchEvent(new CustomEvent('api-log', {
+          detail: {
+            timestamp: new Date(),
+            method,
+            url: endpoint,
+            status: 408,
+            duration,
+            error: errorMessage,
+            userAgent: navigator.userAgent,
+          }
+        }));
+      }
+
       throw new ApiError('Request timeout - please check your connection', 408);
     }
+
+    errorMessage = error instanceof Error ? error.message : 'Network error';
+
+    // Log to debug panel (staging only)
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENV === 'staging') {
+      window.dispatchEvent(new CustomEvent('api-log', {
+        detail: {
+          timestamp: new Date(),
+          method,
+          url: endpoint,
+          status: 0,
+          duration,
+          error: errorMessage,
+          userAgent: navigator.userAgent,
+        }
+      }));
+    }
+
     throw error;
   }
+
+  const duration = Date.now() - startTime;
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({
@@ -92,11 +142,42 @@ async function request<T>(
       message: 'An unexpected error occurred',
     }));
 
+    errorMessage = errorData.message || 'Request failed';
+
+    // Log to debug panel (staging only)
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENV === 'staging') {
+      window.dispatchEvent(new CustomEvent('api-log', {
+        detail: {
+          timestamp: new Date(),
+          method,
+          url: endpoint,
+          status: responseStatus,
+          duration,
+          error: errorMessage,
+          userAgent: navigator.userAgent,
+        }
+      }));
+    }
+
     throw new ApiError(
       errorData.message || 'Request failed',
       response.status,
       errorData.details
     );
+  }
+
+  // Log successful request to debug panel (staging only)
+  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENV === 'staging') {
+    window.dispatchEvent(new CustomEvent('api-log', {
+      detail: {
+        timestamp: new Date(),
+        method,
+        url: endpoint,
+        status: responseStatus,
+        duration,
+        userAgent: navigator.userAgent,
+      }
+    }));
   }
 
   // Handle 204 No Content
@@ -538,17 +619,13 @@ export const testsApi = {
     studentId: string,
     token: string
   ): Promise<{ attempt: TestAttempt }> => {
-    // Submit each answer
-    for (const answerData of data.answers) {
-      await request(`/api/tests/attempts/${attemptId}/answer`, {
-        method: 'POST',
-        body: JSON.stringify({
-          questionId: answerData.questionId,
-          answer: answerData.answer,
-        }),
-        token,
-      });
-    }
+    // NEW: Batch submit all answers in ONE API call (reduces 21 calls to 2)
+    await request(`/api/tests/attempts/${attemptId}/answers/batch`, {
+      method: 'POST',
+      body: JSON.stringify({ answers: data.answers }),
+      token,
+      timeout: 30000, // 30 seconds for batch submission (critical for iPad/mobile)
+    });
 
     // Complete the attempt to calculate score
     const result = await request<{ attempt: TestAttempt }>(
@@ -556,6 +633,7 @@ export const testsApi = {
       {
         method: 'POST',
         token,
+        timeout: 15000, // 15 seconds for completion (less critical)
       }
     );
 
